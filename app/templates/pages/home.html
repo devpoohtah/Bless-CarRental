@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% from 'components/cards.html' import detail_dialog %}
+
+{% block head_extra %}
+{% set structured_data = {
+  "@context": "https://schema.org",
+  "@type": "TravelAgency",
+  "name": site.business_name,
+  "telephone": "+639660534280",
+  "address": {"@type": "PostalAddress", "addressLocality": "Iloilo City", "addressCountry": "PH"},
+  "sameAs": [site.facebook_url]
+} %}
+<script type="application/ld+json">{{ structured_data | tojson }}</script>
+{% endblock %}
+
+{% block content %}
+{% include 'sections/hero.html' %}
+{% include 'sections/services.html' %}
+{% include 'sections/about.html' %}
+{% include 'sections/tours.html' %}
+{% include 'sections/destinations.html' %}
+{% include 'sections/car_rental.html' %}
+{% include 'sections/why_us.html' %}
+{% include 'sections/testimonials.html' %}
+{% include 'sections/gallery.html' %}
+{% include 'sections/faq.html' %}
+{% include 'sections/contact.html' %}
+{% endblock %}
+
+{% block dialogs %}
+{% for tour in tours %}
+{{ detail_dialog('tour-' ~ tour.id, tour.name, tour.destination, tour.photo, tour.description,
+  [('Duration', tour.duration or 'To be confirmed', 'clock'), ('Price', tour.price_php | php, 'tag')], tour.is_sample) }}
+{% endfor %}
+{% for dest in destinations %}
+{{ detail_dialog('destination-' ~ dest.id, dest.name, dest.region, dest.photo, dest.description, [], dest.is_sample) }}
+{% endfor %}
+{% endblock %}

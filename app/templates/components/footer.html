@@ -1,0 +1,50 @@
+{% from 'components/logo.html' import brand_logo %}
+<footer class="site-footer on-dark">
+  <div class="container footer__grid">
+    <div>
+      {{ brand_logo() }}
+      <p class="footer__about">{{ site.business_name }}. Tour packages and car rentals in {{ site.location }}. {{ site.tagline }}</p>
+      <ul class="social">
+        <li><a href="{{ site.facebook_url }}" target="_blank" rel="noopener noreferrer" aria-label="BLESS on Facebook (opens in a new tab)">{{ icon('facebook', 'icon') }}</a></li>
+        <li><a href="{{ site.messenger_url }}" target="_blank" rel="noopener noreferrer" aria-label="Message BLESS on Messenger (opens in a new tab)">{{ icon('message-circle', 'icon') }}</a></li>
+      </ul>
+    </div>
+    <nav aria-label="Footer quick links">
+      <h2 class="footer__heading">Quick links</h2>
+      <ul class="footer__list">
+        {% for link in nav_links %}
+        <li><a href="{{ link.href }}">{{ link.label }}</a></li>
+        {% endfor %}
+      </ul>
+    </nav>
+    <div class="footer__stack">
+      <nav aria-label="Travel tours">
+        <h2 class="footer__heading">Travel tours</h2>
+        <ul class="footer__list">
+          <li><a href="#tours">Tour packages</a></li>
+          <li><a href="#destinations">Destinations</a></li>
+          <li><a href="{{ site.messenger_url }}" target="_blank" rel="noopener noreferrer">Inquire about a tour</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Car rental">
+        <h2 class="footer__heading">Car rental</h2>
+        <ul class="footer__list">
+          <li><a href="#car-rental">Vehicle listings</a></li>
+          <li><a href="#faq">Rental questions</a></li>
+          <li><a href="{{ site.messenger_url }}" target="_blank" rel="noopener noreferrer">Inquire about a vehicle</a></li>
+        </ul>
+      </nav>
+    </div>
+    <div>
+      <h2 class="footer__heading">Contact</h2>
+      <ul class="footer__list">
+        <li>{{ icon('phone', 'icon icon--sm') }}<a href="{{ site.phone_href }}">{{ site.phone_display }}</a></li>
+        <li>{{ icon('map-pin', 'icon icon--sm') }}{{ site.location }}</li>
+        {% if site.email %}
+        <li>{{ icon('mail', 'icon icon--sm') }}<a href="mailto:{{ site.email }}">{{ site.email }}</a></li>
+        {% endif %}
+      </ul>
+    </div>
+  </div>
+  <div class="container footer__legal">&copy; {{ current_year }} {{ site.business_name }}. All rights reserved.</div>
+</footer>

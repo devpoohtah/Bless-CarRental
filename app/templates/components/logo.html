@@ -1,0 +1,10 @@
+{% macro brand_logo() %}
+<a href="#home" class="brand" aria-label="{{ site.business_name }}, back to top">
+  <!-- your brand logo will go here -->
+  <img class="brand__logo" src="{{ static_url('images/bless-logo.webp') }}" alt="" width="56" height="56">
+  <span class="brand__text">
+    <span class="brand__name">{{ site.short_name }}</span>
+    <span class="brand__sub">Travel and Tours &amp; Car Rental</span>
+  </span>
+</a>
+{% endmacro %}

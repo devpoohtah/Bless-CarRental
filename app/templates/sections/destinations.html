@@ -1,0 +1,14 @@
+{% from 'components/cards.html' import destination_card %}
+<section id="destinations" class="section section--white">
+  <div class="container">
+    <div class="section__head">
+      <h2>Popular destinations</h2>
+      <p class="section__lead">Places our tours can take you. The list below is sample content until BLESS confirms its destinations.</p>
+    </div>
+    <div class="bento">
+      {% for dest in destinations %}
+      {{ destination_card(dest) }}
+      {% endfor %}
+    </div>
+  </div>
+</section>

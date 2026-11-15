@@ -1,0 +1,26 @@
+{% set reasons = [
+  ('shield-check', 'Trusted travel services', 'Tell us what you have in mind and we will help you plan the trip, from your first message.'),
+  ('car-front', 'Convenient transportation', 'Tours and car rentals from one local business, so getting around is easier to arrange.'),
+  ('headset', 'Customer-focused assistance', 'Reach us by phone, Facebook or Messenger and tell us what you need.'),
+  ('wallet', 'Affordable travel options', 'Ask us about tours and vehicles that fit your travel budget.'),
+  ('camera', 'Memorable travel experiences', 'Discover the world, one mile at a time.'),
+] %}
+<section id="why-us" class="section section--surface">
+  <div class="container why">
+    <div class="why__intro">
+      <h2>Why travel with BLESS</h2>
+      <p>One local business for your tour and your ride, with a straightforward way to ask questions and get started.</p>
+    </div>
+    <ul class="why__list">
+      {% for icon_name, title, text in reasons %}
+      <li>
+        {{ icon(icon_name, 'icon', 1.75) }}
+        <div>
+          <h3>{{ title }}</h3>
+          <p>{{ text }}</p>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+</section>

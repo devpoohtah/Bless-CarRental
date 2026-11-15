@@ -1,0 +1,17 @@
+<section id="gallery" class="section section--surface">
+  <div class="container">
+    <div class="section__head">
+      <h2>Travel experiences</h2>
+      <p class="section__lead">Destinations, group tours, customer trips, vehicles and the people behind BLESS. Placeholder images for now.</p>
+    </div>
+    {# To swap in real photos: put files in app/static/images/gallery/ and update app/services/content.py. #}
+    <ul class="gallery">
+      {% for item in gallery %}
+      <li class="on-dark">
+        <img src="{{ static_url(item.photo.src) }}" alt="{{ item.photo.alt }}" width="1200" height="900" loading="lazy" decoding="async">
+        <span class="gallery__cap">{{ item.category }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+</section>

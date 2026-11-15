@@ -1,0 +1,30 @@
+{% from 'components/logo.html' import brand_logo %}
+<header id="site-header" class="site-header on-dark">
+  <div class="container site-header__bar">
+    {{ brand_logo() }}
+    <nav class="primary-nav" aria-label="Primary">
+      <ul class="nav-list">
+        {% for link in nav_links %}
+        <li><a class="nav__link" href="{{ link.href }}" data-section="{{ link.section_id }}">{{ link.label }}</a></li>
+        {% endfor %}
+      </ul>
+    </nav>
+    <div class="site-header__actions">
+      <a class="btn btn--action btn--sm site-header__cta" href="{{ site.messenger_url }}" target="_blank" rel="noopener noreferrer">Book Now<span class="sr-only"> (opens Messenger in a new tab)</span></a>
+      <button id="menu-toggle" class="menu-toggle" type="button" aria-expanded="false" aria-controls="mobile-menu" aria-label="Open menu">
+        <span data-icon="open">{{ icon('menu', 'icon icon--lg') }}</span>
+        <span data-icon="close" hidden>{{ icon('x', 'icon icon--lg') }}</span>
+      </button>
+    </div>
+  </div>
+  <div id="mobile-menu" class="mobile-menu" hidden>
+    <nav class="container" aria-label="Mobile">
+      <ul>
+        {% for link in nav_links %}
+        <li><a class="nav__link nav__link--mobile" href="{{ link.href }}" data-section="{{ link.section_id }}">{{ link.label }}</a></li>
+        {% endfor %}
+      </ul>
+      <a class="btn btn--action btn--block" href="{{ site.messenger_url }}" target="_blank" rel="noopener noreferrer">Book Now<span class="sr-only"> (opens Messenger in a new tab)</span></a>
+    </nav>
+  </div>
+</header>

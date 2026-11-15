@@ -1,0 +1,33 @@
+<section id="testimonials" class="section section--white">
+  <div class="container">
+    <div class="section__head">
+      <h2>What travelers say</h2>
+      <p class="note">{{ icon('info', 'icon icon--sm') }}These are placeholders. Replace them with verified customer reviews, with the customer's permission (edit app/services/content.py).</p>
+    </div>
+    <div class="quotes">
+      {% for t in testimonials %}
+      <figure class="quote-card">
+        {% if t.is_placeholder %}<span class="badge">Placeholder</span>{% endif %}
+        {{ icon('quote', 'quote-card__mark') }}
+        <blockquote>{{ t.quote }}</blockquote>
+        <div class="stars" role="img" aria-label="{{ (t.rating ~ ' out of 5 stars') if t.rating else 'Rating not yet available' }}">
+          {% for n in range(1, 6) %}
+          {{ icon('star', 'icon' ~ (' is-filled' if t.rating and n <= t.rating else '')) }}
+          {% endfor %}
+        </div>
+        <figcaption>
+          {% if t.photo %}
+          <span class="avatar"><img src="{{ static_url(t.photo.src) }}" alt="{{ t.photo.alt }}" width="48" height="48" loading="lazy"></span>
+          {% else %}
+          <span class="avatar" aria-hidden="true">{{ icon('user', 'icon') }}</span>
+          {% endif %}
+          <span>
+            <span class="quote-card__name">{{ t.author }}</span>
+            <span class="quote-card__service">{{ t.service }}</span>
+          </span>
+        </figcaption>
+      </figure>
+      {% endfor %}
+    </div>
+  </div>
+</section>

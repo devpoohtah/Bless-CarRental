@@ -1,0 +1,35 @@
+/* Design tokens. The one place to change the palette, fonts, spacing and radii. */
+:root {
+  /* Surfaces */
+  --night: #000141;          /* the logo's own navy */
+  --night-raised: #0a0d46;
+  --night-line: rgb(255 255 255 / 0.14);
+  --surface: #f4f4f6;        /* light tint of the logo's silver ring */
+  --white: #ffffff;
+
+  /* Text */
+  --ink: #000141;
+  --muted: #4a4d6e;
+  --on-dark-muted: rgb(255 255 255 / 0.8);
+  --line: rgb(0 1 65 / 0.12);
+
+  /* Action: one filled colour per surface */
+  --peach: #fbbc91;          /* filled buttons on dark, navy text */
+  --peach-hover: #ffd0ae;
+  --night-hover: #1a1d5e;    /* filled buttons on light, white text */
+
+  /* Decorative only: never text, never buttons */
+  --cyan: #5ce2ff;
+  --berry: #ad107b;
+
+  /* Type */
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Figtree", "Segoe UI", system-ui, sans-serif;
+
+  /* Shape and layout */
+  --radius-md: 0.75rem;
+  --radius-lg: 1.25rem;
+  --shadow-card: 0 1px 2px rgb(0 1 65 / 0.06);
+  --header-h: 4.5rem;
+  --container: 80rem;
+}

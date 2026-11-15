@@ -1,0 +1,31 @@
+<section id="contact" class="section section--dark on-dark">
+  <div class="container contact">
+    <div>
+      <h2>Plan your trip or rental with BLESS</h2>
+      <p class="contact__lead">Message us on Messenger or call to ask about tours, vehicles and availability. Online booking is planned for later.</p>
+      <div class="contact__actions">
+        <a class="btn btn--action" href="{{ site.messenger_url }}" target="_blank" rel="noopener noreferrer">{{ icon('message-circle', 'icon') }}Message on Messenger<span class="sr-only"> (opens in a new tab)</span></a>
+        <a class="btn btn--outline-light" href="{{ site.phone_href }}">{{ icon('phone', 'icon') }}Call {{ site.phone_display }}</a>
+      </div>
+    </div>
+    <dl class="contact__list">
+      <div class="contact__row">{{ icon('badge-check', 'icon', 1.75) }}<div><dt>Business</dt><dd>{{ site.business_name }}</dd></div></div>
+      <div class="contact__row">{{ icon('phone', 'icon', 1.75) }}<div><dt>Phone</dt><dd><a href="{{ site.phone_href }}">{{ site.phone_display }}</a></dd></div></div>
+      <div class="contact__row">{{ icon('map-pin', 'icon', 1.75) }}<div><dt>Location</dt><dd>{{ site.location }}</dd></div></div>
+      <div class="contact__row">{{ icon('facebook', 'icon', 1.75) }}<div><dt>Facebook</dt><dd><a href="{{ site.facebook_url }}" target="_blank" rel="noopener noreferrer">BLESS on Facebook<span class="sr-only"> (opens in a new tab)</span></a></dd></div></div>
+      <div class="contact__row">{{ icon('message-circle', 'icon', 1.75) }}<div><dt>Messenger</dt><dd><a href="{{ site.messenger_url }}" target="_blank" rel="noopener noreferrer">Chat with BLESS<span class="sr-only"> (opens in a new tab)</span></a></dd></div></div>
+      <div class="contact__row">
+        {{ icon('mail', 'icon', 1.75) }}
+        <div>
+          <dt>Email</dt>
+          {# Set `email` in app/core/config.py once the business confirms its address; it will appear here as a link. #}
+          {% if site.email %}
+          <dd><a href="mailto:{{ site.email }}">{{ site.email }}</a></dd>
+          {% else %}
+          <dd class="is-muted">Not yet available</dd>
+          {% endif %}
+        </div>
+      </div>
+    </dl>
+  </div>
+</section>

@@ -1,0 +1,15 @@
+{% from 'components/cards.html' import tour_card %}
+<section id="tours" class="section section--surface">
+  <div class="container">
+    <div class="section__head">
+      <h2>Travel tour packages</h2>
+      <p class="section__lead">Pick a package to see the details, then message us to ask about dates and availability.</p>
+      <p class="note">{{ icon('info', 'icon icon--sm') }}Sample listings. Packages, itineraries and rates will be confirmed by BLESS.</p>
+    </div>
+    <div class="stack-grid">
+      {% for tour in tours %}
+      {{ tour_card(tour) }}
+      {% endfor %}
+    </div>
+  </div>
+</section>

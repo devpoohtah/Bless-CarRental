@@ -1,0 +1,17 @@
+<section id="home" class="hero on-dark">
+  {# Hero photo: replace images/hero/hero-placeholder.svg with a real photo (wide, at least 1920px), e.g. hero-photo.jpg, and update the src below. #}
+  <img class="hero__car" src="{{ static_url('images/hero/hero-car.webp') }}" alt="White Suzuki Ertiga Hybrid" width="983" height="617" fetchpriority="high">
+  <div class="container hero__inner">
+    <h1 class="hero__title">
+      <span>Discover More.</span>
+      <span>Travel Further.</span>
+      <span>Drive with BLESS.</span>
+    </h1>
+    <p class="hero__lead">Explore unforgettable destinations and enjoy convenient transportation with BLESS Travel and Tours &amp; Car Rental Services.</p>
+    <div class="hero__actions">
+      <a class="btn btn--action btn--lg" href="#tours">Explore Tours</a>
+      <a class="btn btn--action btn--lg" href="#car-rental">Explore Car Rentals</a>
+    </div>
+    <p class="hero__place">{{ icon('map-pin', 'icon icon--sm icon--cyan') }}Based in {{ site.location }}</p>
+  </div>
+</section>

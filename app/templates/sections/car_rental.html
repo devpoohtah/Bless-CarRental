@@ -1,0 +1,15 @@
+{% from 'components/cards.html' import vehicle_card %}
+<section id="car-rental" class="section section--dark on-dark">
+  <div class="container">
+    <div class="section__head">
+      <h2>Car rental services</h2>
+      <p class="section__lead">Choose a vehicle type, then message us with your dates to ask about availability and rates.</p>
+      <p class="note">{{ icon('info', 'icon icon--sm') }}Sample listings. Vehicles, specifications and rates will be confirmed by BLESS.</p>
+    </div>
+    <div class="stack-grid">
+      {% for v in vehicles %}
+      {{ vehicle_card(v) }}
+      {% endfor %}
+    </div>
+  </div>
+</section>

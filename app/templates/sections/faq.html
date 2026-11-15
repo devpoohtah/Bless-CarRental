@@ -1,0 +1,17 @@
+<section id="faq" class="section section--white">
+  <div class="container faq-layout">
+    <div class="faq-layout__intro">
+      <h2>Frequently asked questions</h2>
+      <p>Something else on your mind? Send us a message.</p>
+      <a class="btn btn--primary" href="{{ site.messenger_url }}" target="_blank" rel="noopener noreferrer">{{ icon('message-circle', 'icon') }}Message us<span class="sr-only"> (opens Messenger in a new tab)</span></a>
+    </div>
+    <div class="faq">
+      {% for faq in faqs %}
+      <details name="faq">
+        <summary>{{ faq.question }}{{ icon('chevron-down', 'icon') }}</summary>
+        <p>{{ faq.answer }}</p>
+      </details>
+      {% endfor %}
+    </div>
+  </div>
+</section>

@@ -1,0 +1,27 @@
+<section id="about" class="section section--white">
+  <div class="container about">
+    <div>
+      <h2>{{ site.tagline }}</h2>
+      <p class="about__lead">{{ site.business_name }} is a travel and transportation business based in {{ site.location }}. We offer tour packages to help you explore destinations, and car rentals to help you get there and get around.</p>
+      <blockquote class="pull-quote">
+        <p>Discover the world, one mile at a time.</p>
+        <p>Fast and easy booking experience.</p>
+      </blockquote>
+      <dl class="duo">
+        <div>
+          <dt>{{ icon('compass', 'icon') }}Travel tours</dt>
+          <dd>Tour packages and destinations, with inquiries handled through Facebook and Messenger. <a class="link" href="#tours">See tours</a></dd>
+        </div>
+        <div>
+          <dt>{{ icon('car-front', 'icon') }}Car rental</dt>
+          <dd>Vehicle rentals for trips around the region and beyond. <a class="link" href="#car-rental">See vehicles</a></dd>
+        </div>
+      </dl>
+    </div>
+    <div class="about__media">
+      {# Replace these two placeholders with real BLESS travel photography. #}
+      <img class="about__img-main" src="{{ static_url('images/about/about-scenic-placeholder.svg') }}" alt="Placeholder image for a travel photo" width="960" height="1200" loading="lazy" decoding="async">
+      <img class="about__img-inset" src="{{ static_url('images/about/about-travel-placeholder.svg') }}" alt="Placeholder image for a second travel photo" width="1200" height="900" loading="lazy" decoding="async">
+    </div>
+  </div>
+</section>
