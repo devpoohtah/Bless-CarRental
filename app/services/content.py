@@ -47,7 +47,7 @@ def list_tours() -> list[TourPackage]:
                 "Itinerary, inclusions, pick-up points and rates will be confirmed by BLESS."
             ),
             duration="1 day",
-            photo=_photo("images/tours/tour-island-day-placeholder.svg",
+            photo=_photo("customer/img/tours/tour-island-day-placeholder.svg",
                          "Placeholder image of an island coastline under a clear sky"),
         ),
         TourPackage(
@@ -60,7 +60,7 @@ def list_tours() -> list[TourPackage]:
                 "sites. Itinerary, inclusions and rates will be confirmed by BLESS."
             ),
             duration="1 day",
-            photo=_photo("images/tours/tour-heritage-day-placeholder.svg",
+            photo=_photo("customer/img/tours/tour-heritage-day-placeholder.svg",
                          "Placeholder image of a stone church at dusk"),
         ),
         TourPackage(
@@ -73,7 +73,7 @@ def list_tours() -> list[TourPackage]:
                 "will be confirmed by BLESS."
             ),
             duration="3 days, 2 nights",
-            photo=_photo("images/tours/tour-beach-getaway-placeholder.svg",
+            photo=_photo("customer/img/tours/tour-beach-getaway-placeholder.svg",
                          "Placeholder image of a white sand beach and turquoise sea"),
         ),
     ]
@@ -87,7 +87,7 @@ def list_destinations() -> list[Destination]:
             region="Aklan",
             summary="White sand beaches and island activities.",
             description="Sample destination. Details will be confirmed by BLESS.",
-            photo=_photo("images/destinations/destination-boracay-placeholder.svg",
+            photo=_photo("customer/img/destinations/destination-boracay-placeholder.svg",
                          "Placeholder image of a beach and turquoise sea"),
         ),
         Destination(
@@ -96,7 +96,7 @@ def list_destinations() -> list[Destination]:
             region="Western Visayas",
             summary="Island scenery within reach of Iloilo City.",
             description="Sample destination. Details will be confirmed by BLESS.",
-            photo=_photo("images/destinations/destination-guimaras-placeholder.svg",
+            photo=_photo("customer/img/destinations/destination-guimaras-placeholder.svg",
                          "Placeholder image of an island coastline"),
         ),
         Destination(
@@ -105,7 +105,7 @@ def list_destinations() -> list[Destination]:
             region="Carles, Iloilo",
             summary="Island hopping and coastal views.",
             description="Sample destination. Details will be confirmed by BLESS.",
-            photo=_photo("images/destinations/destination-gigantes-placeholder.svg",
+            photo=_photo("customer/img/destinations/destination-gigantes-placeholder.svg",
                          "Placeholder image of islands at sunset"),
         ),
         Destination(
@@ -114,7 +114,7 @@ def list_destinations() -> list[Destination]:
             region="Iloilo",
             summary="Historic church and heritage town.",
             description="Sample destination. Details will be confirmed by BLESS.",
-            photo=_photo("images/destinations/destination-miagao-placeholder.svg",
+            photo=_photo("customer/img/destinations/destination-miagao-placeholder.svg",
                          "Placeholder image of a stone church facade"),
         ),
         Destination(
@@ -123,7 +123,7 @@ def list_destinations() -> list[Destination]:
             region="Western Visayas",
             summary="Food, heritage and the riverfront.",
             description="Sample destination. Details will be confirmed by BLESS.",
-            photo=_photo("images/destinations/destination-iloilo-city-placeholder.svg",
+            photo=_photo("customer/img/destinations/destination-iloilo-city-placeholder.svg",
                          "Placeholder image of a city skyline at dusk"),
         ),
     ]
@@ -137,7 +137,7 @@ def list_vehicles() -> list[Vehicle]:
             vehicle_type="Sedan",
             seats=5,
             transmission="Automatic",
-            photo=_photo("images/vehicles/vehicle-compact-sedan-placeholder.svg",
+            photo=_photo("customer/img/vehicles/vehicle-compact-sedan-placeholder.svg",
                          "Placeholder illustration of a sedan"),
         ),
         Vehicle(
@@ -146,7 +146,7 @@ def list_vehicles() -> list[Vehicle]:
             vehicle_type="SUV",
             seats=7,
             transmission="Automatic",
-            photo=_photo("images/vehicles/vehicle-family-suv-placeholder.svg",
+            photo=_photo("customer/img/vehicles/vehicle-family-suv-placeholder.svg",
                          "Placeholder illustration of an SUV"),
         ),
         Vehicle(
@@ -155,7 +155,7 @@ def list_vehicles() -> list[Vehicle]:
             vehicle_type="Van",
             seats=12,
             transmission="Manual",
-            photo=_photo("images/vehicles/vehicle-passenger-van-placeholder.svg",
+            photo=_photo("customer/img/vehicles/vehicle-passenger-van-placeholder.svg",
                          "Placeholder illustration of a passenger van"),
         ),
     ]
@@ -174,7 +174,7 @@ def list_gallery() -> list[GalleryImage]:
     def item(id_: str, category: str, file: str) -> GalleryImage:
         return GalleryImage(
             id=id_, category=category,
-            photo=_photo(f"images/gallery/{file}", f"Placeholder image: {category.lower()}"),
+            photo=_photo(f"customer/img/gallery/{file}", f"Placeholder image: {category.lower()}"),
         )
 
     return [

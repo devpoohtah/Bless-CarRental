@@ -11,8 +11,11 @@ from pydantic import BaseModel, Field
 
 
 class Photo(BaseModel):
-    src: str = Field(description="Path under app/static, e.g. images/tours/example.jpg")
+    src: str = Field(description="Path under app/static, e.g. customer/img/tours/example.jpg")
     alt: str
+
+
+Availability = Literal["inquire", "available", "unavailable"]
 
 
 class TourPackage(BaseModel):
@@ -23,6 +26,7 @@ class TourPackage(BaseModel):
     description: str
     duration: str | None = None
     price_php: int | None = None
+    availability: Availability = "inquire"
     photo: Photo
     is_sample: bool = True
 
@@ -36,8 +40,6 @@ class Destination(BaseModel):
     photo: Photo
     is_sample: bool = True
 
-
-Availability = Literal["inquire", "available", "unavailable"]
 
 
 class Vehicle(BaseModel):

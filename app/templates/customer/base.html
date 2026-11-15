@@ -9,25 +9,26 @@
   <meta property="og:type" content="website">
   <meta property="og:title" content="{{ site.business_name }}">
   <meta property="og:description" content="{{ site.site_description }}">
-  <link rel="icon" href="{{ static_url('images/bless-logo.webp') }}" type="image/webp">
+  <link rel="icon" href="{{ static_url('shared/img/bless-logo.webp') }}" type="image/webp">
   {# Fonts degrade gracefully to the system stack in tokens.css if Google Fonts is unreachable. #}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Figtree:wght@400;500;600;700&display=swap">
-  <link rel="stylesheet" href="{{ static_url('css/tokens.css') }}">
-  <link rel="stylesheet" href="{{ static_url('css/base.css') }}">
-  <link rel="stylesheet" href="{{ static_url('css/components.css') }}">
-  <link rel="stylesheet" href="{{ static_url('css/sections.css') }}">
+  <link rel="stylesheet" href="{{ static_url('shared/css/tokens.css') }}">
+  <link rel="stylesheet" href="{{ static_url('shared/css/base.css') }}">
+  <link rel="stylesheet" href="{{ static_url('shared/css/buttons.css') }}">
+  <link rel="stylesheet" href="{{ static_url('customer/css/components.css') }}">
+  <link rel="stylesheet" href="{{ static_url('customer/css/sections.css') }}">
   {% block head_extra %}{% endblock %}
 </head>
 <body>
   <a href="#main" class="skip-link">Skip to main content</a>
-  {% include 'components/header.html' %}
+  {% include 'customer/components/header.html' %}
   <main id="main">
     {% block content %}{% endblock %}
   </main>
-  {% include 'components/footer.html' %}
+  {% include 'customer/components/footer.html' %}
   {% block dialogs %}{% endblock %}
-  <script src="{{ static_url('js/main.js') }}" defer></script>
+  <script src="{{ static_url('customer/js/main.js') }}" defer></script>
 </body>
 </html>

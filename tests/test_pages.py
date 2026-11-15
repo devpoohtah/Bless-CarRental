@@ -45,4 +45,4 @@ def test_no_emoji_in_markup():
 
 def test_favicon_routes():
     assert client.get("/favicon.ico").status_code == 200
-    assert (STATIC_DIR / "images" / "favicon.svg").exists()
+    assert (STATIC_DIR / "shared" / "img" / "favicon.svg").exists()

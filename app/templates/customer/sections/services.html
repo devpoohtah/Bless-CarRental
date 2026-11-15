@@ -1,0 +1,13 @@
+{% from 'customer/components/cards.html' import service_tile %}
+<section id="services" class="section section--surface">
+  <div class="container">
+    <div class="section__head">
+      <h2>Travel and Ride, All in One Place</h2>
+      <p class="section__lead">Book a tour, rent a vehicle, or do both with the same local business.</p>
+    </div>
+    <div class="service-cards">
+      {{ service_tile('#tours', 'Travel tour packages', 'Tour packages and destinations to explore.', 'View tours', 'customer/img/services/service-tours-placeholder.svg', 'Placeholder image for travel tour packages') }}
+      {{ service_tile('#car-rental', 'Car rental services', 'Vehicles for getting around on your own schedule.', 'View vehicles', 'customer/img/services/service-car-rental-placeholder.svg', 'Placeholder image for car rental services') }}
+    </div>
+  </div>
+</section>

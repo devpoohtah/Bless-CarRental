@@ -1,0 +1,14 @@
+/* Buttons shared by the customer site and the admin: filled = action, outline = secondary. */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; min-height: 3rem; padding: 0.75rem 1.25rem; border: 2px solid transparent; border-radius: var(--radius-md); font-weight: 600; line-height: 1.1; text-decoration: none; cursor: pointer; transition: background-color 0.15s, color 0.15s, border-color 0.15s; }
+.btn--action { background: var(--peach); color: var(--night); }
+.btn--action:hover { background: var(--peach-hover); }
+.btn--primary { background: var(--night); color: #fff; }
+.btn--primary:hover { background: var(--night-hover); }
+.btn--outline { border-color: var(--night); background: transparent; color: var(--night); }
+.btn--outline:hover { background: rgb(0 1 65 / 0.06); }
+.btn--outline-light { border-color: rgb(255 255 255 / 0.55); background: transparent; color: #fff; }
+.btn--outline-light:hover { background: rgb(255 255 255 / 0.1); }
+.btn--sm { min-height: 2.75rem; padding: 0.5rem 1rem; }
+.btn--lg { padding: 1rem 1.75rem; }
+.btn--block { width: 100%; }
+.btn:disabled { opacity: 0.55; cursor: not-allowed; }

@@ -1,5 +1,5 @@
-{% extends 'base.html' %}
-{% from 'components/cards.html' import detail_dialog %}
+{% extends 'customer/base.html' %}
+{% from 'customer/components/cards.html' import detail_dialog %}
 
 {% block head_extra %}
 {% set structured_data = {
@@ -14,17 +14,17 @@
 {% endblock %}
 
 {% block content %}
-{% include 'sections/hero.html' %}
-{% include 'sections/services.html' %}
-{% include 'sections/about.html' %}
-{% include 'sections/tours.html' %}
-{% include 'sections/destinations.html' %}
-{% include 'sections/car_rental.html' %}
-{% include 'sections/why_us.html' %}
-{% include 'sections/testimonials.html' %}
-{% include 'sections/gallery.html' %}
-{% include 'sections/faq.html' %}
-{% include 'sections/contact.html' %}
+{% include 'customer/sections/hero.html' %}
+{% include 'customer/sections/services.html' %}
+{% include 'customer/sections/about.html' %}
+{% include 'customer/sections/tours.html' %}
+{% include 'customer/sections/destinations.html' %}
+{% include 'customer/sections/car_rental.html' %}
+{% include 'customer/sections/why_us.html' %}
+{% include 'customer/sections/testimonials.html' %}
+{% include 'customer/sections/gallery.html' %}
+{% include 'customer/sections/faq.html' %}
+{% include 'customer/sections/contact.html' %}
 {% endblock %}
 
 {% block dialogs %}

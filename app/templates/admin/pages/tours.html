@@ -1,0 +1,46 @@
+{% extends 'admin/base.html' %}
+{% block title %}Tour Package Management | {{ site.short_name }} Admin{% endblock %}
+
+{% block content %}
+<div class="page">
+  <div class="page-head">
+    <div>
+      <h1>Tour Package Management</h1>
+      <p class="page-lead">Add, edit and manage tour packages, prices and availability.</p>
+    </div>
+    <a class="btn btn--primary" href="/admin/services/tours/new">{{ icon('plus', 'icon') }}Add tour package</a>
+  </div>
+
+  {% if tours %}
+  <div class="table-scroll" role="region" aria-label="Tour packages" tabindex="0">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th scope="col">Package</th>
+          <th scope="col">Duration</th>
+          <th scope="col">Price</th>
+          <th scope="col">Availability</th>
+          <th scope="col"><span class="sr-only">Actions</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for tour in tours %}
+        <tr>
+          <th scope="row"><span class="cell-title">{{ tour.name }}</span><span class="cell-sub">{{ tour.destination }}</span></th>
+          <td data-label="Duration">{{ tour.duration or 'Not set' }}</td>
+          <td data-label="Price">{{ tour.price_php | php('Not set') }}</td>
+          <td data-label="Availability">{{ availability_labels[tour.availability] }}</td>
+          <td class="cell-actions"><a class="btn btn--outline btn--sm" href="/admin/services/tours/{{ tour.id }}/edit">Edit<span class="sr-only"> {{ tour.name }}</span></a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if tours | selectattr('is_sample') | list %}
+  <p class="page-note">These packages are sample data shared with the landing page, not saved records.</p>
+  {% endif %}
+  {% else %}
+  <p class="page-note">No tour packages yet. Use Add tour package to create the first one.</p>
+  {% endif %}
+</div>
+{% endblock %}

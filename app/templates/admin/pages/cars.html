@@ -1,0 +1,48 @@
+{% extends 'admin/base.html' %}
+{% block title %}Car Management | {{ site.short_name }} Admin{% endblock %}
+
+{% block content %}
+<div class="page">
+  <div class="page-head">
+    <div>
+      <h1>Car Management</h1>
+      <p class="page-lead">Add, edit and manage cars, rental rates and availability.</p>
+    </div>
+    <a class="btn btn--primary" href="/admin/services/cars/new">{{ icon('plus', 'icon') }}Add car</a>
+  </div>
+
+  {% if cars %}
+  <div class="table-scroll" role="region" aria-label="Cars" tabindex="0">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th scope="col">Car</th>
+          <th scope="col">Seats</th>
+          <th scope="col">Transmission</th>
+          <th scope="col">Daily rate</th>
+          <th scope="col">Availability</th>
+          <th scope="col"><span class="sr-only">Actions</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for car in cars %}
+        <tr>
+          <th scope="row"><span class="cell-title">{{ car.name }}</span><span class="cell-sub">{{ car.vehicle_type }}</span></th>
+          <td data-label="Seats">{{ 'Not set' if car.seats is none else car.seats }}</td>
+          <td data-label="Transmission">{{ car.transmission or 'Not set' }}</td>
+          <td data-label="Daily rate">{{ car.daily_rate_php | php('Not set') }}</td>
+          <td data-label="Availability">{{ availability_labels[car.availability] }}</td>
+          <td class="cell-actions"><a class="btn btn--outline btn--sm" href="/admin/services/cars/{{ car.id }}/edit">Edit<span class="sr-only"> {{ car.name }}</span></a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if cars | selectattr('is_sample') | list %}
+  <p class="page-note">These cars are sample data shared with the landing page, not saved records.</p>
+  {% endif %}
+  {% else %}
+  <p class="page-note">No cars yet. Use Add car to create the first one.</p>
+  {% endif %}
+</div>
+{% endblock %}

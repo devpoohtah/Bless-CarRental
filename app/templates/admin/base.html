@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ site.short_name }} Admin{% endblock %}</title>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#000141">
+  <link rel="icon" href="{{ static_url('shared/img/bless-logo.webp') }}" type="image/webp">
+  {# Same fonts as the customer site; tokens.css falls back to the system stack if they are unreachable. #}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Figtree:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="{{ static_url('shared/css/tokens.css') }}">
+  <link rel="stylesheet" href="{{ static_url('shared/css/base.css') }}">
+  <link rel="stylesheet" href="{{ static_url('shared/css/buttons.css') }}">
+  <link rel="stylesheet" href="{{ static_url('admin/css/admin.css') }}">
+  {% block head_extra %}{% endblock %}
+</head>
+<body>
+  <a href="#main" class="skip-link">Skip to main content</a>
+  <header class="admin-topbar on-dark">
+    <button type="button" class="admin-menu-btn" data-admin-menu aria-controls="admin-sidebar" aria-expanded="false" aria-label="Menu">{{ icon('menu', 'icon icon--lg') }}</button>
+    <span class="admin-brand__name">{{ site.short_name }} Admin</span>
+  </header>
+  {% include 'admin/components/sidebar.html' %}
+  <div class="admin-scrim" data-admin-scrim hidden></div>
+  <main id="main" class="admin-main">
+    {% block content %}{% endblock %}
+  </main>
+  <script src="{{ static_url('admin/js/admin.js') }}" defer></script>
+</body>
+</html>

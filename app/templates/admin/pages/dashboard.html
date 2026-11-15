@@ -1,0 +1,75 @@
+{% extends 'admin/base.html' %}
+{% block title %}Dashboard Overview | {{ site.short_name }} Admin{% endblock %}
+
+{% macro stat(label, value) %}
+<div class="stat">
+  <dt>{{ label }}</dt>
+  <dd>
+    {% if value is none %}
+    <span aria-hidden="true">&mdash;</span><span class="sr-only">No data yet</span>
+    {% else %}
+    {{ value }}
+    {% endif %}
+  </dd>
+</div>
+{% endmacro %}
+
+{% block content %}
+<div class="page">
+  <div class="page-head">
+    <div>
+      <h1>Dashboard Overview</h1>
+      <p class="page-lead">Placeholder dashboard. Live figures will appear here once cars, tour packages and bookings are connected to the database.</p>
+    </div>
+  </div>
+
+  <section aria-label="Totals">
+    <dl class="stat-grid">
+      {{ stat('Total Cars', stats.total_cars) }}
+      {{ stat('Total Tour Packages', stats.total_tour_packages) }}
+      {{ stat('Total Bookings', stats.total_bookings) }}
+    </dl>
+  </section>
+
+  <section aria-labelledby="status-heading">
+    <h2 id="status-heading">Pending and Approved Bookings</h2>
+    <dl class="stat-grid">
+      {{ stat('Pending', stats.pending_bookings) }}
+      {{ stat('Approved', stats.approved_bookings) }}
+    </dl>
+  </section>
+
+  <section aria-labelledby="recent-heading">
+    <h2 id="recent-heading">Recent Booking Requests</h2>
+    {% if recent_bookings %}
+    <div class="table-scroll" role="region" aria-labelledby="recent-heading" tabindex="0">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th scope="col">Customer</th>
+            <th scope="col">Car or tour</th>
+            <th scope="col">Requested date</th>
+            <th scope="col">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for b in recent_bookings %}
+          <tr>
+            <th scope="row">{{ b.customer_name }}</th>
+            <td data-label="Car or tour">{{ b.item }}</td>
+            <td data-label="Requested date">{{ b.requested_date }}</td>
+            <td data-label="Status">{{ b.status | capitalize }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if recent_bookings | selectattr('is_sample') | list %}
+    <p class="page-note">These rows are placeholders, not real bookings.</p>
+    {% endif %}
+    {% else %}
+    <p class="page-note">No booking requests yet.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

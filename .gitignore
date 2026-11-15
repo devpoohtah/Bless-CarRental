@@ -7,3 +7,9 @@ serviceAccount*.json
 .pytest_cache/
 .vscode/
 Thumbs.db
+
+# Secrets: never commit these
+.env.*
+!.env.example
+secrets/
+*firebase-adminsdk*.json

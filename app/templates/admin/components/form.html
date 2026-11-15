@@ -1,0 +1,44 @@
+{# Form field macros for the admin. Labels sit above inputs; * marks required fields. #}
+{% macro field(id, label, value='', type='text', required=False, hint='', wide=False, inputmode='', min='') %}
+<div class="field{{ ' field--wide' if wide }}">
+  <label for="{{ id }}">{{ label }}{% if required %} <span class="field__req" aria-hidden="true">*</span>{% endif %}</label>
+  <input id="{{ id }}" name="{{ id }}" type="{{ type }}" value="{{ '' if value is none else value }}"{% if required %} required{% endif %}{% if inputmode %} inputmode="{{ inputmode }}"{% endif %}{% if min != '' %} min="{{ min }}"{% endif %}{% if hint %} aria-describedby="{{ id }}-hint"{% endif %}>
+  {% if hint %}<p class="field__hint" id="{{ id }}-hint">{{ hint }}</p>{% endif %}
+</div>
+{% endmacro %}
+
+{% macro textarea(id, label, value='', rows=3, required=False) %}
+<div class="field field--wide">
+  <label for="{{ id }}">{{ label }}{% if required %} <span class="field__req" aria-hidden="true">*</span>{% endif %}</label>
+  <textarea id="{{ id }}" name="{{ id }}" rows="{{ rows }}"{% if required %} required{% endif %}>{{ '' if value is none else value }}</textarea>
+</div>
+{% endmacro %}
+
+{% macro select(id, label, options, selected) %}
+<div class="field">
+  <label for="{{ id }}">{{ label }}</label>
+  <select id="{{ id }}" name="{{ id }}">
+    {% for value, text in options %}
+    <option value="{{ value }}"{% if value == selected %} selected{% endif %}>{{ text }}</option>
+    {% endfor %}
+  </select>
+</div>
+{% endmacro %}
+
+{# Upload is intentionally disabled until image storage is connected. #}
+{% macro image_field(label) %}
+<div class="field field--wide">
+  <label for="image">{{ label }}</label>
+  <input id="image" name="image" type="file" accept="image/jpeg,image/png,image/webp" disabled aria-describedby="image-hint">
+  <p class="field__hint" id="image-hint">Image upload is not available yet. It will be added once image storage is set up.</p>
+</div>
+{% endmacro %}
+
+{% macro form_actions(save_label, cancel_href, delete_label=None) %}
+<p class="note">{{ icon('info', 'icon icon--sm') }}<span>Saving{% if delete_label %}, deleting{% endif %} and image upload are not available yet. They will work once the database and image storage are connected.</span></p>
+<div class="form__actions">
+  <button type="submit" class="btn btn--primary" disabled>{{ save_label }}</button>
+  <a class="btn btn--outline" href="{{ cancel_href }}">Cancel</a>
+  {% if delete_label %}<button type="button" class="btn btn--outline form__delete" disabled>{{ delete_label }}</button>{% endif %}
+</div>
+{% endmacro %}

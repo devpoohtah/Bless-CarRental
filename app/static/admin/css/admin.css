@@ -1,0 +1,103 @@
+/* Admin styles. Colours, fonts, base rules and buttons come from static/shared/css.
+ *
+ * Type scale (Bricolage Grotesque for headings, Figtree for everything else):
+ *   page title  h1   clamp(1.5rem, 1.2rem + 1.5vw, 2rem)   700
+ *   section     h2   1.25rem                                700
+ *   body / lead      1rem                                   400
+ *   table text       0.9375rem   (headers 0.875rem, 600, muted)
+ *   labels           0.9375rem   600      hints / notes 0.875rem muted
+ * Layout: fixed sidebar from 64em up; below that, a top bar with a menu button.
+ */
+:root { --sidebar-w: 16rem; }
+body { background: var(--surface); }
+
+/* ---------- Shell: top bar (small screens) and sidebar ---------- */
+.admin-topbar { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 0.75rem; min-height: 3.5rem; padding: 0.375rem 0.75rem; background: var(--night); border-bottom: 1px solid var(--night-line); }
+.admin-menu-btn { display: inline-flex; align-items: center; justify-content: center; width: 2.75rem; height: 2.75rem; border: 0; border-radius: var(--radius-md); background: none; color: #fff; cursor: pointer; }
+.admin-menu-btn:hover { background: rgb(255 255 255 / 0.1); }
+
+.admin-sidebar { position: fixed; inset: 0 auto 0 0; z-index: 40; display: flex; flex-direction: column; gap: 1.5rem; width: min(18rem, 85vw); padding: 1rem; overflow-y: auto; background: var(--night); visibility: hidden; transform: translateX(-100%); transition: transform 0.2s, visibility 0.2s; }
+.admin-sidebar[data-open] { visibility: visible; transform: none; }
+.admin-scrim { position: fixed; inset: 0; z-index: 35; background: rgb(0 1 65 / 0.55); }
+@media (prefers-reduced-motion: reduce) { .admin-sidebar { transition: none; } }
+
+.admin-brand { display: inline-flex; align-items: center; gap: 0.75rem; padding: 0.25rem 0.5rem; border-radius: var(--radius-md); color: #fff; line-height: 1.1; }
+.admin-brand__logo { width: 2.5rem; height: 2.5rem; }
+.admin-brand__text { display: flex; flex-direction: column; }
+.admin-brand__name { font-family: var(--font-display); font-size: 1.25rem; font-weight: 700; letter-spacing: -0.01em; }
+.admin-brand__sub { font-size: 0.8125rem; color: var(--on-dark-muted); }
+
+.admin-nav { display: flex; flex-direction: column; gap: 0.25rem; }
+.admin-nav__label { margin: 1.25rem 0.75rem 0.25rem; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--on-dark-muted); }
+.admin-nav__link { display: flex; align-items: center; gap: 0.75rem; min-height: 2.75rem; padding: 0.5rem 0.75rem; border-radius: var(--radius-md); font-weight: 500; color: var(--on-dark-muted); transition: background-color 0.15s, color 0.15s; }
+.admin-nav__link:hover { background: rgb(255 255 255 / 0.08); color: #fff; }
+.admin-nav__link[aria-current="page"] { background: rgb(255 255 255 / 0.12); box-shadow: inset 3px 0 0 var(--cyan); font-weight: 600; color: #fff; }
+
+@media (min-width: 64em) {
+  .admin-topbar, .admin-scrim { display: none; }
+  .admin-sidebar { width: var(--sidebar-w); visibility: visible; transform: none; }
+  .admin-main { margin-left: var(--sidebar-w); }
+}
+
+/* ---------- Page structure ---------- */
+.page { max-width: 72rem; padding: 1.5rem 1rem 4rem; }
+@media (min-width: 40em) { .page { padding-inline: 2rem; } }
+@media (min-width: 64em) { .page { padding-block: 2.5rem 4rem; } }
+
+.page-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 1rem 1.5rem; margin-bottom: 1.5rem; }
+.page h1 { font-size: clamp(1.5rem, 1.2rem + 1.5vw, 2rem); font-weight: 700; }
+.page h2 { margin-bottom: 1rem; font-size: 1.25rem; font-weight: 700; }
+.page-lead { max-width: 40rem; margin-top: 0.375rem; color: var(--muted); }
+.page-note { margin-top: 0.75rem; font-size: 0.875rem; color: var(--muted); }
+.page > section + section { margin-top: 2.5rem; }
+.back-link { display: inline-flex; align-items: center; min-height: 2.75rem; margin-bottom: 0.25rem; }
+
+/* ---------- Dashboard stats ---------- */
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: 1rem; }
+.stat { padding: 1.25rem 1.5rem; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--white); box-shadow: var(--shadow-card); }
+.stat dt { font-size: 0.95rem; font-weight: 600; color: var(--muted); }
+.stat dd { margin-top: 0.25rem; font-family: var(--font-display); font-size: 2.25rem; font-weight: 700; line-height: 1.1; color: var(--ink); }
+
+/* ---------- Data tables: scroll box on wide screens, stacked cards on phones ---------- */
+.table-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--white); box-shadow: var(--shadow-card); }
+.data-table { width: 100%; min-width: 40rem; border-collapse: collapse; text-align: left; font-size: 0.9375rem; }
+.data-table th, .data-table td { padding: 0.75rem 1rem; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.data-table thead th { font-size: 0.875rem; font-weight: 600; color: var(--muted); background: var(--surface); }
+.data-table tbody th { font-weight: 600; }
+.data-table tbody tr:last-child > * { border-bottom: 0; }
+.cell-title, .cell-sub { display: block; }
+.cell-sub { font-size: 0.875rem; font-weight: 400; color: var(--muted); }
+.cell-actions { text-align: right; }
+
+@media (max-width: 47.99em) {
+  .table-scroll { overflow: visible; border: 0; border-radius: 0; background: none; box-shadow: none; }
+  .data-table { min-width: 0; }
+  .data-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .data-table, .data-table tbody, .data-table tr, .data-table th, .data-table td { display: block; }
+  .data-table tr { margin-bottom: 0.75rem; padding: 0.5rem 0; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--white); box-shadow: var(--shadow-card); }
+  .data-table th, .data-table td, .data-table tbody tr:last-child > * { padding: 0.375rem 1rem; border: 0; }
+  .data-table tbody th { padding-block: 0.5rem; font-size: 1.0625rem; }
+  .data-table td[data-label] { display: flex; justify-content: space-between; gap: 1rem; text-align: right; }
+  .data-table td[data-label]::before { content: attr(data-label); font-weight: 600; text-align: left; color: var(--muted); }
+  .cell-actions { padding-top: 0.5rem; }
+}
+
+/* ---------- Forms ---------- */
+.form { display: grid; gap: 1.5rem; max-width: 48rem; }
+.form__group { display: grid; gap: 1rem; padding: 1.25rem; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--white); box-shadow: var(--shadow-card); }
+.form__group > h2 { margin-bottom: 0; }
+.field { display: grid; gap: 0.375rem; align-content: start; min-width: 0; }
+.field label { font-size: 0.9375rem; font-weight: 600; }
+.field__req { color: var(--muted); }
+.field__hint { font-size: 0.875rem; color: var(--muted); }
+.field input, .field select, .field textarea { width: 100%; min-height: 3rem; padding: 0.625rem 0.875rem; border: 1px solid var(--muted); border-radius: var(--radius-md); background: var(--white); font: inherit; font-size: 1rem; color: var(--ink); }
+.field textarea { min-height: 5rem; resize: vertical; }
+.field input:disabled { border-color: var(--line); background: var(--surface); color: var(--muted); cursor: not-allowed; }
+.form__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; }
+.form__delete { margin-inline-start: auto; }
+.form > .note { margin-top: 0; }
+
+@media (min-width: 40em) {
+  .form__group { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 1.5rem; }
+  .form__group > h2, .field--wide { grid-column: 1 / -1; }
+}
