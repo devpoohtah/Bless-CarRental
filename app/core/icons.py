@@ -9,6 +9,27 @@ Add an icon by pasting its inner SVG markup into ICONS; use it in a template wit
 from markupsafe import Markup, escape
 
 ICONS: dict[str, str] = {
+    "panel-left-close": (
+        '<rect width="18" height="18" x="3" y="3" rx="2"/> <path d="M9 3v18"/> <path d="m16 15-3-3 3-3"/>'
+    ),
+    "panel-left-open": (
+        '<rect width="18" height="18" x="3" y="3" rx="2"/> <path d="M9 3v18"/> <path d="m14 9 3 3-3 3"/>'
+    ),
+    "log-out": (
+        '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/> <path d="m16 17 5-5-5-5"/> <path d="M21 12H9"/>'
+    ),
+    "calendar": (
+        '<path d="M8 2v4"/> <path d="M16 2v4"/> <rect width="18" height="18" x="3" y="4" rx="2"/> <path d="M3 10h18"/>'
+    ),
+    "clipboard-list": (
+        '<rect width="8" height="4" x="8" y="2" rx="1" ry="1"/> <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/> <path d="M12 11h4"/> <path d="M12 16h4"/> <path d="M8 11h.01"/> <path d="M8 16h.01"/>'
+    ),
+    "chevron-left": (
+        '<path d="m15 18-6-6 6-6"/>'
+    ),
+    "chevron-right": (
+        '<path d="m9 18 6-6-6-6"/>'
+    ),
     "layout-dashboard": (
         '<rect width="7" height="9" x="3" y="3" rx="1"/> <rect width="7" height="5" x="14" y="3" rx="1"/> <rect width="7" height="9" x="14" y="12" rx="1"/> <rect width="7" height="5" x="3" y="16" rx="1"/>'
     ),

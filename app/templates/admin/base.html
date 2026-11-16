@@ -6,6 +6,8 @@
   <title>{% block title %}{{ site.short_name }} Admin{% endblock %}</title>
   <meta name="robots" content="noindex, nofollow">
   <meta name="theme-color" content="#000141">
+  {# Restores the collapsed sidebar before first paint so the layout does not jump. #}
+  <script>try{if(localStorage.getItem("admin-sidebar")==="collapsed")document.documentElement.dataset.sidebar="collapsed"}catch(e){}</script>
   <link rel="icon" href="{{ static_url('shared/img/bless-logo.webp') }}" type="image/webp">
   {# Same fonts as the customer site; tokens.css falls back to the system stack if they are unreachable. #}
   <link rel="preconnect" href="https://fonts.googleapis.com">

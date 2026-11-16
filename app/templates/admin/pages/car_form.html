@@ -9,31 +9,34 @@
   <div class="page-head">
     <div>
       <h1>{{ 'Edit car' if editing else 'Add car' }}</h1>
-      <p class="page-lead">{{ car.name if editing else 'Enter the car details, rental rate and availability.' }} Fields marked * are required.</p>
+      <p class="page-lead">{{ (car.name ~ '.') if editing else 'Enter the car details, rental rate and availability.' }} Fields marked * are required.</p>
     </div>
   </div>
 
-  <form class="form" method="post" enctype="multipart/form-data">
-    <section class="form__group" aria-labelledby="car-details">
-      <h2 id="car-details">Details</h2>
-      {{ field('name', 'Car name', car.name if editing else '', required=True) }}
-      {{ field('vehicle_type', 'Vehicle type', car.vehicle_type if editing else '', required=True, hint='For example: Sedan, SUV or Van.') }}
-      {{ field('seats', 'Seats', car.seats if editing else '', type='number', inputmode='numeric', min=1) }}
-      {{ field('transmission', 'Transmission', car.transmission if editing else '', hint='For example: Automatic or Manual.') }}
-    </section>
+  <form class="form form--split" method="post" enctype="multipart/form-data">
+    <div class="form__main">
+      <section class="form__group" aria-labelledby="car-details">
+        <h2 id="car-details">Details</h2>
+        {{ field('name', 'Car name', car.name if editing else '', required=True) }}
+        {{ field('vehicle_type', 'Vehicle type', car.vehicle_type if editing else '', required=True, hint='For example: Sedan, SUV or Van.') }}
+        {{ field('seats', 'Seats', car.seats if editing else '', type='number', inputmode='numeric', min=1) }}
+        {{ field('transmission', 'Transmission', car.transmission if editing else '', hint='For example: Automatic or Manual.') }}
+      </section>
 
-    <section class="form__group" aria-labelledby="car-rates">
-      <h2 id="car-rates">Rate and availability</h2>
-      {{ field('daily_rate_php', 'Daily rate (PHP)', car.daily_rate_php if editing else '', type='number', inputmode='numeric', min=0) }}
-      {{ select('availability', 'Availability', availability_labels.items(), car.availability if editing else 'inquire') }}
-    </section>
+      <section class="form__group" aria-labelledby="car-rates">
+        <h2 id="car-rates">Rate and availability</h2>
+        {{ field('daily_rate_php', 'Daily rate (PHP)', car.daily_rate_php if editing else '', type='number', inputmode='numeric', min=0) }}
+        {{ select('availability', 'Availability', availability_labels.items(), car.availability if editing else 'inquire') }}
+      </section>
+    </div>
 
-    <section class="form__group" aria-labelledby="car-image">
-      <h2 id="car-image">Image</h2>
-      {{ image_field('Car image') }}
-    </section>
-
-    {{ form_actions('Save car', '/admin/services/cars', 'Delete car' if editing) }}
+    <div class="form__side">
+      <section class="form__group" aria-labelledby="car-image">
+        <h2 id="car-image">Image</h2>
+        {{ image_field('Car image') }}
+      </section>
+      {{ form_actions('Save car', '/admin/services/cars', 'Delete car' if editing) }}
+    </div>
   </form>
 </div>
 {% endblock %}

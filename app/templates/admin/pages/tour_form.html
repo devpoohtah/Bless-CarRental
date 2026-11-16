@@ -9,32 +9,35 @@
   <div class="page-head">
     <div>
       <h1>{{ 'Edit tour package' if editing else 'Add tour package' }}</h1>
-      <p class="page-lead">{{ tour.name if editing else 'Enter the package details, price and availability.' }} Fields marked * are required.</p>
+      <p class="page-lead">{{ (tour.name ~ '.') if editing else 'Enter the package details, price and availability.' }} Fields marked * are required.</p>
     </div>
   </div>
 
-  <form class="form" method="post" enctype="multipart/form-data">
-    <section class="form__group" aria-labelledby="tour-details">
-      <h2 id="tour-details">Details</h2>
-      {{ field('name', 'Package name', tour.name if editing else '', required=True, wide=True) }}
-      {{ field('destination', 'Destination', tour.destination if editing else '', required=True) }}
-      {{ field('duration', 'Duration', tour.duration if editing else '', hint='For example: 1 day.') }}
-      {{ textarea('summary', 'Short summary', tour.summary if editing else '', rows=2, required=True) }}
-      {{ textarea('description', 'Full description', tour.description if editing else '', rows=6, required=True) }}
-    </section>
+  <form class="form form--split" method="post" enctype="multipart/form-data">
+    <div class="form__main">
+      <section class="form__group" aria-labelledby="tour-details">
+        <h2 id="tour-details">Details</h2>
+        {{ field('name', 'Package name', tour.name if editing else '', required=True, wide=True) }}
+        {{ field('destination', 'Destination', tour.destination if editing else '', required=True) }}
+        {{ field('duration', 'Duration', tour.duration if editing else '', hint='For example: 1 day.') }}
+        {{ textarea('summary', 'Short summary', tour.summary if editing else '', rows=2, required=True) }}
+        {{ textarea('description', 'Full description', tour.description if editing else '', rows=6, required=True) }}
+      </section>
 
-    <section class="form__group" aria-labelledby="tour-price">
-      <h2 id="tour-price">Price and availability</h2>
-      {{ field('price_php', 'Price (PHP)', tour.price_php if editing else '', type='number', inputmode='numeric', min=0) }}
-      {{ select('availability', 'Availability', availability_labels.items(), tour.availability if editing else 'inquire') }}
-    </section>
+      <section class="form__group" aria-labelledby="tour-price">
+        <h2 id="tour-price">Price and availability</h2>
+        {{ field('price_php', 'Price (PHP)', tour.price_php if editing else '', type='number', inputmode='numeric', min=0) }}
+        {{ select('availability', 'Availability', availability_labels.items(), tour.availability if editing else 'inquire') }}
+      </section>
+    </div>
 
-    <section class="form__group" aria-labelledby="tour-image">
-      <h2 id="tour-image">Image</h2>
-      {{ image_field('Package image') }}
-    </section>
-
-    {{ form_actions('Save tour package', '/admin/services/tours', 'Delete tour package' if editing) }}
+    <div class="form__side">
+      <section class="form__group" aria-labelledby="tour-image">
+        <h2 id="tour-image">Image</h2>
+        {{ image_field('Package image') }}
+      </section>
+      {{ form_actions('Save tour package', '/admin/services/tours', 'Delete tour package' if editing) }}
+    </div>
   </form>
 </div>
 {% endblock %}

@@ -1,0 +1,53 @@
+{% extends 'admin/base.html' %}
+{% block title %}Booking Management | {{ site.short_name }} Admin{% endblock %}
+
+{% block content %}
+<div class="page">
+  <div class="page-head">
+    <div>
+      <h1>Booking Management</h1>
+      <p class="page-lead">View booking requests, customer details and booking status.</p>
+    </div>
+  </div>
+
+  <nav class="filter-tabs" aria-label="Filter bookings by type">
+    <a href="/admin/bookings"{% if not active_type %} aria-current="true"{% endif %}>All</a>
+    <a href="/admin/bookings?type=car"{% if active_type == 'car' %} aria-current="true"{% endif %}>Car rentals</a>
+    <a href="/admin/bookings?type=tour"{% if active_type == 'tour' %} aria-current="true"{% endif %}>Tour bookings</a>
+  </nav>
+
+  {% if bookings %}
+  <div class="table-scroll" role="region" aria-label="Bookings" tabindex="0">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th scope="col">Customer</th>
+          <th scope="col">Car or tour</th>
+          <th scope="col">Dates</th>
+          <th scope="col">Status</th>
+          <th scope="col">Payment</th>
+          <th scope="col"><span class="sr-only">Actions</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in bookings %}
+        <tr>
+          <th scope="row"><span class="cell-title">{{ b.customer_name }}</span><span class="cell-sub">{{ type_labels[b.booking_type] }}</span></th>
+          <td data-label="Car or tour">{{ b.item_name }}</td>
+          <td data-label="Dates">{{ b.start_date | date_range(b.end_date) }}</td>
+          <td data-label="Status">{{ status_labels[b.status] }}</td>
+          <td data-label="Payment">{{ payment_labels[b.payment_status] }}</td>
+          <td class="cell-actions"><a class="btn btn--outline btn--sm" href="/admin/bookings/{{ b.id }}">View<span class="sr-only"> booking of {{ b.customer_name }}</span></a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if bookings | selectattr('is_sample') | list %}
+  <p class="page-note">These bookings are sample data, not real bookings.</p>
+  {% endif %}
+  {% else %}
+  <p class="page-note">No bookings match this filter.</p>
+  {% endif %}
+</div>
+{% endblock %}

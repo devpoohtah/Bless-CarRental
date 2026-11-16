@@ -19,7 +19,7 @@ def test_dashboard_has_all_sections():
 def test_dashboard_shows_placeholders_not_invented_numbers():
     html = client.get("/admin/dashboard").text
     assert "No data yet" in html
-    assert "placeholders, not real bookings" in html
+    assert "sample data, not real bookings" in html
 
 
 def test_dashboard_is_not_indexed_or_linked_from_landing_page():
@@ -60,8 +60,10 @@ def test_sidebar_links_and_current_page():
     html = client.get("/admin/dashboard").text
     for href in ("/admin/dashboard", "/admin/services/cars", "/admin/services/tours"):
         assert f'href="{href}"' in html, href
-    assert re.search(r'href="/admin/dashboard" aria-current="page"', html)
-    assert "/admin/services/cars\" aria-current" not in html
+    assert re.search(r'href="/admin/dashboard"[^>]*aria-current="page"', html)
+    assert not re.search(r'href="/admin/services/cars"[^>]*aria-current', html)
+    for href in ("/admin/bookings", "/admin/calendar"):
+        assert f'href="{href}"' in html, href
 
 
 def test_admin_uses_shared_logo_and_favicon():
@@ -69,3 +71,22 @@ def test_admin_uses_shared_logo_and_favicon():
     assert html.count("/static/shared/img/bless-logo.webp") >= 2  # favicon link + sidebar logo
     assert client.get("/static/shared/img/bless-logo.webp").status_code == 200
     assert client.get("/static/customer/img/bless-logo.webp").status_code == 404
+
+
+def test_sidebar_has_collapse_and_sign_out():
+    html = client.get("/admin/dashboard").text
+    assert "data-admin-collapse" in html and 'aria-expanded="true"' in html
+    assert re.search(r'<form method="post" action="/admin/logout">', html)
+    assert "Sign out" in html
+
+
+def test_logout_is_post_only_and_leaves_the_admin():
+    assert client.get("/admin/logout").status_code == 405
+    response = client.post("/admin/logout", follow_redirects=False)
+    assert response.status_code == 303 and response.headers["location"] == "/"
+
+
+def test_dashboard_recent_requests_come_from_bookings():
+    html = client.get("/admin/dashboard").text
+    assert "Customer 1" in html
+    assert 'href="/admin/bookings/sample-' in html

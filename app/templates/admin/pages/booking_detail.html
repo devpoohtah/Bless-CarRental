@@ -1,0 +1,92 @@
+{% extends 'admin/base.html' %}
+{% from 'admin/components/form.html' import select %}
+{% set is_car = booking.booking_type == 'car' %}
+{% block title %}{{ booking.customer_name }} | Booking | {{ site.short_name }} Admin{% endblock %}
+
+{% macro fact(label, value, wide=False) %}
+<div class="fact{{ ' fact--wide' if wide }}"><dt>{{ label }}</dt><dd>{{ value }}</dd></div>
+{% endmacro %}
+
+{% block content %}
+<div class="page">
+  <a class="link back-link" href="/admin/bookings">Back to Booking Management</a>
+  <div class="page-head">
+    <div>
+      <h1>{{ booking.customer_name }}</h1>
+      <p class="page-lead">{{ type_labels[booking.booking_type] }} &middot; {{ booking.item_name }}</p>
+    </div>
+  </div>
+
+  <div class="detail">
+    <div class="detail__main">
+      <section class="card" aria-labelledby="customer-heading">
+        <h2 id="customer-heading">Customer information</h2>
+        <dl class="facts">
+          {{ fact('Name', booking.customer_name) }}
+          {{ fact('Phone', booking.customer_phone) }}
+          {{ fact('Email', booking.customer_email, wide=True) }}
+        </dl>
+      </section>
+
+      <section class="card" aria-labelledby="booking-heading">
+        <h2 id="booking-heading">Booking details</h2>
+        <dl class="facts">
+          {{ fact('Type', type_labels[booking.booking_type]) }}
+          {{ fact('Selected car' if is_car else 'Selected tour package', booking.item_name) }}
+          {{ fact('Pick-up date' if is_car else 'Start date', booking.start_date | long_date) }}
+          {{ fact('Return date' if is_car else 'End date', booking.end_date | long_date) }}
+          {{ fact('Requested on', booking.requested_on | long_date) }}
+          {{ fact('Details', booking.details or 'None', wide=True) }}
+        </dl>
+      </section>
+
+      <section class="card" aria-labelledby="history-heading">
+        <h2 id="history-heading">Booking history</h2>
+        <ol class="timeline">
+          {% for change in history %}
+          <li>
+            <strong>{{ status_labels[change.status] }}</strong>{% if loop.first %} <span class="timeline__current">Current</span>{% endif %}
+            <span class="cell-sub">{{ change.changed_on | long_date }}</span>
+          </li>
+          {% endfor %}
+        </ol>
+      </section>
+    </div>
+
+    <div class="detail__side">
+      <section class="card" aria-labelledby="status-heading">
+        <h2 id="status-heading">Status</h2>
+        <p class="status-line"><span>Current status</span><strong>{{ status_labels[booking.status] }}</strong></p>
+        {% if next_options %}
+        {% if booking.status == 'pending' %}
+        <div class="action-row">
+          <button type="button" class="btn btn--primary" disabled>Approve</button>
+          <button type="button" class="btn btn--outline" disabled>Reject</button>
+        </div>
+        {% endif %}
+        <div class="stack">
+          {{ select('status', 'Update status', next_options, next_options[0][0], disabled=True) }}
+          <button type="button" class="btn btn--outline" disabled>Save status</button>
+        </div>
+        {% if 'cancelled' in next_options | map(attribute=0) | list %}
+        <button type="button" class="btn btn--outline" disabled>Cancel booking</button>
+        {% endif %}
+        {% else %}
+        <p class="page-note">This booking is {{ status_labels[booking.status] | lower }}, so its status can no longer be changed.</p>
+        {% endif %}
+      </section>
+
+      <section class="card" aria-labelledby="payment-heading">
+        <h2 id="payment-heading">Payment</h2>
+        <p class="status-line"><span>Payment status</span><strong>{{ payment_labels[booking.payment_status] }}</strong></p>
+        <div class="stack">
+          {{ select('payment_status', 'Update payment status', payment_labels.items(), booking.payment_status, disabled=True) }}
+          <button type="button" class="btn btn--outline" disabled>Save payment status</button>
+        </div>
+      </section>
+
+      <p class="note">{{ icon('info', 'icon icon--sm') }}<span>Status and payment changes are not available yet. They will work once the database is connected.</span></p>
+    </div>
+  </div>
+</div>
+{% endblock %}

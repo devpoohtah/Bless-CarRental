@@ -14,10 +14,10 @@
 </div>
 {% endmacro %}
 
-{% macro select(id, label, options, selected) %}
+{% macro select(id, label, options, selected, disabled=False) %}
 <div class="field">
   <label for="{{ id }}">{{ label }}</label>
-  <select id="{{ id }}" name="{{ id }}">
+  <select id="{{ id }}" name="{{ id }}"{% if disabled %} disabled{% endif %}>
     {% for value, text in options %}
     <option value="{{ value }}"{% if value == selected %} selected{% endif %}>{{ text }}</option>
     {% endfor %}

@@ -21,7 +21,7 @@ def test_car_list_shows_cars_and_add_link():
     assert 'href="/admin/services/cars/new"' in html
     assert 'href="/admin/services/cars/family-suv/edit"' in html
     assert "sample data" in html
-    assert re.search(r'href="/admin/services/cars" aria-current="page"', html)
+    assert re.search(r'href="/admin/services/cars"[^>]*aria-current="page"', html)
 
 
 def test_tour_list_shows_packages_and_add_link():
@@ -29,7 +29,7 @@ def test_tour_list_shows_packages_and_add_link():
     assert "Tour Package Management" in html
     assert "Island Day Tour" in html
     assert 'href="/admin/services/tours/new"' in html
-    assert re.search(r'href="/admin/services/tours" aria-current="page"', html)
+    assert re.search(r'href="/admin/services/tours"[^>]*aria-current="page"', html)
 
 
 def test_car_form_new_is_blank_and_edit_is_prefilled():

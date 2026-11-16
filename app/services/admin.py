@@ -5,9 +5,9 @@ get_dashboard_stats() and list_recent_bookings() with Firestore reads and keep r
 the same schemas; the route and template will not need to change.
 """
 
-from app.schemas.admin import BookingRequest, DashboardStats
+from app.schemas.admin import DashboardStats
 from app.schemas.catalog import TourPackage, Vehicle
-from app.services import content
+from app.services import bookings, content
 
 # Same wording the landing page uses for each availability value.
 AVAILABILITY_LABELS = {
@@ -22,23 +22,8 @@ def get_dashboard_stats() -> DashboardStats:
     return DashboardStats()
 
 
-def list_recent_bookings(limit: int = 5) -> list[BookingRequest]:
-    rows = [
-        BookingRequest(id="sample-1", customer_name="Placeholder customer 1",
-                       item="Placeholder car rental", requested_date="Placeholder date",
-                       status="pending"),
-        BookingRequest(id="sample-2", customer_name="Placeholder customer 2",
-                       item="Placeholder tour package", requested_date="Placeholder date",
-                       status="approved"),
-        BookingRequest(id="sample-3", customer_name="Placeholder customer 3",
-                       item="Placeholder car rental", requested_date="Placeholder date",
-                       status="pending"),
-    ]
-    return rows[:limit]
-
-
 def get_dashboard_context() -> dict:
-    return {"stats": get_dashboard_stats(), "recent_bookings": list_recent_bookings()}
+    return {"stats": get_dashboard_stats(), "recent_bookings": bookings.recent_bookings()}
 
 
 # Service management. Until Firestore is connected these return the landing page sample

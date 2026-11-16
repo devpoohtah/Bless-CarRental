@@ -1,6 +1,9 @@
 {% set active = active_nav | default('') %}
+{% macro link(href, key, icon_name, label, active) %}
+<a class="admin-nav__link" href="{{ href }}" title="{{ label }}"{% if active == key %} aria-current="page"{% endif %}>{{ icon(icon_name, 'icon') }}<span class="admin-nav__text">{{ label }}</span></a>
+{% endmacro %}
 <aside id="admin-sidebar" class="admin-sidebar on-dark">
-  <a class="admin-brand" href="/admin/dashboard">
+  <a class="admin-brand" href="/admin/dashboard" title="{{ site.short_name }} Admin">
     <img class="admin-brand__logo" src="{{ static_url('shared/img/bless-logo.webp') }}" alt="" width="40" height="40">
     <span class="admin-brand__text">
       <span class="admin-brand__name">{{ site.short_name }}</span>
@@ -8,9 +11,22 @@
     </span>
   </a>
   <nav class="admin-nav" aria-label="Admin">
-    <a class="admin-nav__link" href="/admin/dashboard"{% if active == 'dashboard' %} aria-current="page"{% endif %}>{{ icon('layout-dashboard', 'icon') }}<span>Dashboard</span></a>
-    <p class="admin-nav__label" id="nav-services">Service Management</p>
-    <a class="admin-nav__link" href="/admin/services/cars"{% if active == 'cars' %} aria-current="page"{% endif %}>{{ icon('car-front', 'icon') }}<span>Cars</span></a>
-    <a class="admin-nav__link" href="/admin/services/tours"{% if active == 'tours' %} aria-current="page"{% endif %}>{{ icon('compass', 'icon') }}<span>Tour Packages</span></a>
+    {{ link('/admin/dashboard', 'dashboard', 'layout-dashboard', 'Dashboard', active) }}
+    <p class="admin-nav__label">Service Management</p>
+    {{ link('/admin/services/cars', 'cars', 'car-front', 'Cars', active) }}
+    {{ link('/admin/services/tours', 'tours', 'compass', 'Tour Packages', active) }}
+    <p class="admin-nav__label">Booking Management</p>
+    {{ link('/admin/bookings', 'bookings', 'clipboard-list', 'Bookings', active) }}
+    {{ link('/admin/calendar', 'calendar', 'calendar', 'Calendar', active) }}
   </nav>
+  <div class="admin-sidebar__foot">
+    <button type="button" class="admin-nav__link admin-nav__btn admin-collapse" data-admin-collapse aria-expanded="true" title="Collapse sidebar">
+      <span class="admin-collapse__icon admin-collapse__icon--close">{{ icon('panel-left-close', 'icon') }}</span>
+      <span class="admin-collapse__icon admin-collapse__icon--open">{{ icon('panel-left-open', 'icon') }}</span>
+      <span class="admin-nav__text" data-collapse-label>Collapse</span>
+    </button>
+    <form method="post" action="/admin/logout">
+      <button type="submit" class="admin-nav__link admin-nav__btn" title="Sign out">{{ icon('log-out', 'icon') }}<span class="admin-nav__text">Sign out</span></button>
+    </form>
+  </div>
 </aside>

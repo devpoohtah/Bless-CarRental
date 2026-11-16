@@ -1,5 +1,6 @@
 """Shared Jinja2 environment so every route renders with the same helpers."""
 
+from datetime import date
 from pathlib import Path
 
 from fastapi.templating import Jinja2Templates
@@ -27,4 +28,19 @@ def php(amount: int | None, fallback: str = "Contact for rates") -> str:
 
 
 templates.env.globals.update(icon=icon, static_url=static_url, site=settings)
-templates.env.filters["php"] = php
+def short_date(day: date) -> str:
+    return f"{day:%b} {day.day}"
+
+
+def long_date(day: date) -> str:
+    return f"{day:%a}, {day:%b} {day.day}, {day.year}"
+
+
+def date_range(start: date, end: date) -> str:
+    """'Nov 10, 2026' for a single day, 'Nov 3 – Nov 5, 2026' for a range."""
+    if start == end:
+        return f"{short_date(start)}, {start.year}"
+    return f"{short_date(start)} \u2013 {short_date(end)}, {end.year}"
+
+
+templates.env.filters.update(php=php, short_date=short_date, long_date=long_date, date_range=date_range)
