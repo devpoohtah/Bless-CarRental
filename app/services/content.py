@@ -1,13 +1,13 @@
 """Content for the landing page.
 
-Today this is static sample data. When Firebase is added, replace the bodies of the
-list_* functions with Firestore reads (see app/db) and keep returning the same schemas;
-the routes and templates will not need to change.
+Tours and vehicles are read from Firestore when it is connected. Destinations, testimonials,
+gallery and FAQs are still static sample data.
 
 Everything marked is_sample / is_placeholder is NOT confirmed business information.
 Edit it here, or set the flag to False once the real details are in.
 """
 
+from app.db import firebase, repositories
 from app.schemas.catalog import (
     Destination,
     FaqItem,
@@ -35,7 +35,7 @@ def _photo(src: str, alt: str) -> Photo:
     return Photo(src=src, alt=alt)
 
 
-def list_tours() -> list[TourPackage]:
+def _sample_tours() -> list[TourPackage]:
     return [
         TourPackage(
             id="island-day-tour",
@@ -77,6 +77,20 @@ def list_tours() -> list[TourPackage]:
                          "Placeholder image of a white sand beach and turquoise sea"),
         ),
     ]
+
+
+# Tours and vehicles come from Firestore once it is connected (Admin > Service Management);
+# without credentials the sample listings below keep the site and the tests working.
+def list_tours() -> list[TourPackage]:
+    if firebase.is_configured():
+        return sorted(repositories.list_all(repositories.TOURS, TourPackage), key=lambda t: t.name.lower())
+    return _sample_tours()
+
+
+def list_vehicles() -> list[Vehicle]:
+    if firebase.is_configured():
+        return sorted(repositories.list_all(repositories.CARS, Vehicle), key=lambda v: v.name.lower())
+    return _sample_vehicles()
 
 
 def list_destinations() -> list[Destination]:
@@ -129,7 +143,7 @@ def list_destinations() -> list[Destination]:
     ]
 
 
-def list_vehicles() -> list[Vehicle]:
+def _sample_vehicles() -> list[Vehicle]:
     return [
         Vehicle(
             id="compact-sedan",

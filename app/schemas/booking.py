@@ -21,7 +21,7 @@ class Booking(BaseModel):
     booking_type: BookingType
     customer_name: str
     customer_phone: str
-    customer_email: str
+    customer_email: str = ""
     item_name: str  # the car or tour package that was selected
     start_date: date  # pick-up date for a car, tour date for a tour package
     end_date: date  # return date for a car, last day of the tour
@@ -30,4 +30,4 @@ class Booking(BaseModel):
     status: BookingStatus
     payment_status: PaymentStatus
     history: list[StatusChange]  # oldest first
-    is_sample: bool = True  # placeholder row, not a real booking
+    is_sample: bool = True  # placeholder row, not a real booking; saved bookings set this to False

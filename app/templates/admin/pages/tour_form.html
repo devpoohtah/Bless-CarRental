@@ -1,5 +1,5 @@
 {% extends 'admin/base.html' %}
-{% from 'admin/components/form.html' import field, textarea, select, image_field, form_actions %}
+{% from 'admin/components/form.html' import field, textarea, select, image_field, form_actions, errors_box %}
 {% set editing = tour is not none %}
 {% block title %}{{ 'Edit tour package' if editing else 'Add tour package' }} | {{ site.short_name }} Admin{% endblock %}
 
@@ -13,30 +13,31 @@
     </div>
   </div>
 
+  {{ errors_box(errors) }}
   <form class="form form--split" method="post" enctype="multipart/form-data">
     <div class="form__main">
       <section class="form__group" aria-labelledby="tour-details">
         <h2 id="tour-details">Details</h2>
-        {{ field('name', 'Package name', tour.name if editing else '', required=True, wide=True) }}
-        {{ field('destination', 'Destination', tour.destination if editing else '', required=True) }}
-        {{ field('duration', 'Duration', tour.duration if editing else '', hint='For example: 1 day.') }}
-        {{ textarea('summary', 'Short summary', tour.summary if editing else '', rows=2, required=True) }}
-        {{ textarea('description', 'Full description', tour.description if editing else '', rows=6, required=True) }}
+        {{ field('name', 'Package name', form.name, required=True, wide=True) }}
+        {{ field('destination', 'Destination', form.destination, required=True) }}
+        {{ field('duration', 'Duration', form.duration, hint='For example: 1 day.') }}
+        {{ textarea('summary', 'Short summary', form.summary, rows=2, required=True) }}
+        {{ textarea('description', 'Full description', form.description, rows=6, required=True) }}
       </section>
 
       <section class="form__group" aria-labelledby="tour-price">
         <h2 id="tour-price">Price and availability</h2>
-        {{ field('price_php', 'Price (PHP)', tour.price_php if editing else '', type='number', inputmode='numeric', min=0) }}
-        {{ select('availability', 'Availability', availability_labels.items(), tour.availability if editing else 'inquire') }}
+        {{ field('price_php', 'Price (PHP)', form.price_php, type='number', inputmode='numeric', min=0) }}
+        {{ select('availability', 'Availability', availability_labels.items(), form.availability or 'inquire') }}
       </section>
     </div>
 
     <div class="form__side">
       <section class="form__group" aria-labelledby="tour-image">
         <h2 id="tour-image">Image</h2>
-        {{ image_field('Package image') }}
+        {{ image_field('Package image', tour.photo if editing) }}
       </section>
-      {{ form_actions('Save tour package', '/admin/services/tours', 'Delete tour package' if editing) }}
+      {{ form_actions('Save tour package', '/admin/services/tours', 'Delete tour package' if editing, '/admin/services/tours/' ~ tour.id ~ '/delete' if editing, 'Delete this tour package? This cannot be undone.') }}
     </div>
   </form>
 </div>

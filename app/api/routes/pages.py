@@ -11,7 +11,7 @@ router = APIRouter()
 
 
 @router.get("/", response_class=HTMLResponse, include_in_schema=False)
-async def home(request: Request) -> HTMLResponse:
+def home(request: Request) -> HTMLResponse:
     context = get_home_context() | {"current_year": date.today().year}
     return templates.TemplateResponse(request, "customer/pages/home.html", context)
 

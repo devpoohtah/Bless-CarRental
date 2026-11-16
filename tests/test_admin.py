@@ -80,10 +80,11 @@ def test_sidebar_has_collapse_and_sign_out():
     assert "Sign out" in html
 
 
-def test_logout_is_post_only_and_leaves_the_admin():
+def test_logout_is_post_only_clears_the_cookie_and_returns_to_login():
     assert client.get("/admin/logout").status_code == 405
     response = client.post("/admin/logout", follow_redirects=False)
-    assert response.status_code == 303 and response.headers["location"] == "/"
+    assert response.status_code == 303 and response.headers["location"] == "/admin/login"
+    assert "bless_admin_session" in response.headers["set-cookie"]
 
 
 def test_dashboard_recent_requests_come_from_bookings():

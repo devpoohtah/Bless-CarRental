@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in | {{ site.short_name }} Admin</title>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#000141">
+  <link rel="icon" href="{{ static_url('shared/img/bless-logo.webp') }}" type="image/webp">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Figtree:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="{{ static_url('shared/css/tokens.css') }}">
+  <link rel="stylesheet" href="{{ static_url('shared/css/base.css') }}">
+  <link rel="stylesheet" href="{{ static_url('shared/css/buttons.css') }}">
+  <link rel="stylesheet" href="{{ static_url('admin/css/admin.css') }}">
+</head>
+<body>
+  <main id="main" class="login">
+    <div class="login__card">
+      <div class="login__brand">
+        <img src="{{ static_url('shared/img/bless-logo.webp') }}" alt="" width="48" height="48">
+        <div>
+          <h1>{{ site.short_name }} Admin</h1>
+          <p class="page-note" style="margin:0">Sign in with an authorized account.</p>
+        </div>
+      </div>
+
+      {% if firebase_config %}
+      <div id="login-error" class="form-errors" role="alert" hidden></div>
+      <button type="button" class="btn btn--outline btn--block" id="google-signin">Continue with Google</button>
+      <p class="login__or">or sign in with email</p>
+      <form class="form" id="password-form">
+        <div class="field">
+          <label for="email">Email</label>
+          <input id="email" name="email" type="email" autocomplete="username" required>
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" autocomplete="current-password" required>
+        </div>
+        <button type="submit" class="btn btn--primary btn--block">Sign in</button>
+      </form>
+      {# Public Firebase web config (not secrets), read by login.js. tojson escapes it safely. #}
+      <script type="application/json" id="firebase-config">{{ firebase_config | tojson }}</script>
+      <script type="module" src="{{ static_url('admin/js/login.js') }}"></script>
+      {% else %}
+      <p class="form-errors" role="alert">Sign-in is not set up. Add the FIREBASE_* web values to .env and restart the server.</p>
+      {% endif %}
+    </div>
+  </main>
+</body>
+</html>

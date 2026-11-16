@@ -3,11 +3,13 @@
 
 {% block content %}
 <div class="page">
+  {% include 'admin/components/notice.html' %}
   <div class="page-head">
     <div>
       <h1>Booking Management</h1>
       <p class="page-lead">View booking requests, customer details and booking status.</p>
     </div>
+    <a class="btn btn--primary" href="/admin/bookings/new">{{ icon('plus', 'icon') }}Add booking</a>
   </div>
 
   <nav class="filter-tabs" aria-label="Filter bookings by type">

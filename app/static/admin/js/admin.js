@@ -41,3 +41,9 @@
   });
   if (collapseButton) syncCollapse();
 })();
+
+// Buttons with data-confirm ask before they submit (delete, reject, cancel).
+document.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-confirm]");
+  if (button && !window.confirm(button.dataset.confirm)) event.preventDefault();
+});

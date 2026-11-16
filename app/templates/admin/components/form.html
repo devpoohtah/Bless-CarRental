@@ -25,20 +25,31 @@
 </div>
 {% endmacro %}
 
-{# Upload is intentionally disabled until image storage is connected. #}
-{% macro image_field(label) %}
+{% macro errors_box(errors) %}
+{% if errors %}
+<div class="form-errors" role="alert">
+  <p><strong>Please fix the following:</strong></p>
+  <ul>{% for message in errors %}<li>{{ message }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+{% endmacro %}
+
+{% macro image_field(label, current=None) %}
 <div class="field field--wide">
-  <label for="image">{{ label }}</label>
-  <input id="image" name="image" type="file" accept="image/jpeg,image/png,image/webp" disabled aria-describedby="image-hint">
-  <p class="field__hint" id="image-hint">Image upload is not available yet. It will be added once image storage is set up.</p>
+  {% if current %}<img class="thumb" src="{{ static_url(current.src) }}" alt="{{ current.alt }}" width="320" height="240">{% endif %}
+  <label for="image">{{ label }}{% if current %} (choose a file to replace it){% endif %}</label>
+  <input id="image" name="image" type="file" accept="image/jpeg,image/png,image/webp" aria-describedby="image-hint">
+  <p class="field__hint" id="image-hint">JPEG, PNG or WebP, up to 5 MB. It is saved as WebP. Cover or crop out license plate numbers before uploading, because the image is public on the website.</p>
 </div>
 {% endmacro %}
 
-{% macro form_actions(save_label, cancel_href, delete_label=None) %}
-<p class="note">{{ icon('info', 'icon icon--sm') }}<span>Saving{% if delete_label %}, deleting{% endif %} and image upload are not available yet. They will work once the database and image storage are connected.</span></p>
+{% macro form_actions(save_label, cancel_href, delete_label=None, delete_url=None, delete_confirm='') %}
+{% if not database_ready() %}
+<p class="note">{{ icon('info', 'icon icon--sm') }}<span>The database is not connected, so saving and deleting are unavailable. Set GOOGLE_APPLICATION_CREDENTIALS in .env.</span></p>
+{% endif %}
 <div class="form__actions">
-  <button type="submit" class="btn btn--primary" disabled>{{ save_label }}</button>
+  <button type="submit" class="btn btn--primary"{% if not database_ready() %} disabled{% endif %}>{{ save_label }}</button>
   <a class="btn btn--outline" href="{{ cancel_href }}">Cancel</a>
-  {% if delete_label %}<button type="button" class="btn btn--outline form__delete" disabled>{{ delete_label }}</button>{% endif %}
+  {% if delete_label %}<button type="submit" class="btn btn--outline form__delete" formaction="{{ delete_url }}" formnovalidate data-confirm="{{ delete_confirm }}"{% if not database_ready() %} disabled{% endif %}>{{ delete_label }}</button>{% endif %}
 </div>
 {% endmacro %}

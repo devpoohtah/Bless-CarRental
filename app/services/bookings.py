@@ -1,15 +1,19 @@
 """Data for booking management and the booking calendar.
 
-Until Firestore is connected this returns placeholder bookings. Their dates are relative
-to today so the calendar always has something to show. Replace the bodies of
-list_bookings() and get_booking() with Firestore reads; the routes and templates will not
-need to change.
+Bookings are read from and written to Firestore when it is connected. Without credentials
+this returns placeholder bookings whose dates are relative to today, so the calendar and
+tests always have something to show.
 """
 
 import calendar
 from datetime import date, timedelta
 
+from app.db import firebase
+from app.db import repositories as repo
 from app.schemas.booking import Booking, BookingStatus, BookingType, StatusChange
+from app.schemas.forms import BookingInput
+from app.services import content
+from app.services.errors import FormError
 
 STATUS_LABELS = {
     "pending": "Pending",
@@ -79,12 +83,60 @@ def _sample_bookings(today: date) -> list[Booking]:
 
 
 def list_bookings(booking_type: BookingType | None = None) -> list[Booking]:
-    rows = sorted(_sample_bookings(date.today()), key=lambda b: b.requested_on, reverse=True)
+    rows = repo.list_all(repo.BOOKINGS, Booking) if firebase.is_configured() else _sample_bookings(date.today())
+    rows = sorted(rows, key=lambda b: (b.requested_on, b.start_date), reverse=True)
     return [b for b in rows if booking_type in (None, b.booking_type)]
 
 
 def get_booking(booking_id: str) -> Booking | None:
+    if firebase.is_configured():
+        return repo.get_one(repo.BOOKINGS, booking_id, Booking)
     return next((b for b in list_bookings() if b.id == booking_id), None)
+
+
+def item_choices() -> dict[str, list[tuple[str, str]]]:
+    """Cars and tour packages for the booking form, as (value, label) pairs per group."""
+    return {
+        "Cars": [(f"car:{v.name}", v.name) for v in content.list_vehicles()],
+        "Tour packages": [(f"tour:{t.name}", t.name) for t in content.list_tours()],
+    }
+
+
+def create_booking(data: BookingInput) -> str:
+    choices = {value for group in item_choices().values() for value, _ in group}
+    if data.item not in choices:
+        raise FormError("Choose a car or tour package from the list.")
+    today = date.today()
+    booking = Booking(
+        id="",
+        booking_type=data.booking_type,
+        customer_name=data.customer_name,
+        customer_phone=data.customer_phone,
+        customer_email=data.customer_email or "",
+        item_name=data.item_name,
+        start_date=data.start_date,
+        end_date=data.end_date,
+        details=data.details or "",
+        requested_on=today,
+        status="pending",
+        payment_status=data.payment_status,
+        history=[StatusChange(status="pending", changed_on=today)],
+        is_sample=False,
+    )
+    return repo.save(repo.BOOKINGS, booking)
+
+
+def change_status(booking: Booking, new_status: str) -> None:
+    if new_status not in NEXT_STATUSES[booking.status]:
+        raise FormError("That status change is not allowed for this booking.")
+    history = [*booking.history, StatusChange(status=new_status, changed_on=date.today())]
+    repo.save(repo.BOOKINGS, booking.model_copy(update={"status": new_status, "history": history}), booking.id)
+
+
+def change_payment(booking: Booking, new_status: str) -> None:
+    if new_status not in PAYMENT_LABELS:
+        raise FormError("Choose a payment status from the list.")
+    repo.save(repo.BOOKINGS, booking.model_copy(update={"payment_status": new_status}), booking.id)
 
 
 def recent_bookings(limit: int = 5) -> list[Booking]:

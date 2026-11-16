@@ -1,0 +1,59 @@
+{% extends 'admin/base.html' %}
+{% from 'admin/components/form.html' import field, textarea, select, errors_box %}
+{% block title %}Add booking | {{ site.short_name }} Admin{% endblock %}
+
+{% block content %}
+<div class="page">
+  <a class="link back-link" href="/admin/bookings">Back to Booking Management</a>
+  <div class="page-head">
+    <div>
+      <h1>Add booking</h1>
+      <p class="page-lead">Record a booking by hand, for example one arranged on Messenger or by phone. It starts as Pending. Fields marked * are required.</p>
+    </div>
+  </div>
+
+  {{ errors_box(errors) }}
+  <form class="form" method="post">
+    <section class="form__group" aria-labelledby="booking-what">
+      <h2 id="booking-what">Car or tour</h2>
+      <div class="field field--wide">
+        <label for="item">Car or tour package <span class="field__req" aria-hidden="true">*</span></label>
+        <select id="item" name="item" required>
+          <option value="">Choose one</option>
+          {% for group, options in item_choices.items() %}
+          {% if options %}
+          <optgroup label="{{ group }}">
+            {% for value, label in options %}
+            <option value="{{ value }}"{% if value == form.item %} selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </optgroup>
+          {% endif %}
+          {% endfor %}
+        </select>
+        {% if not item_choices['Cars'] and not item_choices['Tour packages'] %}
+        <p class="field__hint">There are no cars or tour packages yet. Add one under Service Management first.</p>
+        {% endif %}
+      </div>
+      {{ field('start_date', 'Start date', form.start_date, type='date', required=True, hint='Pick-up date for a car, tour date for a tour package.') }}
+      {{ field('end_date', 'End date', form.end_date, type='date', required=True, hint='Return date for a car, last day of the tour.') }}
+      {{ textarea('details', 'Details', form.details, rows=3) }}
+    </section>
+
+    <section class="form__group" aria-labelledby="booking-customer">
+      <h2 id="booking-customer">Customer</h2>
+      {{ field('customer_name', 'Customer name', form.customer_name, required=True) }}
+      {{ field('customer_phone', 'Phone', form.customer_phone, type='tel', required=True) }}
+      {{ field('customer_email', 'Email', form.customer_email, type='email', hint='Optional.') }}
+      {{ select('payment_status', 'Payment status', payment_labels.items(), form.payment_status or 'unpaid') }}
+    </section>
+
+    {% if not database_ready() %}
+    <p class="note">{{ icon('info', 'icon icon--sm') }}<span>The database is not connected, so saving is unavailable. Set GOOGLE_APPLICATION_CREDENTIALS in .env.</span></p>
+    {% endif %}
+    <div class="form__actions">
+      <button type="submit" class="btn btn--primary"{% if not database_ready() %} disabled{% endif %}>Save booking</button>
+      <a class="btn btn--outline" href="/admin/bookings">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

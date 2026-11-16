@@ -11,8 +11,9 @@ from pydantic import BaseModel, Field
 
 
 class Photo(BaseModel):
-    src: str = Field(description="Path under app/static, e.g. customer/img/tours/example.jpg")
+    src: str = Field(description="Path under app/static, or a full https URL for an uploaded image")
     alt: str
+    public_id: str | None = Field(default=None, description="Cloudinary id, needed to delete the upload")
 
 
 Availability = Literal["inquire", "available", "unavailable"]

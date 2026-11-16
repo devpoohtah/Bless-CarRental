@@ -4,11 +4,15 @@
     <div class="section__head">
       <h2>Car rental services</h2>
       <p class="section__lead">Choose a vehicle type, then message us with your dates to ask about availability and rates.</p>
+      {% if vehicles | selectattr('is_sample') | list %}
       <p class="note">{{ icon('info', 'icon icon--sm') }}Sample listings. Vehicles, specifications and rates will be confirmed by BLESS.</p>
+      {% endif %}
     </div>
     <div class="stack-grid">
       {% for v in vehicles %}
       {{ vehicle_card(v) }}
+      {% else %}
+      <p>No vehicles are listed right now. Message us on Messenger to ask about availability.</p>
       {% endfor %}
     </div>
   </div>

@@ -73,18 +73,9 @@ def test_detail_wording_differs_for_tours():
     assert "Selected tour package" in html and "Start date" in html and "Pick-up date" not in html
 
 
-def test_detail_actions_follow_the_status_flow_and_are_disabled():
-    pending = client.get("/admin/bookings/sample-1").text  # pending
-    assert re.search(r'<button type="button" class="btn btn--primary" disabled>Approve', pending)
-    assert "Reject" in pending and "Cancel booking" in pending
-    assert re.search(r'<select id="status"[^>]*disabled', pending)
-    approved = client.get("/admin/bookings/sample-3").text  # approved: no approve/reject
-    assert ">Approve<" not in approved and "Cancel booking" in approved
-    ongoing = client.get("/admin/bookings/sample-5").text  # ongoing: can only complete
-    assert "Completed" in ongoing and "Cancel booking" not in ongoing
-    for final in ("sample-6", "sample-7", "sample-8"):  # completed, rejected, cancelled
-        html = client.get(f"/admin/bookings/{final}").text
-        assert "can no longer be changed" in html and "Save status" not in html
+def test_sample_bookings_have_no_working_controls():
+    html = client.get("/admin/bookings/sample-1").text
+    assert "sample booking" in html and "Save status" not in html and "Approve" not in html
 
 
 def test_unknown_booking_is_404():

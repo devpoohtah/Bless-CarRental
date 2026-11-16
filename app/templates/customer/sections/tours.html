@@ -4,11 +4,15 @@
     <div class="section__head">
       <h2>Travel tour packages</h2>
       <p class="section__lead">Pick a package to see the details, then message us to ask about dates and availability.</p>
+      {% if tours | selectattr('is_sample') | list %}
       <p class="note">{{ icon('info', 'icon icon--sm') }}Sample listings. Packages, itineraries and rates will be confirmed by BLESS.</p>
+      {% endif %}
     </div>
     <div class="stack-grid">
       {% for tour in tours %}
       {{ tour_card(tour) }}
+      {% else %}
+      <p>No tour packages are listed right now. Message us on Messenger to ask about upcoming tours.</p>
       {% endfor %}
     </div>
   </div>
