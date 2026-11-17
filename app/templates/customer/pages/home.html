@@ -1,5 +1,5 @@
 {% extends 'customer/base.html' %}
-{% from 'customer/components/cards.html' import detail_dialog %}
+{% from 'customer/components/cards.html' import detail_dialog, tour_dialogs %}
 
 {% block head_extra %}
 {% set structured_data = {
@@ -28,13 +28,7 @@
 {% endblock %}
 
 {% block dialogs %}
-{% for tour in tours %}
-{{ detail_dialog('tour-' ~ tour.id, tour.name, tour.destination, tour.photo, tour.description,
-  [('Duration', tour.duration or 'To be confirmed', 'clock'), ('Price', tour.price_php | php, 'tag')]
-    + ([('Vehicle', tour.vehicle_name ~ (' (' ~ tour.vehicle_seats ~ ' seats)' if tour.vehicle_seats else ''), 'users')] if tour.vehicle_name else []),
-  tour.is_sample,
-  book_href=('/book/tour?tour=' ~ tour.id | urlencode) if tour.availability != 'unavailable' else None) }}
-{% endfor %}
+{{ tour_dialogs(tours) }}
 {% for dest in destinations %}
 {{ detail_dialog('destination-' ~ dest.id, dest.name, dest.region, dest.photo, dest.description, [], dest.is_sample) }}
 {% endfor %}

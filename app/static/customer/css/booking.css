@@ -1,9 +1,5 @@
 /* Booking pages (/book/car and /book/tour): summary on the left, contact card and form on the right. */
 .book { padding: calc(var(--header-h) + 1.5rem) 0 4rem; background: var(--surface); color: var(--ink); --focus: var(--night); }
-.crumbs ol { list-style: none; display: flex; flex-wrap: wrap; gap: 0.5rem; font-size: 0.9375rem; color: var(--muted); }
-.crumbs li + li::before { content: "\203A"; margin-right: 0.5rem; }
-.crumbs a { text-decoration: underline; text-underline-offset: 0.2em; }
-.crumbs [aria-current="page"] { font-weight: 600; color: var(--ink); }
 
 .book__layout { display: grid; gap: 1.5rem; margin-top: 1.25rem; }
 @media (min-width: 64em) {

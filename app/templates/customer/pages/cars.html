@@ -1,0 +1,31 @@
+{% extends 'customer/base.html' %}
+{% from 'customer/components/cards.html' import vehicle_card %}
+{% block title %}Car rental | {{ site.business_name }}{% endblock %}
+
+{% block content %}
+<section class="catalog">
+  <div class="container">
+    <nav class="crumbs" aria-label="Breadcrumb">
+      <ol>
+        <li><a href="/">Home</a></li>
+        <li><a href="/#car-rental">Car rental</a></li>
+        <li aria-current="page">All cars</li>
+      </ol>
+    </nav>
+    <div class="section__head">
+      <h1>Car rental</h1>
+      <p class="section__lead">Choose a vehicle, then book it online or message us with your dates to ask about availability and rates.</p>
+      {% if vehicles | selectattr('is_sample') | list %}
+      <p class="note">{{ icon('info', 'icon icon--sm') }}Sample listings. Vehicles, specifications and rates will be confirmed by BLESS.</p>
+      {% endif %}
+    </div>
+    <div class="stack-grid">
+      {% for v in vehicles %}
+      {{ vehicle_card(v) }}
+      {% else %}
+      <p>No vehicles are listed right now. Message us on Messenger to ask about availability.</p>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock %}

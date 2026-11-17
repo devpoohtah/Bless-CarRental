@@ -43,6 +43,9 @@
 .card { display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius-lg); background: #fff; color: var(--ink); box-shadow: var(--shadow-card); --focus: var(--night); }
 .card__media { position: relative; }
 .card__media img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; }
+/* Vehicles show the whole car (cutouts are wider than 4:3) on white, so photos with a white background blend in */
+.card__media--vehicle { background: #fff; }
+.card__media--vehicle img { object-fit: contain; padding: 0.75rem; }
 .card__body { display: flex; flex: 1; flex-direction: column; padding: 1.5rem; }
 .card__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; }
 .card__meta { display: flex; align-items: center; gap: 0.375rem; font-size: 0.875rem; font-weight: 500; color: var(--muted); }
@@ -132,3 +135,9 @@ a.tile:focus-visible { outline-color: var(--night); }
 .booking-form__alt { font-size: 0.9375rem; color: var(--muted); }
 .booking-form__trap { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
 .booking-done__ref { margin-top: 1rem; font-size: 1.125rem; }
+
+/* Breadcrumb trail on the booking pages and on /cars and /tours */
+.crumbs ol { list-style: none; display: flex; flex-wrap: wrap; gap: 0.5rem; font-size: 0.9375rem; color: var(--muted); }
+.crumbs li + li::before { content: "\203A"; margin-right: 0.5rem; }
+.crumbs a { text-decoration: underline; text-underline-offset: 0.2em; }
+.crumbs [aria-current="page"] { font-weight: 600; color: var(--ink); }

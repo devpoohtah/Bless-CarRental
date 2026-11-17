@@ -26,6 +26,9 @@ from app.schemas.catalog import (
 HERO_IMAGE_BASE = "customer/img/hero"
 HERO_SLIDES = [HeroSlide(file=f"slide-{n}.webp") for n in range(1, 9)]
 
+# How many tour packages the landing page shows before it links to /tours.
+TOURS_ON_HOME = 3
+
 NAV_LINKS = [
     NavLink(label="Home", href="#home", section_id="home"),
     NavLink(label="About", href="#about", section_id="about"),
@@ -258,7 +261,7 @@ def get_home_context() -> dict:
     return {
         "nav_links": NAV_LINKS,
         "hero_slides": [(f"{HERO_IMAGE_BASE}/{slide.file}", slide) for slide in HERO_SLIDES],
-        "tours": list_tours(),
+        "tours": list_tours()[:TOURS_ON_HOME],
         "destinations": list_destinations(),
         "vehicles": list_vehicles(),
         "testimonials": list_testimonials(),

@@ -1,4 +1,4 @@
-{% from 'customer/components/cards.html' import vehicle_card %}
+{% from 'customer/components/cards.html' import vehicle_slide %}
 <section id="car-rental" class="section section--dark on-dark">
   <div class="container">
     <div class="section__head">
@@ -8,12 +8,27 @@
       <p class="note">{{ icon('info', 'icon icon--sm') }}Sample listings. Vehicles, specifications and rates will be confirmed by BLESS.</p>
       {% endif %}
     </div>
-    <div class="stack-grid">
-      {% for v in vehicles %}
-      {{ vehicle_card(v) }}
-      {% else %}
-      <p>No vehicles are listed right now. Message us on Messenger to ask about availability.</p>
-      {% endfor %}
+    {% if vehicles %}
+    {# One vehicle per slide, straight from the admin's car list: a new car appears here by itself. Swiping works without JavaScript; main.js adds the buttons. #}
+    <div class="vcar" data-vcar role="group" aria-roledescription="carousel" aria-label="Vehicles for rent">
+      <div class="vcar__track" data-vcar-track>
+        {% for v in vehicles %}
+        {{ vehicle_slide(v, loop.index, loop.length) }}
+        {% endfor %}
+      </div>
+      <div class="vcar__bar">
+        {% if vehicles | length > 1 %}
+        <div class="vcar__controls" data-vcar-controls hidden>
+          <button type="button" class="icon-btn" data-vcar-prev aria-label="Previous vehicle">{{ icon('chevron-left', 'icon') }}</button>
+          <span class="vcar__count" data-vcar-count aria-live="polite">1 of {{ vehicles | length }}</span>
+          <button type="button" class="icon-btn" data-vcar-next aria-label="Next vehicle">{{ icon('chevron-right', 'icon') }}</button>
+        </div>
+        {% endif %}
+        <a class="btn btn--outline-light" href="/cars">View all cars</a>
+      </div>
     </div>
+    {% else %}
+    <p class="vcar__empty">No vehicles are listed right now. Message us on Messenger to ask about availability.</p>
+    {% endif %}
   </div>
 </section>

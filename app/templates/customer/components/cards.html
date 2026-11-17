@@ -1,11 +1,11 @@
 {# Card macros for tours, destinations, services and vehicles. #}
 
 {# Links to the booking page for this car or tour, with it chosen. Unavailable items cannot be booked. #}
-{% macro book_button(kind, entry, label, extra='') %}
+{% macro book_button(kind, entry, label, extra='', variant='primary') %}
 {% if entry.availability == 'unavailable' %}
-<button type="button" class="btn btn--primary{{ ' ' ~ extra if extra }}" disabled>Currently unavailable</button>
+<button type="button" class="btn btn--{{ variant }}{{ ' ' ~ extra if extra }}" disabled>Currently unavailable</button>
 {% else %}
-<a class="btn btn--primary{{ ' ' ~ extra if extra }}" href="/book/{{ kind }}?{{ kind }}={{ entry.id | urlencode }}">{{ label }}<span class="sr-only"> {{ entry.name }}</span></a>
+<a class="btn btn--{{ variant }}{{ ' ' ~ extra if extra }}" href="/book/{{ kind }}?{{ kind }}={{ entry.id | urlencode }}">{{ label }}<span class="sr-only"> {{ entry.name }}</span></a>
 {% endif %}
 {% endmacro %}
 
@@ -58,7 +58,7 @@
 {% macro vehicle_card(v) %}
 {% set status = {'inquire': 'Ask for availability', 'available': 'Available', 'unavailable': 'Currently unavailable'}[v.availability] %}
 <article class="card">
-  <div class="card__media">
+  <div class="card__media card__media--vehicle">
     <img src="{{ static_url(v.photo.src) }}" alt="{{ v.photo.alt }}" width="1200" height="900" loading="lazy" decoding="async">
     {% if v.is_sample %}<span class="badge badge--float">Sample</span>{% endif %}
   </div>
@@ -81,6 +81,39 @@
     {{ book_button('car', v, 'Book this vehicle', 'btn--block') }}
   </div>
 </article>
+{% endmacro %}
+
+{# One slide of the Car Rental carousel on the landing page. #}
+{% macro vehicle_slide(v, position, total) %}
+{% set status = {'inquire': 'Ask for availability', 'available': 'Available', 'unavailable': 'Currently unavailable'}[v.availability] %}
+<article class="vslide" data-vslide role="group" aria-roledescription="slide" aria-label="{{ position }} of {{ total }}">
+  <div class="vslide__stage">
+    <img src="{{ static_url(v.photo.src) }}" alt="{{ v.photo.alt }}" width="1200" height="900" loading="lazy" decoding="async">
+    {% if v.is_sample %}<span class="badge badge--float">Sample</span>{% endif %}
+  </div>
+  <div class="vslide__info">
+    <p class="vslide__type">{{ v.vehicle_type }}</p>
+    <h3 class="vslide__name">{{ v.name }}</h3>
+    <dl class="vslide__facts">
+      <div><dt>Passengers</dt><dd>{{ v.seats if v.seats else 'To be confirmed' }}</dd></div>
+      <div><dt>Transmission</dt><dd>{{ v.transmission or 'To be confirmed' }}</dd></div>
+      <div><dt>Rental rate</dt><dd class="vslide__rate">{{ v.daily_rate_php | php }}</dd></div>
+    </dl>
+    <p class="vslide__status">{{ status }}</p>
+    {{ book_button('car', v, 'Book this vehicle', 'btn--lg', 'action') }}
+  </div>
+</article>
+{% endmacro %}
+
+{# The details dialogs for a list of tours: opened by the tour cards' "View details" buttons. #}
+{% macro tour_dialogs(tours) %}
+{% for tour in tours %}
+{{ detail_dialog('tour-' ~ tour.id, tour.name, tour.destination, tour.photo, tour.description,
+  [('Duration', tour.duration or 'To be confirmed', 'clock'), ('Price', tour.price_php | php, 'tag')]
+    + ([('Vehicle', tour.vehicle_name ~ (' (' ~ tour.vehicle_seats ~ ' seats)' if tour.vehicle_seats else ''), 'users')] if tour.vehicle_name else []),
+  tour.is_sample,
+  book_href=('/book/tour?tour=' ~ tour.id | urlencode) if tour.availability != 'unavailable' else None) }}
+{% endfor %}
 {% endmacro %}
 
 {% macro detail_dialog(dom_id, title, subtitle, photo, description, facts, is_sample, book_href=None) %}

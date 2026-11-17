@@ -131,6 +131,30 @@
     show(0);
   }
 
+  // Car Rental carousel: previous/next buttons and a counter over a scroll-snap track. Off-screen slides are inert so Tab skips them.
+  document.querySelectorAll("[data-vcar]").forEach((root) => {
+    const track = root.querySelector("[data-vcar-track]");
+    const controls = root.querySelector("[data-vcar-controls]");
+    if (!track || !controls) return;
+    const slides = [...track.querySelectorAll("[data-vslide]")];
+    const count = controls.querySelector("[data-vcar-count]");
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
+    let index = 0;
+    const update = () => {
+      index = Math.min(slides.length - 1, Math.max(0, Math.round(track.scrollLeft / track.clientWidth)));
+      count.textContent = `${index + 1} of ${slides.length}`;
+      slides.forEach((slide, n) => slide.toggleAttribute("inert", n !== index));
+    };
+    const goTo = (i) => track.scrollTo({ left: ((i + slides.length) % slides.length) * track.clientWidth, behavior: reduced.matches ? "auto" : "smooth" });
+    controls.querySelector("[data-vcar-prev]").addEventListener("click", () => goTo(index - 1));
+    controls.querySelector("[data-vcar-next]").addEventListener("click", () => goTo(index + 1));
+    let frame = 0;
+    track.addEventListener("scroll", () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(update); }, { passive: true });
+    window.addEventListener("resize", () => track.scrollTo({ left: index * track.clientWidth, behavior: "auto" }));
+    controls.hidden = false;
+    update();
+  });
+
   // Detail dialogs (native <dialog>): open from buttons, close on backdrop click.
   document.querySelectorAll("[data-open-dialog]").forEach((btn) =>
     btn.addEventListener("click", () => document.getElementById(btn.dataset.openDialog)?.showModal())

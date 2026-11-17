@@ -1,0 +1,35 @@
+{% extends 'customer/base.html' %}
+{% from 'customer/components/cards.html' import tour_card, tour_dialogs %}
+{% block title %}Travel tour packages | {{ site.business_name }}{% endblock %}
+
+{% block content %}
+<section class="catalog">
+  <div class="container">
+    <nav class="crumbs" aria-label="Breadcrumb">
+      <ol>
+        <li><a href="/">Home</a></li>
+        <li><a href="/#tours">Tours</a></li>
+        <li aria-current="page">All tour packages</li>
+      </ol>
+    </nav>
+    <div class="section__head">
+      <h1>Travel tour packages</h1>
+      <p class="section__lead">Pick a package to see the details, then book it online or message us to ask about dates and availability.</p>
+      {% if tours | selectattr('is_sample') | list %}
+      <p class="note">{{ icon('info', 'icon icon--sm') }}Sample listings. Packages, itineraries and rates will be confirmed by BLESS.</p>
+      {% endif %}
+    </div>
+    <div class="stack-grid">
+      {% for tour in tours %}
+      {{ tour_card(tour) }}
+      {% else %}
+      <p>No tour packages are listed right now. Message us on Messenger to ask about upcoming tours.</p>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block dialogs %}
+{{ tour_dialogs(tours) }}
+{% endblock %}
