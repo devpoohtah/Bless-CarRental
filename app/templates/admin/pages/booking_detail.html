@@ -36,12 +36,16 @@
           {{ fact('Type', type_labels[booking.booking_type]) }}
           {{ fact('Selected car' if is_car else 'Selected tour package', booking.item_name) }}
           {{ fact('Pick-up date' if is_car else 'Start date', booking.start_date | long_date) }}
+          {% if booking.start_time %}{{ fact('Pick-up time', booking.start_time | clock) }}{% endif %}
           {{ fact('Return date' if is_car else 'End date', booking.end_date | long_date) }}
+          {% if booking.end_time %}{{ fact('Return time', booking.end_time | clock) }}{% endif %}
           {{ fact('Reference', booking.reference) }}
           {{ fact('Requested on', booking.requested_on | long_date) }}
           {% if booking.passengers %}{{ fact('Passengers' if is_car else 'Guests', booking.passengers) }}{% endif %}
           {% if is_car and booking.driver_option %}{{ fact('Driver', driver_labels[booking.driver_option]) }}{% endif %}
           {% if booking.pickup_location %}{{ fact('Pick-up location', booking.pickup_location, wide=True) }}{% endif %}
+          {% if booking.dropoff_location %}{{ fact('Drop-off location', booking.dropoff_location, wide=True) }}{% endif %}
+          {% if booking.destination %}{{ fact('Destination', booking.destination, wide=True) }}{% endif %}
           {{ fact('Details', booking.details or 'None', wide=True) }}
         </dl>
       </section>

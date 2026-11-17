@@ -12,6 +12,7 @@ from app.schemas.admin import DashboardStats
 from app.schemas.catalog import Photo, TourPackage, Vehicle
 from app.schemas.forms import CarInput, TourInput
 from app.services import bookings, content, images
+from app.services.errors import FormError
 
 # Same wording the landing page uses for each availability value.
 AVAILABILITY_LABELS = {
@@ -23,6 +24,7 @@ AVAILABILITY_LABELS = {
 # Shown until a real photo is uploaded.
 CAR_PLACEHOLDER = "customer/img/services/service-car-rental-placeholder.svg"
 TOUR_PLACEHOLDER = "customer/img/services/service-tours-placeholder.svg"
+VAN_PLACEHOLDER = "customer/img/vehicles/vehicle-passenger-van-placeholder.svg"
 
 
 # ---- dashboard ----
@@ -118,13 +120,72 @@ def delete_car(car: Vehicle) -> None:
     _remove(repo.CARS, car)
 
 
-def create_tour_package(data: TourInput, image: UploadFile | None) -> str:
-    return _create(repo.TOURS, TourPackage, "tours", TOUR_PLACEHOLDER, data, image)
+def _save_tour(item: TourPackage | None, data: TourInput, image: UploadFile | None,
+               vehicle_image: UploadFile | None) -> str:
+    """Create (item is None) or update a tour package, with its package photo and its own vehicle photo.
+
+    The vehicle belongs to the package, so vans stay out of the car rental list.
+    """
+    if _has_file(vehicle_image) and not data.vehicle_name:
+        raise FormError("Enter the vehicle name before adding a vehicle image.")
+    uploads: list[images.UploadedImage] = []  # made now; removed again if the save fails
+
+    def upload(file, folder):
+        done = _upload(file, folder)
+        if done:
+            uploads.append(done)
+        return done
+
+    try:
+        new_photo = upload(image, "tours")
+        new_vehicle = upload(vehicle_image, "tour-vehicles")
+    except Exception:
+        for done in uploads:
+            images.delete(done.public_id)
+        raise
+
+    old_photo = item.photo if item else None
+    old_vehicle = item.vehicle_photo if item else None
+    if new_photo:
+        photo = Photo(src=new_photo.url, alt=data.name, public_id=new_photo.public_id)
+    elif old_photo:
+        photo = old_photo.model_copy(update={"alt": data.name})
+    else:
+        photo = Photo(src=TOUR_PLACEHOLDER, alt=data.name)
+    if not data.vehicle_name:
+        vehicle_photo = None
+    elif new_vehicle:
+        vehicle_photo = Photo(src=new_vehicle.url, alt=data.vehicle_name, public_id=new_vehicle.public_id)
+    elif old_vehicle:
+        vehicle_photo = old_vehicle.model_copy(update={"alt": data.vehicle_name})
+    else:
+        vehicle_photo = Photo(src=VAN_PLACEHOLDER, alt=data.vehicle_name)
+
+    fields = {**data.model_dump(), "photo": photo, "vehicle_photo": vehicle_photo, "is_sample": False}
+    saved = item.model_copy(update=fields) if item else TourPackage(id="", **fields)
+    try:
+        doc_id = repo.save(repo.TOURS, saved, item.id if item else None)
+    except Exception:
+        for done in uploads:
+            images.delete(done.public_id)
+        raise
+    if new_photo and old_photo and old_photo.public_id:
+        images.delete(old_photo.public_id)  # the replaced image
+    if old_vehicle and old_vehicle.public_id and (new_vehicle or vehicle_photo is None):
+        images.delete(old_vehicle.public_id)  # replaced, or the vehicle was removed
+    return doc_id
 
 
-def update_tour_package(tour: TourPackage, data: TourInput, image: UploadFile | None) -> None:
-    _update(repo.TOURS, "tours", tour, data, image)
+def create_tour_package(data: TourInput, image: UploadFile | None, vehicle_image: UploadFile | None = None) -> str:
+    return _save_tour(None, data, image, vehicle_image)
+
+
+def update_tour_package(tour: TourPackage, data: TourInput, image: UploadFile | None,
+                        vehicle_image: UploadFile | None = None) -> None:
+    _save_tour(tour, data, image, vehicle_image)
 
 
 def delete_tour_package(tour: TourPackage) -> None:
     _remove(repo.TOURS, tour)
+    if tour.vehicle_photo:
+        images.delete(tour.vehicle_photo.public_id)

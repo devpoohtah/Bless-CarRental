@@ -31,6 +31,6 @@
   {% include 'customer/components/footer.html' %}
   {% block dialogs %}{% endblock %}
   <script src="{{ static_url('customer/js/main.js') }}" defer></script>
-  <script src="{{ static_url('customer/js/booking.js') }}" defer></script>
+  {% block scripts %}{% endblock %}
 </body>
 </html>

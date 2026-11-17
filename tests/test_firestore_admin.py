@@ -132,6 +132,69 @@ def test_tour_create_edit_delete(fake_db, uploads):
     assert fake_db.data["tours"] == {}
 
 
+def test_a_tour_package_keeps_its_own_vehicle_and_never_adds_it_to_car_rental(fake_db, uploads):
+    van = {"vehicle_name": "Toyota Hiace", "vehicle_seats": "12"}
+    client.post("/admin/services/tours/new", data=TOUR | van, files={"vehicle_image": ("van.png", b"x", "image/png")})
+    tour_id = only_id(fake_db, "tours")
+    saved = fake_db.data["tours"][tour_id]
+    assert saved["vehicle_name"] == "Toyota Hiace" and saved["vehicle_seats"] == 12
+    assert saved["vehicle_photo"]["src"].startswith("https://res.cloudinary.com/demo/tour-vehicles/")
+    assert uploads["uploaded"] == [("van.png", "tour-vehicles")]
+    assert "cars" not in fake_db.data or fake_db.data["cars"] == {}
+    assert "Toyota Hiace (12 seats)" in client.get("/admin/services/tours").text
+    assert 'value="Toyota Hiace"' in client.get(f"/admin/services/tours/{tour_id}/edit").text
+
+
+def test_a_vehicle_without_a_new_photo_gets_the_placeholder_and_keeps_it_on_edit(fake_db, uploads):
+    client.post("/admin/services/tours/new", data=TOUR | {"vehicle_name": "Toyota Hiace"})
+    tour_id = only_id(fake_db, "tours")
+    assert fake_db.data["tours"][tour_id]["vehicle_photo"]["src"].endswith("vehicle-passenger-van-placeholder.svg")
+    client.post(f"/admin/services/tours/{tour_id}/edit", data=TOUR | {"vehicle_name": "Toyota Hiace", "vehicle_seats": "9"},
+                files={"vehicle_image": ("van.png", b"x", "image/png")})
+    first = fake_db.data["tours"][tour_id]["vehicle_photo"]
+    assert first["public_id"] == "bless/tour-vehicles/1"
+    client.post(f"/admin/services/tours/{tour_id}/edit", data=TOUR | {"vehicle_name": "Toyota Hiace", "vehicle_seats": "9"})
+    assert fake_db.data["tours"][tour_id]["vehicle_photo"]["public_id"] == "bless/tour-vehicles/1"  # kept
+    assert uploads["deleted"] == []
+
+
+def test_replacing_or_removing_the_vehicle_deletes_its_old_image(fake_db, uploads):
+    client.post("/admin/services/tours/new", data=TOUR | {"vehicle_name": "Hiace"}, files={"vehicle_image": ("a.png", b"x", "image/png")})
+    tour_id = only_id(fake_db, "tours")
+    client.post(f"/admin/services/tours/{tour_id}/edit", data=TOUR | {"vehicle_name": "Hiace"}, files={"vehicle_image": ("b.png", b"x", "image/png")})
+    assert uploads["deleted"] == ["bless/tour-vehicles/1"]
+    client.post(f"/admin/services/tours/{tour_id}/edit", data=TOUR)  # vehicle name cleared
+    saved = fake_db.data["tours"][tour_id]
+    assert saved["vehicle_name"] is None and saved["vehicle_photo"] is None
+    assert uploads["deleted"] == ["bless/tour-vehicles/1", "bless/tour-vehicles/2"]
+
+
+def test_deleting_a_tour_also_deletes_its_vehicle_image(fake_db, uploads):
+    client.post("/admin/services/tours/new", data=TOUR | {"vehicle_name": "Hiace"}, files={"vehicle_image": ("a.png", b"x", "image/png")})
+    client.post(f"/admin/services/tours/{only_id(fake_db, 'tours')}/delete")
+    assert fake_db.data["tours"] == {} and "bless/tour-vehicles/1" in uploads["deleted"]
+
+
+def test_a_vehicle_image_needs_a_vehicle_name_and_nothing_is_uploaded_or_saved(fake_db, uploads):
+    response = client.post("/admin/services/tours/new", data=TOUR, files={"vehicle_image": ("van.png", b"x", "image/png")})
+    assert response.status_code == 422 and "Enter the vehicle name" in response.text
+    assert fake_db.data.get("tours", {}) == {} and uploads["uploaded"] == []
+
+
+def test_the_vehicle_seats_must_be_a_sensible_whole_number(fake_db, uploads):
+    for seats in ("0", "99", "many"):
+        response = client.post("/admin/services/tours/new", data=TOUR | {"vehicle_name": "Hiace", "vehicle_seats": seats})
+        assert response.status_code == 422 and "Vehicle seats" in response.text, seats
+    assert fake_db.data.get("tours", {}) == {}
+
+
+def test_the_tour_form_has_vehicle_fields_and_its_own_image_input(fake_db):
+    html = client.get("/admin/services/tours/new").text
+    for expected in ('name="vehicle_name"', 'name="vehicle_seats"', 'name="vehicle_image"', 'name="image"'):
+        assert expected in html
+    assert re.findall(r'<input id="([^"]+)"', html).count("image") == 1  # ids stay unique
+
+
 # ---- public site ----
 def test_public_site_shows_firestore_items_and_drops_the_sample_notes(fake_db, uploads):
     client.post("/admin/services/cars/new", data=CAR)

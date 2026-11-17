@@ -20,6 +20,7 @@
         <tr>
           <th scope="col">Package</th>
           <th scope="col">Duration</th>
+          <th scope="col">Vehicle</th>
           <th scope="col">Price</th>
           <th scope="col">Availability</th>
           <th scope="col"><span class="sr-only">Actions</span></th>
@@ -30,6 +31,7 @@
         <tr>
           <th scope="row"><span class="cell-title">{{ tour.name }}</span><span class="cell-sub">{{ tour.destination }}</span></th>
           <td data-label="Duration">{{ tour.duration or 'Not set' }}</td>
+          <td data-label="Vehicle">{{ (tour.vehicle_name ~ (' (' ~ tour.vehicle_seats ~ ' seats)' if tour.vehicle_seats else '')) if tour.vehicle_name else 'Not set' }}</td>
           <td data-label="Price">{{ tour.price_php | php('Not set') }}</td>
           <td data-label="Availability">{{ availability_labels[tour.availability] }}</td>
           <td class="cell-actions"><a class="btn btn--outline btn--sm" href="/admin/services/tours/{{ tour.id }}/edit">Edit<span class="sr-only"> {{ tour.name }}</span></a></td>

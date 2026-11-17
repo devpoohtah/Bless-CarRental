@@ -34,12 +34,12 @@
 {% endif %}
 {% endmacro %}
 
-{% macro image_field(label, current=None) %}
+{% macro image_field(label, current=None, name='image') %}
 <div class="field field--wide">
   {% if current %}<img class="thumb" src="{{ static_url(current.src) }}" alt="{{ current.alt }}" width="320" height="240">{% endif %}
-  <label for="image">{{ label }}{% if current %} (choose a file to replace it){% endif %}</label>
-  <input id="image" name="image" type="file" accept="image/jpeg,image/png,image/webp" aria-describedby="image-hint">
-  <p class="field__hint" id="image-hint">JPEG, PNG or WebP, up to 5 MB. It is saved as WebP. Cover or crop out license plate numbers before uploading, because the image is public on the website.</p>
+  <label for="{{ name }}">{{ label }}{% if current %} (choose a file to replace it){% endif %}</label>
+  <input id="{{ name }}" name="{{ name }}" type="file" accept="image/jpeg,image/png,image/webp" aria-describedby="{{ name }}-hint">
+  <p class="field__hint" id="{{ name }}-hint">JPEG, PNG or WebP, up to 5 MB. It is saved as WebP. Cover or crop out license plate numbers before uploading, because the image is public on the website.</p>
 </div>
 {% endmacro %}
 

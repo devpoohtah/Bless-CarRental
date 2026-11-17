@@ -13,7 +13,8 @@ from app.services.errors import FormError
 router = APIRouter(prefix="/admin/services", include_in_schema=False, dependencies=[Depends(require_admin)])
 
 CAR_FIELDS = ("name", "vehicle_type", "seats", "transmission", "daily_rate_php", "availability")
-TOUR_FIELDS = ("name", "destination", "duration", "summary", "description", "price_php", "availability")
+TOUR_FIELDS = ("name", "destination", "duration", "summary", "description", "price_php", "availability",
+               "vehicle_name", "vehicle_seats")
 
 
 def render(request: Request, template: str, active_nav: str, status_code: int = 200, **context) -> HTMLResponse:
@@ -131,12 +132,14 @@ def tour_new(request: Request) -> HTMLResponse:
 def tour_create(
     request: Request, name: str = Form(""), destination: str = Form(""), duration: str = Form(""),
     summary: str = Form(""), description: str = Form(""), price_php: str = Form(""),
-    availability: str = Form("inquire"), image: UploadFile | None = File(None),
+    availability: str = Form("inquire"), vehicle_name: str = Form(""), vehicle_seats: str = Form(""),
+    image: UploadFile | None = File(None), vehicle_image: UploadFile | None = File(None),
 ):
     require_configured()
     raw = dict(name=name, destination=destination, duration=duration, summary=summary,
-               description=description, price_php=price_php, availability=availability)
-    errors = _run(TourInput, raw, lambda data: service.create_tour_package(data, image))
+               description=description, price_php=price_php, availability=availability,
+               vehicle_name=vehicle_name, vehicle_seats=vehicle_seats)
+    errors = _run(TourInput, raw, lambda data: service.create_tour_package(data, image, vehicle_image))
     if not errors:
         return _done("/admin/services/tours", "saved")
     return render(request, "tour_form.html", "tours", 422, tour=None, form=raw, errors=errors)
@@ -152,13 +155,15 @@ def tour_edit(request: Request, tour_id: str) -> HTMLResponse:
 def tour_update(
     request: Request, tour_id: str, name: str = Form(""), destination: str = Form(""), duration: str = Form(""),
     summary: str = Form(""), description: str = Form(""), price_php: str = Form(""),
-    availability: str = Form("inquire"), image: UploadFile | None = File(None),
+    availability: str = Form("inquire"), vehicle_name: str = Form(""), vehicle_seats: str = Form(""),
+    image: UploadFile | None = File(None), vehicle_image: UploadFile | None = File(None),
 ):
     require_configured()
     tour = _tour_or_404(tour_id)
     raw = dict(name=name, destination=destination, duration=duration, summary=summary,
-               description=description, price_php=price_php, availability=availability)
-    errors = _run(TourInput, raw, lambda data: service.update_tour_package(tour, data, image))
+               description=description, price_php=price_php, availability=availability,
+               vehicle_name=vehicle_name, vehicle_seats=vehicle_seats)
+    errors = _run(TourInput, raw, lambda data: service.update_tour_package(tour, data, image, vehicle_image))
     if not errors:
         return _done("/admin/services/tours", "saved")
     return render(request, "tour_form.html", "tours", 422, tour=tour, form=raw, errors=errors)

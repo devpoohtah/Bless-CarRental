@@ -16,8 +16,9 @@ def test_services_root_redirects_to_cars():
 def test_car_list_shows_cars_and_add_link():
     html = client.get("/admin/services/cars").text
     assert "Car Management" in html
-    for name in ("Compact Sedan", "Family SUV", "Passenger Van"):
+    for name in ("Compact Sedan", "Family SUV"):
         assert name in html
+    assert "Passenger Van" not in html  # vans belong to tour packages, not car rental
     assert 'href="/admin/services/cars/new"' in html
     assert 'href="/admin/services/cars/family-suv/edit"' in html
     assert "sample data" in html

@@ -49,6 +49,10 @@ def _sample_tours() -> list[TourPackage]:
             duration="1 day",
             photo=_photo("customer/img/tours/tour-island-day-placeholder.svg",
                          "Placeholder image of an island coastline under a clear sky"),
+            vehicle_name="Passenger Van",
+            vehicle_seats=12,
+            vehicle_photo=_photo("customer/img/vehicles/vehicle-passenger-van-placeholder.svg",
+                                 "Placeholder illustration of a passenger van"),
         ),
         TourPackage(
             id="heritage-church-tour",
@@ -62,6 +66,10 @@ def _sample_tours() -> list[TourPackage]:
             duration="1 day",
             photo=_photo("customer/img/tours/tour-heritage-day-placeholder.svg",
                          "Placeholder image of a stone church at dusk"),
+            vehicle_name="Passenger Van",
+            vehicle_seats=12,
+            vehicle_photo=_photo("customer/img/vehicles/vehicle-passenger-van-placeholder.svg",
+                                 "Placeholder illustration of a passenger van"),
         ),
         TourPackage(
             id="beach-getaway",
@@ -75,6 +83,10 @@ def _sample_tours() -> list[TourPackage]:
             duration="3 days, 2 nights",
             photo=_photo("customer/img/tours/tour-beach-getaway-placeholder.svg",
                          "Placeholder image of a white sand beach and turquoise sea"),
+            vehicle_name="Passenger Van",
+            vehicle_seats=12,
+            vehicle_photo=_photo("customer/img/vehicles/vehicle-passenger-van-placeholder.svg",
+                                 "Placeholder illustration of a passenger van"),
         ),
     ]
 
@@ -162,15 +174,6 @@ def _sample_vehicles() -> list[Vehicle]:
             transmission="Automatic",
             photo=_photo("customer/img/vehicles/vehicle-family-suv-placeholder.svg",
                          "Placeholder illustration of an SUV"),
-        ),
-        Vehicle(
-            id="passenger-van",
-            name="Passenger Van",
-            vehicle_type="Van",
-            seats=12,
-            transmission="Manual",
-            photo=_photo("customer/img/vehicles/vehicle-passenger-van-placeholder.svg",
-                         "Placeholder illustration of a passenger van"),
         ),
     ]
 

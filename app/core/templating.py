@@ -1,6 +1,6 @@
 """Shared Jinja2 environment so every route renders with the same helpers."""
 
-from datetime import date
+from datetime import date, time
 from pathlib import Path
 
 from fastapi.templating import Jinja2Templates
@@ -68,4 +68,9 @@ def date_range(start: date, end: date) -> str:
     return f"{short_date(start)} \u2013 {short_date(end)}, {end.year}"
 
 
-templates.env.filters.update(php=php, short_date=short_date, long_date=long_date, date_range=date_range)
+def clock(value: time) -> str:
+    """'9:30 AM'."""
+    return f"{value:%I:%M %p}".lstrip("0")
+
+
+templates.env.filters.update(php=php, short_date=short_date, long_date=long_date, date_range=date_range, clock=clock)

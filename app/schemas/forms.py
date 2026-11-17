@@ -1,7 +1,7 @@
 """Validation for the admin forms. Raw form strings go in; clean values or messages come out."""
 
 import re
-from datetime import date
+from datetime import date, time
 from typing import Literal
 
 from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
@@ -31,6 +31,8 @@ class TourInput(BaseModel):
     description: str = Field(min_length=1, max_length=4000)
     price_php: int | None = Field(default=None, ge=0, le=10_000_000)
     availability: Availability = "inquire"
+    vehicle_name: str | None = Field(default=None, max_length=120)
+    vehicle_seats: int | None = Field(default=None, ge=1, le=60)
 
 
 class _ItemInput(BaseModel):
@@ -67,17 +69,12 @@ _PHONE_CHARACTERS = re.compile(r"^[0-9+()\-.\s]+$")
 _EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
-class PublicBookingInput(_ItemInput):
-    """A booking request from the website. The customer cannot set status or payment."""
+class _PublicContact(BaseModel):
+    """The customer's own details, shared by the car rental and tour forms."""
 
     customer_name: str = Field(min_length=1, max_length=120)
     customer_phone: str = Field(min_length=1, max_length=40)
     customer_email: str | None = Field(default=None, max_length=120)
-    start_date: date
-    end_date: date | None = None  # left blank for a one-day tour: it then equals the start date
-    passengers: int = Field(ge=1, le=60)
-    pickup_location: str | None = Field(default=None, max_length=200)
-    driver_option: DriverOption | None = None
     details: str | None = Field(default=None, max_length=2000)
 
     @field_validator("customer_phone")
@@ -94,6 +91,40 @@ class PublicBookingInput(_ItemInput):
         if value is not None and not _EMAIL.match(value):
             raise ValueError("must be a valid email address")
         return value
+
+
+class PublicCarBookingInput(_PublicContact):
+    """A car rental request from the website. The customer cannot set status or payment."""
+
+    car: str = Field(min_length=1, max_length=200)  # the car's id
+    start_date: date
+    start_time: time | None = None
+    end_date: date
+    end_time: time | None = None
+    pickup_location: str = Field(min_length=1, max_length=200)
+    dropoff_location: str = Field(min_length=1, max_length=200)
+    destination: str = Field(min_length=1, max_length=200)
+    passengers: int = Field(ge=1, le=60)
+    driver_option: DriverOption | None = None
+
+    @model_validator(mode="after")
+    def _return_after_pickup(self):
+        if self.end_date < self.start_date:
+            raise ValueError("the return date cannot be before the pick-up date")
+        if (self.end_date == self.start_date and self.start_time and self.end_time
+                and self.end_time <= self.start_time):
+            raise ValueError("the return time must be after the pick-up time")
+        return self
+
+
+class PublicTourBookingInput(_PublicContact):
+    """A tour booking request from the website."""
+
+    tour: str = Field(min_length=1, max_length=200)  # the tour package's id
+    start_date: date
+    end_date: date | None = None  # left blank for a one-day tour: it then equals the start date
+    guests: int = Field(ge=1, le=60)
+    pickup_location: str | None = Field(default=None, max_length=200)
 
     @model_validator(mode="after")
     def _dates_in_order(self):
@@ -113,6 +144,9 @@ LABELS = {
     "start_date": "Start date", "end_date": "End date", "details": "Details",
     "payment_status": "Payment status", "passengers": "Number of people",
     "pickup_location": "Pick-up location", "driver_option": "Driver option",
+    "car": "Type of car", "tour": "Tour package", "guests": "Number of guests",
+    "dropoff_location": "Drop-off location", "start_time": "Pick-up time", "end_time": "Return time",
+    "vehicle_name": "Vehicle name", "vehicle_seats": "Vehicle seats",
 }
 
 
@@ -129,6 +163,8 @@ def _message(error: dict) -> str:
         return "is too long"
     if kind in ("date_parsing", "date_from_datetime_parsing", "date_type"):
         return "must be a valid date"
+    if kind in ("time_parsing", "time_type"):
+        return "must be a valid time"
     if kind == "value_error":
         return str(error["ctx"]["error"])
     return "is not valid"

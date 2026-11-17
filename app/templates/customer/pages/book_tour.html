@@ -1,0 +1,80 @@
+{% extends 'customer/pages/book_base.html' %}
+{% from 'customer/components/booking_fields.html' import calendar, contact_fields %}
+{% set kind = 'tour' %}
+{% set section = 'tours' %}
+{% set section_label = 'Tours' %}
+{% set form_title = 'Book a tour' %}
+{% set empty_title = 'No tour packages are open for booking right now' %}
+{% set empty_text = 'Message us on Messenger to ask about upcoming tours.' %}
+{% block title %}Book a tour | {{ site.business_name }}{% endblock %}
+
+{% block summary %}
+<figure class="book__photo">
+  <img data-bind-src="photo" src="{{ static_url(selected.photo.src) }}" alt="{{ selected.photo.alt }}" width="1200" height="900">
+</figure>
+<div class="book__headline">
+  <div>
+    <h2 class="book__name" data-bind="name">{{ selected.name }}</h2>
+    <p class="book__sub">{{ icon('map-pin', 'icon icon--sm') }}<span data-bind="destination">{{ selected.destination }}</span></p>
+  </div>
+</div>
+<p class="book__text" data-bind="summary">{{ selected.summary }}</p>
+<dl class="facts">
+  <div><dt>{{ icon('clock', 'icon icon--sm') }}Duration</dt><dd data-bind="duration">{{ selected.duration or 'To be confirmed' }}</dd></div>
+  <div><dt>{{ icon('tag', 'icon icon--sm') }}Price</dt><dd data-bind="price">{{ selected.price_php | php }}</dd></div>
+</dl>
+<div class="book__vehicle" data-show-if="vehicleName"{% if not selected.vehicle_name %} hidden{% endif %}>
+  <img data-bind-src="vehiclePhoto" src="{{ static_url(selected.vehicle_photo.src) if selected.vehicle_photo else '' }}" alt="{{ selected.vehicle_photo.alt if selected.vehicle_photo else '' }}" width="160" height="120">
+  <div>
+    <p class="rate__label">Vehicle for this tour</p>
+    <p class="book__vehicle-name" data-bind="vehicleName">{{ selected.vehicle_name }}</p>
+    <p class="book__sub" data-show-if="vehicleSeats"{% if not selected.vehicle_seats %} hidden{% endif %}>{{ icon('users', 'icon icon--sm') }}<span><span data-bind="vehicleSeats">{{ selected.vehicle_seats }}</span> seats</span></p>
+  </div>
+</div>
+{% endblock %}
+
+{% block fields %}
+<fieldset>
+  <legend>Tour details</legend>
+  <div class="booking-form__grid">
+    <div class="field field--wide">
+      <label for="bk-item">Tour package</label>
+      <select id="bk-item" name="tour" required>
+        {% for t in tours %}
+        <option value="{{ t.id }}"{% if t.id == selected.id %} selected{% endif %}
+          data-name="{{ t.name }}" data-destination="{{ t.destination }}" data-summary="{{ t.summary }}"
+          data-duration="{{ t.duration or 'To be confirmed' }}" data-price="{{ t.price_php | php }}"
+          data-photo="{{ static_url(t.photo.src) }}" data-photo-alt="{{ t.photo.alt }}"
+          data-vehicle-name="{{ t.vehicle_name or '' }}" data-vehicle-seats="{{ t.vehicle_seats or '' }}"
+          data-max="{{ t.vehicle_seats or '' }}"
+          data-vehicle-photo="{{ static_url(t.vehicle_photo.src) if t.vehicle_photo else '' }}"
+          data-vehicle-photo-alt="{{ t.vehicle_photo.alt if t.vehicle_photo else '' }}">{{ t.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    {{ calendar('Click the tour date. For a tour of several days, click the last day too.') }}
+    <div class="field">
+      <label for="bk-start">Tour date</label>
+      <input id="bk-start" name="start_date" type="date" min="{{ today_iso }}" required>
+    </div>
+    <div class="field">
+      <label for="bk-end">Last day of the tour (optional)</label>
+      <input id="bk-end" name="end_date" type="date" min="{{ today_iso }}">
+    </div>
+    <div class="field">
+      <label for="bk-people">Number of guests</label>
+      <input id="bk-people" name="guests" type="number" inputmode="numeric" min="1" max="{{ selected.vehicle_seats or 60 }}" required>
+    </div>
+    <div class="field">
+      <label for="bk-pickup">Pick-up location (optional)</label>
+      <input id="bk-pickup" name="pickup_location" type="text" maxlength="200" autocomplete="off" aria-describedby="bk-pickup-hint">
+      <p class="field__hint" id="bk-pickup-hint">A hotel, address or landmark.</p>
+    </div>
+    <div class="field field--wide">
+      <label for="bk-details">Anything else we should know? (optional)</label>
+      <textarea id="bk-details" name="details" rows="3" maxlength="2000"></textarea>
+    </div>
+  </div>
+</fieldset>
+{{ contact_fields() }}
+{% endblock %}

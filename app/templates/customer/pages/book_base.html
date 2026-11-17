@@ -1,0 +1,94 @@
+{# Shared shell for the car rental and tour booking pages: breadcrumb, summary of the chosen item on the
+   left, BLESS contact card and the form on the right. The pages fill in the summary and the fields.
+   Needs: selected (None when nothing can be booked), blocked (dates already taken, per item name), today_iso. #}
+{% extends 'customer/base.html' %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css" integrity="sha384-RkASv+6KfBMW9eknReJIJ6b3UnjKOKC5bOUaNgIY778NFbQ8MtWq9Lr/khUgqtTt" crossorigin="anonymous">
+<link rel="stylesheet" href="{{ static_url('customer/css/booking.css') }}">
+{% endblock %}
+
+{% block content %}
+<section class="book">
+  <div class="container">
+    <nav class="crumbs" aria-label="Breadcrumb">
+      <ol>
+        <li><a href="/">Home</a></li>
+        <li><a href="/#{{ section }}">{{ section_label }}</a></li>
+        <li aria-current="page">Book</li>
+      </ol>
+    </nav>
+
+    {% if selected %}
+    <div class="book__layout">
+      <div class="book__summary">
+        {% block summary %}{% endblock %}
+      </div>
+
+      <div class="book__panel">
+        <div class="book__contact">
+          <img src="{{ static_url('shared/img/bless-logo.webp') }}" alt="" width="48" height="48">
+          <div>
+            <p class="book__contact-name">{{ site.business_name }}</p>
+            <p class="book__contact-sub">BLESS confirms availability and the final rate.</p>
+          </div>
+          <ul class="book__contact-links">
+            <li><a class="link" href="{{ site.phone_href }}">{{ icon('phone', 'icon icon--sm') }}{{ site.phone_display }}</a></li>
+            <li><a class="link" href="{{ site.messenger_url }}" target="_blank" rel="noopener noreferrer">{{ icon('message-circle', 'icon icon--sm') }}Messenger<span class="sr-only"> (opens in a new tab)</span></a></li>
+          </ul>
+        </div>
+
+        <div id="booking-view-form">
+          <h1 class="book__title">{{ form_title }}</h1>
+          <p class="book__lead">Send your request and BLESS will contact you to confirm. Nothing is booked until BLESS confirms.</p>
+
+          <form id="booking-form" class="booking-form" method="post" action="/book/{{ kind }}" data-kind="{{ kind }}" data-today="{{ today_iso }}">
+            <div id="booking-errors" class="form-errors" role="alert" tabindex="-1" hidden>
+              <p><strong>Please fix the following:</strong></p>
+              <ul></ul>
+            </div>
+            {% block fields %}{% endblock %}
+
+            {# Bots fill every field they find. People never see this one. #}
+            <div class="booking-form__trap" aria-hidden="true">
+              <label>Website<input type="text" name="website" tabindex="-1" autocomplete="off"></label>
+            </div>
+
+            <div class="booking-form__actions">
+              <button type="submit" class="btn btn--primary btn--lg btn--block" data-busy-label="Sending…">Send booking request</button>
+              <p class="booking-form__alt">Prefer to chat? <a class="link" href="{{ site.messenger_url }}" target="_blank" rel="noopener noreferrer">Message us on Messenger<span class="sr-only"> (opens in a new tab)</span></a></p>
+            </div>
+          </form>
+        </div>
+
+        <div id="booking-view-done" tabindex="-1" hidden>
+          <h1 class="book__title" id="booking-done-title">Request received</h1>
+          <p class="book__lead">Thank you, <span data-done-name></span>. BLESS will contact you at <span data-done-phone></span> to confirm availability and the rate.</p>
+          <p class="booking-done__ref" data-done-ref-row hidden>Your reference: <strong data-done-ref></strong></p>
+          <p class="book__lead">This is a request, not a confirmed booking. Keep your reference in case you message us about it.</p>
+          <div class="book__done-actions">
+            <a class="btn btn--primary" href="/">Back to home</a>
+            <a class="btn btn--outline" href="{{ site.messenger_url }}" target="_blank" rel="noopener noreferrer">Message us on Messenger<span class="sr-only"> (opens in a new tab)</span></a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script type="application/json" id="blocked-dates">{{ blocked | tojson }}</script>
+    {% else %}
+    <div class="book__empty">
+      <h1 class="book__title">{{ empty_title }}</h1>
+      <p class="book__lead">{{ empty_text }}</p>
+      <div class="book__done-actions">
+        <a class="btn btn--primary" href="{{ site.messenger_url }}" target="_blank" rel="noopener noreferrer">Message us on Messenger<span class="sr-only"> (opens in a new tab)</span></a>
+        <a class="btn btn--outline" href="/">Back to home</a>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js" integrity="sha384-5JqMv4L/Xa0hfvtF06qboNdhvuYXUku9ZrhZh3bSk8VXF0A/RuSLHpLsSV9Zqhl6" crossorigin="anonymous" defer></script>
+<script src="{{ static_url('customer/js/booking.js') }}" defer></script>
+{% endblock %}

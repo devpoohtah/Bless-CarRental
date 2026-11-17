@@ -58,9 +58,9 @@ def alerts(monkeypatch) -> list[str]:
 @pytest.fixture
 def catalog(fake_db):
     repo.save(repo.CARS, Vehicle(id="", name="Family SUV", vehicle_type="SUV", seats=7, availability="available",
-                                 photo=PHOTO, is_sample=False))
+                                 photo=PHOTO, is_sample=False), "family-suv")
     repo.save(repo.TOURS, TourPackage(id="", name="Island Day Tour", destination="Guimaras", summary="S", description="D",
-                                      availability="inquire", photo=PHOTO, is_sample=False))
+                                      availability="inquire", photo=PHOTO, is_sample=False), "island-day-tour")
     return fake_db
 
 
@@ -139,14 +139,14 @@ def test_a_network_failure_is_logged_without_the_token_and_does_not_raise(telegr
 
 # ---- when alerts go out ----
 def test_a_car_request_sends_one_alert_with_its_reference(catalog, alerts):
-    response = client.post("/bookings", data=car_request())
+    response = client.post("/book/car", data=car_request())
     assert response.status_code == 201
     (text,) = alerts
     assert response.json()["reference"] in text and "Ana Reyes" in text and "Family SUV" in text
 
 
 def test_a_tour_request_sends_one_alert(catalog, alerts):
-    assert client.post("/bookings", data=tour_request()).status_code == 201
+    assert client.post("/book/tour", data=tour_request()).status_code == 201
     (text,) = alerts
     assert "New tour request" in text and "Ben Cruz" in text
 
@@ -154,26 +154,26 @@ def test_a_tour_request_sends_one_alert(catalog, alerts):
 def test_the_alert_links_to_the_booking_when_the_site_address_is_set(catalog, telegram_on, monkeypatch):
     sent = []
     monkeypatch.setattr(notify.urllib.request, "urlopen", lambda request, timeout: sent.append(json.loads(request.data)) or FakeResponse())
-    client.post("/bookings", data=car_request())
+    client.post("/book/car", data=car_request())
     booking_id = next(iter(catalog.data["bookings"]))
     assert f"Open: https://bless.example/admin/bookings/{booking_id}" in sent[0]["text"]
 
 
 def test_no_alert_for_requests_that_were_not_saved(catalog, alerts):
-    client.post("/bookings", data=car_request(customer_name=""))                  # invalid
-    client.post("/bookings", data=car_request(website="http://spam.example"))      # bot
-    client.post("/bookings", data=car_request(item="car:Nope"))                         # unknown car
+    client.post("/book/car", data=car_request(customer_name=""))                  # invalid
+    client.post("/book/car", data=car_request(website="http://spam.example"))      # bot
+    client.post("/book/car", data=car_request(car="nope"))                         # unknown car
     assert alerts == []
 
 
 def test_no_alert_when_the_request_is_rejected_by_the_business_rules(catalog, alerts):
-    assert client.post("/bookings", data=car_request(passengers="9")).status_code == 422   # Family SUV seats 7
-    assert client.post("/bookings", data=car_request(start_date=when(-2), end_date=when(1))).status_code == 422
+    assert client.post("/book/car", data=car_request(passengers="9")).status_code == 422   # Family SUV seats 7
+    assert client.post("/book/car", data=car_request(start_date=when(-2), end_date=when(1))).status_code == 422
     assert alerts == []
 
 
 def test_no_alert_without_a_database(alerts):
-    assert client.post("/bookings", data=car_request()).status_code == 503
+    assert client.post("/book/car", data=car_request()).status_code == 503
     assert alerts == []
 
 
@@ -181,7 +181,7 @@ def test_the_booking_is_saved_and_the_customer_told_even_if_the_alert_blows_up(c
     def explode(text):
         raise RuntimeError("telegram is down")
     monkeypatch.setattr(notify, "send_telegram", explode)
-    response = client.post("/bookings", data=car_request())
+    response = client.post("/book/car", data=car_request())
     assert response.status_code == 201 and response.json()["reference"].startswith("BLESS-")
     assert len(catalog.data["bookings"]) == 1
 

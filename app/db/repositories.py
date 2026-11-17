@@ -38,6 +38,14 @@ def list_all(collection: str, model: type[M]) -> list[M]:
     return [item for item in (_parse(model, doc) for doc in docs) if item is not None]
 
 
+def list_where(collection: str, model: type[M], **equals) -> list[M]:
+    """Documents that have all these field values (equality only, so no composite index is needed)."""
+    query = firebase.get_db().collection(collection)
+    for field, value in equals.items():
+        query = query.where(filter=FieldFilter(field, "==", value))
+    return [item for item in (_parse(model, doc) for doc in query.stream()) if item is not None]
+
+
 def count_where(collection: str, **equals) -> int:
     """How many documents have all these field values. Firestore counts on its side, so nothing is downloaded."""
     query = firebase.get_db().collection(collection)

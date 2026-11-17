@@ -1,0 +1,98 @@
+{% extends 'customer/pages/book_base.html' %}
+{% from 'customer/components/booking_fields.html' import calendar, contact_fields %}
+{% set kind = 'car' %}
+{% set section = 'car-rental' %}
+{% set section_label = 'Car rental' %}
+{% set form_title = 'Book a car' %}
+{% set empty_title = 'No cars are open for booking right now' %}
+{% set empty_text = 'Message us on Messenger to ask about available cars.' %}
+{% block title %}Book a car | {{ site.business_name }}{% endblock %}
+
+{% block summary %}
+<figure class="book__photo">
+  <img data-bind-src="photo" src="{{ static_url(selected.photo.src) }}" alt="{{ selected.photo.alt }}" width="1200" height="900">
+</figure>
+<div class="book__headline">
+  <div>
+    <h2 class="book__name" data-bind="name">{{ selected.name }}</h2>
+    <p class="book__sub" data-bind="type">{{ selected.vehicle_type }}</p>
+  </div>
+</div>
+<dl class="facts">
+  <div><dt>{{ icon('users', 'icon icon--sm') }}Passengers</dt><dd data-bind="seats">{{ selected.seats if selected.seats else 'To be confirmed' }}</dd></div>
+  <div><dt>{{ icon('cog', 'icon icon--sm') }}Transmission</dt><dd data-bind="transmission">{{ selected.transmission or 'To be confirmed' }}</dd></div>
+</dl>
+<div class="rate">
+  <p class="rate__label">Rental rate</p>
+  <p class="rate__value">
+  <span data-bind="rate">{{ selected.daily_rate_php | php }}</span><small> /24 hours</small>
+</p>
+</p>
+
+</div>
+{% endblock %}
+
+{% block fields %}
+<fieldset>
+  <legend>Trip details</legend>
+  <div class="booking-form__grid">
+    <div class="field field--wide">
+      <label for="bk-item">Type of car</label>
+      <select id="bk-item" name="car" required>
+        {% for c in cars %}
+        <option value="{{ c.id }}"{% if c.id == selected.id %} selected{% endif %}
+          data-name="{{ c.name }}" data-type="{{ c.vehicle_type }}" data-seats="{{ c.seats if c.seats else 'To be confirmed' }}"
+          data-max="{{ c.seats or '' }}" data-transmission="{{ c.transmission or 'To be confirmed' }}"
+          data-rate="{{ c.daily_rate_php | php }}" data-photo="{{ static_url(c.photo.src) }}" data-photo-alt="{{ c.photo.alt }}">{{ c.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="bk-pickup">Pick-up location</label>
+      <input id="bk-pickup" name="pickup_location" type="text" maxlength="200" autocomplete="off" required>
+    </div>
+    <div class="field">
+      <label for="bk-dropoff">Drop-off location</label>
+      <input id="bk-dropoff" name="dropoff_location" type="text" maxlength="200" autocomplete="off" required>
+    </div>
+    <div class="field field--wide">
+      <label for="bk-destination">Destination</label>
+      <input id="bk-destination" name="destination" type="text" maxlength="200" autocomplete="off" required>
+    </div>
+    {{ calendar('Click the first day, then the last day. For a one-day rental, click the same day twice.') }}
+    <div class="field">
+      <label for="bk-start">Booking date</label>
+      <input id="bk-start" name="start_date" type="date" min="{{ today_iso }}" required>
+    </div>
+    <div class="field">
+      <label for="bk-start-time">Booking time (optional)</label>
+      <input id="bk-start-time" name="start_time" type="time">
+    </div>
+    <div class="field">
+      <label for="bk-end">Return date</label>
+      <input id="bk-end" name="end_date" type="date" min="{{ today_iso }}" required>
+    </div>
+    <div class="field">
+      <label for="bk-end-time">Return time (optional)</label>
+      <input id="bk-end-time" name="end_time" type="time">
+    </div>
+    <div class="field">
+      <label for="bk-people">Number of passengers</label>
+      <input id="bk-people" name="passengers" type="number" inputmode="numeric" min="1" max="{{ selected.seats or 60 }}" required>
+    </div>
+    <div class="field">
+      <label for="bk-driver">Driver (optional)</label>
+      <select id="bk-driver" name="driver_option">
+        <option value="">Not sure yet</option>
+        <option value="with_driver">With a driver</option>
+        <option value="self_drive">Self-drive</option>
+      </select>
+    </div>
+    <div class="field field--wide">
+      <label for="bk-details">Anything else we should know? (optional)</label>
+      <textarea id="bk-details" name="details" rows="3" maxlength="2000"></textarea>
+    </div>
+  </div>
+</fieldset>
+{{ contact_fields() }}
+{% endblock %}

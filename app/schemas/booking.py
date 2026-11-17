@@ -1,7 +1,7 @@
 """Data shapes for booking management. Plain Pydantic models so they can later be filled
 from Firestore without changing the templates."""
 
-from datetime import date
+from datetime import date, time
 from typing import Literal
 
 from pydantic import BaseModel
@@ -30,6 +30,10 @@ class Booking(BaseModel):
     # Filled in by the website booking form. Older and hand-added bookings leave them empty.
     passengers: int | None = None  # people travelling (guests for a tour)
     pickup_location: str = ""  # hotel, address or landmark
+    dropoff_location: str = ""  # cars only
+    destination: str = ""  # cars only
+    start_time: time | None = None  # pick-up time; optional
+    end_time: time | None = None  # return time; optional
     driver_option: DriverOption | None = None  # cars only
     requested_on: date
     status: BookingStatus

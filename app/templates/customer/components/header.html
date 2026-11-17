@@ -1,16 +1,16 @@
-{% from 'customer/components/logo.html' import brand_logo %}
+{% from 'customer/components/logo.html' import brand_logo with context %}
 <header id="site-header" class="site-header on-dark">
   <div class="container site-header__bar">
     {{ brand_logo() }}
     <nav class="primary-nav" aria-label="Primary">
       <ul class="nav-list">
         {% for link in nav_links %}
-        <li><a class="nav__link" href="{{ link.href }}" data-section="{{ link.section_id }}">{{ link.label }}</a></li>
+        <li><a class="nav__link" href="{{ nav_base }}{{ link.href }}" data-section="{{ link.section_id }}">{{ link.label }}</a></li>
         {% endfor %}
       </ul>
     </nav>
     <div class="site-header__actions">
-      <button type="button" class="btn btn--action btn--sm site-header__cta" data-book>Book Now</button>
+      <a class="btn btn--action btn--sm site-header__cta" href="{{ nav_base }}#services">Book Now</a>
       <button id="menu-toggle" class="menu-toggle" type="button" aria-expanded="false" aria-controls="mobile-menu" aria-label="Open menu">
         <span data-icon="open">{{ icon('menu', 'icon icon--lg') }}</span>
         <span data-icon="close" hidden>{{ icon('x', 'icon icon--lg') }}</span>
@@ -21,10 +21,10 @@
     <nav class="container" aria-label="Mobile">
       <ul>
         {% for link in nav_links %}
-        <li><a class="nav__link nav__link--mobile" href="{{ link.href }}" data-section="{{ link.section_id }}">{{ link.label }}</a></li>
+        <li><a class="nav__link nav__link--mobile" href="{{ nav_base }}{{ link.href }}" data-section="{{ link.section_id }}">{{ link.label }}</a></li>
         {% endfor %}
       </ul>
-      <button type="button" class="btn btn--action btn--block" data-book>Book Now</button>
+      <a class="btn btn--action btn--block" href="{{ nav_base }}#services">Book Now</a>
     </nav>
   </div>
 </header>

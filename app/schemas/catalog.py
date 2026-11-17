@@ -29,6 +29,11 @@ class TourPackage(BaseModel):
     price_php: int | None = None
     availability: Availability = "inquire"
     photo: Photo
+    # The vehicle that takes guests on this tour (usually a van). It lives on the package, not in the
+    # car rental list, so vans never show up for car rental.
+    vehicle_name: str | None = None
+    vehicle_seats: int | None = None
+    vehicle_photo: Photo | None = None
     is_sample: bool = True
 
 

@@ -1,5 +1,6 @@
-"""The website booking form: POST /bookings, plus the buttons and dialog on the landing page."""
+"""The website booking pages: /book/car and /book/tour, their forms, the blocked dates, and the buttons that lead there."""
 
+import json
 import re
 from datetime import timedelta
 
@@ -11,11 +12,13 @@ from app.core.clock import today_ph
 from app.core.ratelimit import RateLimiter
 from app.db import repositories as repo
 from app.main import app
+from app.schemas.booking import Booking, StatusChange
 from app.schemas.catalog import Photo, TourPackage, Vehicle
 from app.services import bookings as service
 
 client = TestClient(app)
 PHOTO = Photo(src="customer/img/vehicles/vehicle-compact-sedan-placeholder.svg", alt="A car")
+VAN_PHOTO = Photo(src="customer/img/vehicles/vehicle-passenger-van-placeholder.svg", alt="A van")
 
 
 @pytest.fixture(autouse=True)
@@ -25,13 +28,18 @@ def fresh_limiter(monkeypatch):
 
 @pytest.fixture
 def catalog(fake_db):
-    """A car that seats 7, an unavailable car, a tour package and an unavailable tour."""
-    for name, seats, availability in (("Family SUV", 7, "available"), ("Old Van", 12, "unavailable")):
+    """Cars: Family SUV (7 seats), City Car, and one unavailable. Tours: Island Day Tour (its van seats 10),
+    Plain Tour (no vehicle details) and one unavailable."""
+    for doc_id, name, seats, availability in (("family-suv", "Family SUV", 7, "available"), ("city-car", "City Car", 4, "inquire"),
+                                              ("old-car", "Old Car", 5, "unavailable")):
         repo.save(repo.CARS, Vehicle(id="", name=name, vehicle_type="SUV", seats=seats, availability=availability,
-                                     photo=PHOTO, is_sample=False))
-    for name, availability in (("Island Day Tour", "inquire"), ("Closed Tour", "unavailable")):
+                                     photo=PHOTO, is_sample=False), doc_id)
+    tours = (("island-day-tour", "Island Day Tour", "inquire", True), ("plain-tour", "Plain Tour", "inquire", False),
+             ("closed-tour", "Closed Tour", "unavailable", False))
+    for doc_id, name, availability, has_van in tours:
+        van = dict(vehicle_name="Toyota Hiace", vehicle_seats=10, vehicle_photo=VAN_PHOTO) if has_van else {}
         repo.save(repo.TOURS, TourPackage(id="", name=name, destination="Guimaras", summary="Summary.", description="Full.",
-                                          availability=availability, photo=PHOTO, is_sample=False))
+                                          availability=availability, photo=PHOTO, is_sample=False, **van), doc_id)
     return fake_db
 
 
@@ -40,14 +48,15 @@ def when(days: int) -> str:
 
 
 def car_request(**changes) -> dict:
-    data = dict(item="car:Family SUV", start_date=when(5), end_date=when(7), passengers="4",
-                pickup_location="Hotel in Iloilo City", driver_option="with_driver", details="Child seat please.",
+    data = dict(car="family-suv", start_date=when(5), start_time="09:00", end_date=when(7), end_time="17:30",
+                pickup_location="Hotel in Iloilo City", dropoff_location="Iloilo Airport", destination="Guimaras",
+                passengers="4", driver_option="with_driver", details="Child seat please.",
                 customer_name="Ana Reyes", customer_phone="0917 123 4567", customer_email="ana@example.com")
     return data | changes
 
 
 def tour_request(**changes) -> dict:
-    data = dict(item="tour:Island Day Tour", start_date=when(10), end_date="", passengers="6",
+    data = dict(tour="island-day-tour", start_date=when(10), end_date="", guests="6",
                 customer_name="Ben Cruz", customer_phone="+63 917 765 4321")
     return data | changes
 
@@ -56,44 +65,85 @@ def saved_bookings(db) -> list[dict]:
     return list(db.data.get("bookings", {}).values())
 
 
-# ---- success ----
+def add_booking(status="approved", start=5, end=7, kind="car", item="Family SUV") -> None:
+    """A booking BLESS already has, written straight to the database."""
+    today = today_ph()
+    repo.save(repo.BOOKINGS, Booking(
+        id="", booking_type=kind, customer_name="Earlier Customer", customer_phone="09170000000", item_name=item,
+        start_date=today + timedelta(days=start), end_date=today + timedelta(days=end), requested_on=today,
+        status=status, payment_status="unpaid", history=[StatusChange(status=status, changed_on=today)], is_sample=False))
+
+
+# ---- car rental: success ----
 def test_a_car_request_is_saved_as_a_pending_unpaid_booking(catalog):
-    response = client.post("/bookings", data=car_request())
+    response = client.post("/book/car", data=car_request())
     assert response.status_code == 201
-    reference = response.json()["reference"]
-    assert re.fullmatch(r"BLESS-[A-Z0-9]{4,6}", reference)
+    assert re.fullmatch(r"BLESS-[A-Z0-9]{4,6}", response.json()["reference"])
     (saved,) = saved_bookings(catalog)
     assert saved["status"] == "pending" and saved["payment_status"] == "unpaid" and saved["is_sample"] is False
     assert saved["booking_type"] == "car" and saved["item_name"] == "Family SUV"
-    assert saved["passengers"] == 4 and saved["driver_option"] == "with_driver"
-    assert saved["pickup_location"] == "Hotel in Iloilo City" and saved["details"] == "Child seat please."
+    assert saved["passengers"] == 4 and saved["driver_option"] == "with_driver" and saved["details"] == "Child seat please."
+    assert saved["pickup_location"] == "Hotel in Iloilo City" and saved["dropoff_location"] == "Iloilo Airport"
+    assert saved["destination"] == "Guimaras"
     assert saved["start_date"] == when(5) and saved["end_date"] == when(7)
+    assert saved["start_time"] == "09:00:00" and saved["end_time"] == "17:30:00"
     assert [h["status"] for h in saved["history"]] == ["pending"]
 
 
-def test_a_one_day_tour_needs_no_end_date_and_has_no_driver(catalog):
-    response = client.post("/bookings", data=tour_request(driver_option="with_driver"))
+def test_times_and_driver_are_optional_for_a_car(catalog):
+    data = car_request(start_time="", end_time="", driver_option="", customer_email="", details="")
+    assert client.post("/book/car", data=data).status_code == 201
+    (saved,) = saved_bookings(catalog)
+    assert saved["start_time"] is None and saved["end_time"] is None and saved["driver_option"] is None
+
+
+def test_a_one_day_rental_can_return_later_the_same_day(catalog):
+    data = car_request(start_date=when(5), end_date=when(5), start_time="08:00", end_time="18:00")
+    assert client.post("/book/car", data=data).status_code == 201
+
+
+# ---- tours: success ----
+def test_a_one_day_tour_needs_no_end_date_and_no_pickup(catalog):
+    response = client.post("/book/tour", data=tour_request())
     assert response.status_code == 201
     (saved,) = saved_bookings(catalog)
-    assert saved["booking_type"] == "tour" and saved["end_date"] == saved["start_date"] == when(10)
-    assert saved["driver_option"] is None and saved["customer_email"] == ""
+    assert saved["booking_type"] == "tour" and saved["item_name"] == "Island Day Tour"
+    assert saved["end_date"] == saved["start_date"] == when(10)
+    assert saved["passengers"] == 6 and saved["pickup_location"] == ""
+    assert saved["driver_option"] is None and saved["customer_email"] == "" and saved["status"] == "pending"
 
 
-def test_a_website_request_shows_up_for_the_admin_with_its_details(catalog):
-    client.post("/bookings", data=car_request())
-    listing = client.get("/admin/bookings").text
-    assert "Ana Reyes" in listing and "Pending" in listing
+def test_a_multi_day_tour_keeps_its_end_date_and_meeting_point(catalog):
+    data = tour_request(end_date=when(12), pickup_location="Hotel in Iloilo City")
+    assert client.post("/book/tour", data=data).status_code == 201
+    (saved,) = saved_bookings(catalog)
+    assert saved["end_date"] == when(12) and saved["pickup_location"] == "Hotel in Iloilo City"
+
+
+# ---- what the admin sees ----
+def test_a_car_request_shows_up_for_the_admin_with_every_detail(catalog):
+    client.post("/book/car", data=car_request())
+    assert "Ana Reyes" in client.get("/admin/bookings").text
     booking_id = next(iter(catalog.data["bookings"]))
     detail = client.get(f"/admin/bookings/{booking_id}").text
-    for expected in ("BLESS-", "Hotel in Iloilo City", "With a driver", "Passengers", "Child seat please."):
-        assert expected in detail
+    for expected in ("BLESS-", "Hotel in Iloilo City", "Iloilo Airport", "Drop-off location", "Destination", "Guimaras",
+                     "With a driver", "Passengers", "Pick-up time", "9:00 AM", "Return time", "5:30 PM", "Child seat please."):
+        assert expected in detail, expected
     assert "Ana Reyes" in client.get("/admin/dashboard").text
 
 
+def test_a_tour_request_shows_guests_to_the_admin(catalog):
+    client.post("/book/tour", data=tour_request())
+    detail = client.get(f"/admin/bookings/{next(iter(catalog.data['bookings']))}").text
+    assert "Island Day Tour" in detail and "Guests" in detail and "Drop-off" not in detail and "Pick-up time" not in detail
+
+
 def test_customers_cannot_choose_status_or_payment(catalog):
-    client.post("/bookings", data=car_request() | {"status": "approved", "payment_status": "paid", "is_sample": "true"})
-    (saved,) = saved_bookings(catalog)
-    assert saved["status"] == "pending" and saved["payment_status"] == "unpaid" and saved["is_sample"] is False
+    extra = {"status": "approved", "payment_status": "paid", "is_sample": "true"}
+    client.post("/book/car", data=car_request() | extra)
+    client.post("/book/tour", data=tour_request() | extra)
+    for saved in saved_bookings(catalog):
+        assert saved["status"] == "pending" and saved["payment_status"] == "unpaid" and saved["is_sample"] is False
 
 
 # ---- validation: nothing is saved ----
@@ -106,53 +156,142 @@ def test_customers_cannot_choose_status_or_payment(catalog):
     ({"start_date": "soon"}, "must be a valid date"),
     ({"start_date": when(-1)}, "cannot be in the past"),
     ({"start_date": when(800), "end_date": when(801)}, "within the next two years"),
-    ({"end_date": when(2)}, "end date cannot be before the start date"),
+    ({"end_date": ""}, "End date is required"),
+    ({"end_date": when(2)}, "return date cannot be before the pick-up date"),
+    ({"start_date": when(5), "end_date": when(5), "start_time": "10:00", "end_time": "09:00"}, "return time must be after"),
+    ({"start_time": "9 o'clock"}, "Pick-up time must be a valid time"),
+    ({"pickup_location": ""}, "Pick-up location is required"),
+    ({"dropoff_location": ""}, "Drop-off location is required"),
+    ({"destination": ""}, "Destination is required"),
     ({"passengers": ""}, "Number of people is required"),
     ({"passengers": "0"}, "Number of people is outside the allowed range"),
     ({"passengers": "many"}, "must be a whole number"),
     ({"passengers": "8"}, "seats up to 7"),
     ({"driver_option": "chauffeur"}, "Driver option is not valid"),
-    ({"item": ""}, "Car or tour is required"),
-    ({"item": "car:Does Not Exist"}, "Choose a car or tour package"),
-    ({"item": "boat:Family SUV"}, "Choose a car or tour package"),
-    ({"item": "car:Old Van", "passengers": "2"}, "currently unavailable"),
-    ({"item": "tour:Closed Tour", "passengers": "2"}, "currently unavailable"),
+    ({"car": ""}, "Type of car is required"),
+    ({"car": "does-not-exist"}, "Choose a car from the list"),
+    ({"car": "old-car", "passengers": "2"}, "currently unavailable"),
 ])
-def test_invalid_requests_are_refused_with_a_message_and_nothing_is_saved(catalog, changes, message):
-    response = client.post("/bookings", data=car_request(**changes))
+def test_invalid_car_requests_are_refused_with_a_message_and_nothing_is_saved(catalog, changes, message):
+    response = client.post("/book/car", data=car_request(**changes))
     assert response.status_code == 422, response.text
     assert any(message in text for text in response.json()["errors"]), response.json()
     assert saved_bookings(catalog) == []
 
 
-def test_a_tour_does_not_check_seats(catalog):
-    assert client.post("/bookings", data=tour_request(passengers="30")).status_code == 201
+@pytest.mark.parametrize("changes, message", [
+    ({"customer_name": ""}, "Customer name is required"),
+    ({"customer_phone": "call me"}, "valid phone number"),
+    ({"start_date": ""}, "Start date is required"),
+    ({"start_date": when(-1)}, "cannot be in the past"),
+    ({"end_date": when(2)}, "end date cannot be before the start date"),
+    ({"guests": ""}, "Number of guests is required"),
+    ({"guests": "0"}, "Number of guests is outside the allowed range"),
+    ({"guests": "11"}, "seats up to 10 guests"),
+    ({"tour": ""}, "Tour package is required"),
+    ({"tour": "does-not-exist"}, "Choose a tour package from the list"),
+    ({"tour": "closed-tour", "guests": "2"}, "currently unavailable"),
+])
+def test_invalid_tour_requests_are_refused_with_a_message_and_nothing_is_saved(catalog, changes, message):
+    response = client.post("/book/tour", data=tour_request(**changes))
+    assert response.status_code == 422, response.text
+    assert any(message in text for text in response.json()["errors"]), response.json()
+    assert saved_bookings(catalog) == []
+
+
+def test_a_tour_without_vehicle_details_has_no_guest_limit(catalog):
+    assert client.post("/book/tour", data=tour_request(tour="plain-tour", guests="30")).status_code == 201
+
+
+def test_a_form_cannot_book_the_other_kind_of_item(catalog):
+    assert client.post("/book/car", data=car_request(car="island-day-tour")).status_code == 422
+    assert client.post("/book/tour", data=tour_request(tour="family-suv")).status_code == 422
+    assert saved_bookings(catalog) == []
+
+
+# ---- dates that are already taken ----
+def test_an_approved_booking_blocks_overlapping_dates_for_that_car(catalog):
+    add_booking("approved", 5, 7)
+    for start, end in ((4, 5), (6, 6), (7, 9), (3, 10)):
+        response = client.post("/book/car", data=car_request(start_date=when(start), end_date=when(end)))
+        assert response.status_code == 422, (start, end)
+        assert "already booked" in response.json()["errors"][0]
+    assert len(saved_bookings(catalog)) == 1  # only the one added directly
+
+
+def test_the_days_just_before_and_after_an_approved_booking_are_free(catalog):
+    add_booking("approved", 5, 7)
+    assert client.post("/book/car", data=car_request(start_date=when(2), end_date=when(4), start_time="", end_time="")).status_code == 201
+    assert client.post("/book/car", data=car_request(start_date=when(8), end_date=when(9), start_time="", end_time="")).status_code == 201
+
+
+def test_an_ongoing_booking_still_blocks_its_dates(catalog):
+    add_booking("ongoing", 5, 7)
+    assert client.post("/book/car", data=car_request()).status_code == 422
+
+
+@pytest.mark.parametrize("status", ["pending", "rejected", "cancelled", "completed"])
+def test_only_approved_and_ongoing_bookings_block_dates(catalog, status):
+    add_booking(status, 5, 7)
+    assert client.post("/book/car", data=car_request()).status_code == 201
+
+
+def test_a_booking_for_another_car_does_not_block(catalog):
+    add_booking("approved", 5, 7, item="City Car")
+    assert client.post("/book/car", data=car_request()).status_code == 201
+
+
+def test_a_car_booking_does_not_block_a_tour_with_the_same_name(catalog):
+    add_booking("approved", 10, 10, kind="car", item="Island Day Tour")
+    assert client.post("/book/tour", data=tour_request()).status_code == 201
+
+
+def test_an_approved_tour_blocks_that_tour_only(catalog):
+    add_booking("approved", 10, 10, kind="tour", item="Island Day Tour")
+    assert client.post("/book/tour", data=tour_request()).status_code == 422
+    assert client.post("/book/tour", data=tour_request(tour="plain-tour")).status_code == 201
+
+
+def test_blocked_dates_are_on_the_page_without_any_customer_details(catalog):
+    add_booking("approved", 5, 7)
+    add_booking("pending", 20, 21)
+    html = client.get("/book/car").text
+    data = json.loads(re.search(r'<script type="application/json" id="blocked-dates">(.*?)</script>', html, re.S).group(1))
+    assert data["Family SUV"] == [[when(5), when(7)]] and data["City Car"] == []
+    assert "Earlier Customer" not in html and "09170000000" not in html
+
+
+def test_without_a_database_nothing_is_blocked():
+    assert service.blocked_ranges("car", "Family SUV") == []
 
 
 # ---- abuse and failure ----
 def test_the_hidden_field_makes_a_bot_look_successful_but_saves_nothing(catalog):
-    response = client.post("/bookings", data=car_request(website="http://spam.example"))
-    assert response.status_code == 201 and response.json()["reference"] == ""
+    for url, data in (("/book/car", car_request()), ("/book/tour", tour_request())):
+        response = client.post(url, data=data | {"website": "http://spam.example"})
+        assert response.status_code == 201 and response.json()["reference"] == ""
     assert saved_bookings(catalog) == []
 
 
 def test_too_many_requests_from_one_address_are_refused(catalog, monkeypatch):
     monkeypatch.setattr(bookings_route, "limiter", RateLimiter(max_hits=2, window_seconds=600))
-    codes = [client.post("/bookings", data=car_request()).status_code for _ in range(3)]
+    codes = [client.post("/book/car", data=car_request(start_date=when(20 + 3 * i), end_date=when(21 + 3 * i))).status_code
+             for i in range(3)]
     assert codes == [201, 201, 429]
     assert len(saved_bookings(catalog)) == 2
 
 
 def test_without_a_database_the_request_is_refused_politely():
-    response = client.post("/bookings", data=car_request())
-    assert response.status_code == 503 and "Messenger" in response.json()["errors"][0]
+    for url, data in (("/book/car", car_request()), ("/book/tour", tour_request())):
+        response = client.post(url, data=data)
+        assert response.status_code == 503 and "Messenger" in response.json()["errors"][0]
 
 
 def test_a_storage_failure_gives_a_generic_message_and_no_internals(catalog, monkeypatch):
     def broken(data):
         raise RuntimeError("secret firestore detail")
-    monkeypatch.setattr(service, "create_public_booking", broken)
-    response = client.post("/bookings", data=car_request())
+    monkeypatch.setattr(service, "create_car_booking", broken)
+    response = client.post("/book/car", data=car_request())
     assert response.status_code == 503
     assert "secret" not in response.text and "try again" in response.json()["errors"][0]
 
@@ -166,41 +305,100 @@ def test_the_rate_limiter_forgets_old_attempts():
     assert limiter.allow("a")
 
 
-# ---- landing page ----
-def test_book_now_buttons_open_the_form_instead_of_messenger():
-    html = client.get("/").text
-    assert html.count('<button type="button" class="btn btn--action btn--sm site-header__cta" data-book>Book Now</button>') == 1
-    assert '<button type="button" class="btn btn--action btn--block" data-book>Book Now</button>' in html
-    assert "(opens Messenger in a new tab)</span></a>" not in html.split('id="main"')[0]  # none left in the header
-    # one booking button per sample vehicle and tour card, each naming what it books
-    assert html.count('data-book="car:') == len(service.content.list_vehicles())
-    assert html.count('data-book="tour:') >= len(service.content.list_tours())
-
-
-def test_the_booking_dialog_is_on_the_page_once_with_every_field_the_server_expects():
-    html = client.get("/").text
-    assert html.count('id="booking-dialog"') == 1
+# ---- the pages ----
+def field_names(html: str) -> set[str]:
     form = html.split('id="booking-form"')[1].split("</form>")[0]
-    for name in ("item", "start_date", "end_date", "passengers", "driver_option", "pickup_location", "details",
-                 "customer_name", "customer_phone", "customer_email", "website"):
-        assert f'name="{name}"' in form, name
-    assert f'min="{today_ph().isoformat()}"' in form
-    assert 'action="/bookings"' in html and 'method="post"' in html
-    assert all(re.search(rf'<label[^>]*for="{i}"', html) for i in re.findall(r'<(?:input|select|textarea) id="(bk-[a-z]+)"', html))
+    return set(re.findall(r'<(?:input|select|textarea)[^>]* name="([a-z_]+)"', form))
+
+
+def test_the_car_page_has_every_field_the_server_expects():
+    html = client.get("/book/car").text
+    assert field_names(html) >= {"car", "start_date", "start_time", "end_date", "end_time", "pickup_location",
+                                 "dropoff_location", "destination", "passengers", "driver_option", "details",
+                                 "customer_name", "customer_phone", "customer_email", "website"}
+    assert 'action="/book/car"' in html and 'method="post"' in html and f'min="{today_ph().isoformat()}"' in html
+    ids = re.findall(r'<(?:input|select|textarea) id="(bk-[a-z-]+)"', html)
+    assert ids and all(re.search(rf'<label[^>]*for="{i}"', html) for i in ids)
+
+
+def test_the_tour_page_has_every_field_the_server_expects():
+    html = client.get("/book/tour").text
+    assert field_names(html) >= {"tour", "start_date", "end_date", "guests", "pickup_location", "details",
+                                 "customer_name", "customer_phone", "customer_email", "website"}
+    assert field_names(html).isdisjoint({"dropoff_location", "destination", "driver_option", "start_time", "end_time"})
+    assert 'action="/book/tour"' in html
+    ids = re.findall(r'<(?:input|select|textarea) id="(bk-[a-z-]+)"', html)
+    assert ids and all(re.search(rf'<label[^>]*for="{i}"', html) for i in ids)
+
+
+def test_each_page_loads_the_calendar_from_a_pinned_cdn_version_with_an_integrity_check():
+    for url in ("/book/car", "/book/tour"):
+        html = client.get(url).text
+        assert re.search(r'<script src="https://cdn\.jsdelivr\.net/npm/flatpickr@4\.6\.13/dist/flatpickr\.min\.js" integrity="sha384-', html)
+        assert re.search(r'<link rel="stylesheet" href="https://cdn\.jsdelivr\.net/npm/flatpickr@4\.6\.13/dist/flatpickr\.min\.css" integrity="sha384-', html)
+        assert 'id="bk-calendar"' in html
+
+
+def test_the_chosen_item_is_preselected_and_unavailable_ones_are_not_offered(catalog):
+    html = client.get("/book/car?car=city-car").text
+    assert re.search(r'<option value="city-car" selected', html)
+    options = html.split('id="bk-item"')[1].split("</select>")[0]
+    assert "Family SUV" in options and "City Car" in options and "Old Car" not in options
+    tours = client.get("/book/tour?tour=plain-tour").text
+    assert re.search(r'<option value="plain-tour" selected', tours) and "Closed Tour" not in tours
+
+
+def test_an_unknown_choice_falls_back_to_the_first_item(catalog):
+    assert re.search(r'<option value="city-car" selected', client.get("/book/car?car=nope").text)
+
+
+def test_the_tour_page_shows_the_tours_own_vehicle(catalog):
+    html = client.get("/book/tour?tour=island-day-tour").text
+    assert "Vehicle for this tour" in html and "Toyota Hiace" in html and 'data-vehicle-seats="10"' in html
+    plain = client.get("/book/tour?tour=plain-tour").text
+    assert re.search(r'<div class="book__vehicle"[^>]* hidden>', plain)
+
+
+def test_vans_belong_to_tours_not_to_car_rental():
+    assert "Passenger Van" in client.get("/book/tour").text  # the sample tours carry a van
+    assert "Passenger Van" not in client.get("/book/car").text
+    home = client.get("/").text
+    assert "Passenger Van" not in home.split('id="car-rental"')[1].split("</section>")[0]
+
+
+def test_a_page_with_nothing_to_book_says_so_and_offers_messenger(fake_db):
+    for url in ("/book/car", "/book/tour"):
+        html = client.get(url).text
+        assert "open for booking right now" in html and "m.me/" in html and 'id="booking-form"' not in html
+
+
+def test_the_booking_pages_link_back_to_the_landing_page_sections():
+    html = client.get("/book/car").text
+    assert 'href="/#tours"' in html and 'href="/#home"' in html and 'href="/#services"' in html
+    assert 'href="/"' in html  # breadcrumb
+
+
+def test_messenger_stays_available_as_a_secondary_way_to_ask():
+    for url in ("/book/car", "/book/tour"):
+        assert "Message us on Messenger" in client.get(url).text
+
+
+# ---- landing page ----
+def test_the_landing_page_buttons_lead_to_the_booking_pages(catalog):
+    html = client.get("/").text
+    assert 'href="/book/car?car=family-suv"' in html and 'href="/book/tour?tour=island-day-tour"' in html
+    assert "booking-dialog" not in html and "data-book" not in html
+    assert html.count('class="btn btn--action btn--sm site-header__cta" href="#services"') == 1
+    assert 'class="btn btn--action btn--block" href="#services"' in html
 
 
 def test_unavailable_items_cannot_be_booked_from_the_site(catalog):
     html = client.get("/").text
-    assert 'data-book="car:Family SUV"' in html and 'data-book="tour:Island Day Tour"' in html
-    assert 'data-book="car:Old Van"' not in html and 'data-book="tour:Closed Tour"' not in html
+    assert "/book/car?car=old-car" not in html and "/book/tour?tour=closed-tour" not in html
     assert "Currently unavailable</button>" in html
-    options = html.split('id="bk-item"')[1].split("</select>")[0]
-    assert "Family SUV" in options and "Island Day Tour" in options
-    assert "Old Van" not in options and "Closed Tour" not in options
 
 
-def test_messenger_stays_available_as_a_secondary_way_to_ask():
+def test_the_tour_details_dialog_links_to_the_tour_booking_page(catalog):
     html = client.get("/").text
-    dialog = html.split('id="booking-dialog"')[1]
-    assert "Message us on Messenger" in dialog
-    assert html.count("https://m.me/") >= 3  # footer, contact and the dialogs still link to Messenger
+    dialog = html.split('id="tour-island-day-tour"')[1].split("</dialog>")[0]
+    assert 'href="/book/tour?tour=island-day-tour"' in dialog and "Toyota Hiace (10 seats)" in dialog

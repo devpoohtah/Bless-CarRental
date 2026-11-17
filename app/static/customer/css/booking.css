@@ -1,0 +1,56 @@
+/* Booking pages (/book/car and /book/tour): summary on the left, contact card and form on the right. */
+.book { padding: calc(var(--header-h) + 1.5rem) 0 4rem; background: var(--surface); color: var(--ink); --focus: var(--night); }
+.crumbs ol { list-style: none; display: flex; flex-wrap: wrap; gap: 0.5rem; font-size: 0.9375rem; color: var(--muted); }
+.crumbs li + li::before { content: "\203A"; margin-right: 0.5rem; }
+.crumbs a { text-decoration: underline; text-underline-offset: 0.2em; }
+.crumbs [aria-current="page"] { font-weight: 600; color: var(--ink); }
+
+.book__layout { display: grid; gap: 1.5rem; margin-top: 1.25rem; }
+@media (min-width: 64em) {
+  .book__layout { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 2rem; align-items: start; }
+  .book__summary { position: sticky; top: calc(var(--header-h) + 1.5rem); }
+}
+
+/* Summary of the chosen car or tour */
+.book__photo img { width: 100%; aspect-ratio: 4 / 3; max-height: 32rem; object-fit: cover; border-radius: var(--radius-lg); background: var(--line); }
+.book__headline { margin-top: 1.25rem; }
+.book__name { font-size: clamp(1.5rem, 1.2rem + 1.5vw, 2rem); font-weight: 700; }
+.book__sub { display: flex; align-items: center; gap: 0.375rem; margin-top: 0.25rem; font-size: 0.9375rem; color: var(--muted); }
+.book__text { margin-top: 0.75rem; max-width: 60ch; color: var(--muted); }
+.book__vehicle { display: flex; align-items: center; gap: 1rem; margin-top: 1.25rem; padding: 0.75rem; border: 1px solid var(--line); border-radius: var(--radius-md); background: #fff; }
+.book__vehicle img { flex: none; width: 6.5rem; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 0.5rem; background: var(--line); }
+.book__vehicle-name { font-weight: 700; }
+
+/* Right column */
+.book__panel { padding: 1.25rem; border: 1px solid var(--line); border-radius: var(--radius-lg); background: #fff; box-shadow: var(--shadow-card); }
+@media (min-width: 40em) { .book__panel { padding: 1.75rem; } }
+.book__contact { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 0.25rem 0.875rem; padding-bottom: 1.25rem; border-bottom: 1px solid var(--line); }
+.book__contact img { width: 3rem; height: 3rem; border-radius: 50%; object-fit: contain; background: var(--night); }
+.book__contact-name { font-weight: 700; line-height: 1.3; }
+.book__contact-sub { font-size: 0.875rem; color: var(--muted); }
+.book__contact-links { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; margin-top: 0.75rem; font-size: 0.9375rem; }
+.book__contact-links a { display: inline-flex; align-items: center; gap: 0.375rem; }
+.book__title { margin-top: 1.5rem; font-size: clamp(1.5rem, 1.2rem + 1.5vw, 1.875rem); font-weight: 700; }
+.book__lead { max-width: 60ch; margin-top: 0.5rem; color: var(--muted); }
+.book__done-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.5rem; }
+.book__empty { max-width: 40rem; padding-block: 3rem; }
+.book .booking-form { margin-top: 1.25rem; }
+
+/* Calendar (Flatpickr, shown inline). The date inputs below it hold the real values. */
+.book__calendar-title { font-size: 0.9375rem; font-weight: 600; }
+.book__calendar-box { display: flex; justify-content: center; padding: 0.5rem; border: 1px solid var(--line); border-radius: var(--radius-md); background: #fff; }
+.book .flatpickr-calendar.inline { width: 100%; max-width: 22rem; box-shadow: none; font-family: var(--font-body); }
+.book .flatpickr-calendar.inline .flatpickr-days, .book .flatpickr-calendar.inline .dayContainer { width: 100%; min-width: 100%; max-width: 100%; }
+.book .flatpickr-day { max-width: none; flex-basis: 14.2857%; height: 2.5rem; line-height: 2.5rem; color: var(--ink); }
+.book .flatpickr-day.today { border-color: var(--berry); }
+.book .flatpickr-day.selected, .book .flatpickr-day.startRange, .book .flatpickr-day.endRange,
+.book .flatpickr-day.selected:hover, .book .flatpickr-day.startRange:hover, .book .flatpickr-day.endRange:hover { border-color: var(--night); background: var(--night); color: #fff; }
+.book .flatpickr-day.inRange { border-color: transparent; background: rgb(0 1 65 / 0.08); box-shadow: -5px 0 0 rgb(0 1 65 / 0.08), 5px 0 0 rgb(0 1 65 / 0.08); }
+.book .flatpickr-day.flatpickr-disabled, .book .flatpickr-day.flatpickr-disabled:hover { color: var(--muted); opacity: 0.45; cursor: not-allowed; }
+.book .flatpickr-day.is-booked, .book .flatpickr-day.is-booked:hover { text-decoration: line-through; opacity: 0.7; }
+.book .flatpickr-day.prevMonthDay, .book .flatpickr-day.nextMonthDay { color: var(--muted); }
+.book .flatpickr-months, .book .flatpickr-month { height: 3rem; }
+.book .flatpickr-current-month { top: 0; height: 100%; padding: 0; display: flex; align-items: center; justify-content: center; gap: 0.25rem; line-height: 1; font-size: 1.0625rem; color: var(--ink); }
+.book .flatpickr-current-month .numInputWrapper { width: 5ch; }
+.book span.flatpickr-weekday { color: var(--ink); }
+.book .flatpickr-months .flatpickr-prev-month, .book .flatpickr-months .flatpickr-next-month { padding: 0.75rem; }

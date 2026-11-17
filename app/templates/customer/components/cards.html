@@ -1,11 +1,11 @@
 {# Card macros for tours, destinations, services and vehicles. #}
 
-{# Opens the booking dialog with this car or tour chosen. Unavailable items cannot be booked. #}
+{# Links to the booking page for this car or tour, with it chosen. Unavailable items cannot be booked. #}
 {% macro book_button(kind, entry, label, extra='') %}
 {% if entry.availability == 'unavailable' %}
 <button type="button" class="btn btn--primary{{ ' ' ~ extra if extra }}" disabled>Currently unavailable</button>
 {% else %}
-<button type="button" class="btn btn--primary{{ ' ' ~ extra if extra }}" data-book="{{ kind }}:{{ entry.name }}">{{ label }}<span class="sr-only"> {{ entry.name }}</span></button>
+<a class="btn btn--primary{{ ' ' ~ extra if extra }}" href="/book/{{ kind }}?{{ kind }}={{ entry.id | urlencode }}">{{ label }}<span class="sr-only"> {{ entry.name }}</span></a>
 {% endif %}
 {% endmacro %}
 
@@ -83,7 +83,7 @@
 </article>
 {% endmacro %}
 
-{% macro detail_dialog(dom_id, title, subtitle, photo, description, facts, is_sample, book_item=None) %}
+{% macro detail_dialog(dom_id, title, subtitle, photo, description, facts, is_sample, book_href=None) %}
 <dialog id="{{ dom_id }}" aria-labelledby="{{ dom_id }}-title" class="detail-dialog">
   <div class="detail-dialog__media">
     <img src="{{ static_url(photo.src) }}" alt="{{ photo.alt }}" width="1200" height="900" loading="lazy" decoding="async">
@@ -106,8 +106,8 @@
     <p class="notice">{{ icon('info', 'icon') }}This is a sample listing. BLESS will confirm the details and rates when you inquire.</p>
     {% endif %}
     <div class="detail-dialog__actions">
-      {% if book_item %}
-      <button type="button" class="btn btn--primary" data-book="{{ book_item }}">Book now</button>
+      {% if book_href %}
+      <a class="btn btn--primary" href="{{ book_href }}">Book now</a>
       <a class="btn btn--outline" href="{{ site.messenger_url }}" target="_blank" rel="noopener noreferrer">Message us on Messenger<span class="sr-only"> (opens in a new tab)</span></a>
       {% else %}
       <a class="btn btn--primary" href="{{ site.messenger_url }}" target="_blank" rel="noopener noreferrer">Inquire on Messenger<span class="sr-only"> (opens in a new tab)</span></a>

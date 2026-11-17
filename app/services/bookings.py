@@ -12,7 +12,7 @@ from app.db import firebase
 from app.db import repositories as repo
 from app.schemas.booking import Booking, BookingStatus, BookingType, StatusChange
 from app.core.clock import today_ph
-from app.schemas.forms import BookingInput, PublicBookingInput
+from app.schemas.forms import BookingInput, PublicCarBookingInput, PublicTourBookingInput
 from app.services import content
 from app.services.errors import FormError
 
@@ -71,7 +71,7 @@ def _sample_bookings(today: date) -> list[Booking]:
                 [("pending", -4), ("approved", -3)]),
         booking(4, "tour", "Beach Getaway Package", 7, 9, "approved", "paid", -6,
                 [("pending", -6), ("approved", -5)]),
-        booking(5, "car", "Passenger Van", -2, 2, "ongoing", "paid", -9,
+        booking(5, "car", "Family SUV", -2, 2, "ongoing", "paid", -9,
                 [("pending", -9), ("approved", -8), ("ongoing", -2)]),
         booking(6, "tour", "Heritage and Church Tour", -12, -12, "completed", "paid", -20,
                 [("pending", -20), ("approved", -19), ("ongoing", -12), ("completed", -12)]),
@@ -135,51 +135,85 @@ def create_booking(data: BookingInput) -> str:
     return repo.save(repo.BOOKINGS, booking)
 
 
+# A date is taken once BLESS has approved a booking for it, and stays taken while the trip is under way.
+BLOCKING_STATUSES: tuple[BookingStatus, ...] = ("approved", "ongoing")
 MAX_DAYS_AHEAD = 730  # website requests may be made up to two years ahead
 
 
-def _public_item(data: PublicBookingInput):
-    """The car or tour package the customer chose, or a FormError if it cannot be booked."""
-    if data.booking_type is None:
-        raise FormError("Choose a car or tour package from the list.")
-    items = content.list_vehicles() if data.booking_type == "car" else content.list_tours()
-    chosen = next((entry for entry in items if entry.name == data.item_name), None)
+def blocked_ranges(booking_type: BookingType, item_name: str) -> list[tuple[date, date]]:
+    """(first day, last day) of every approved or ongoing booking for this car or tour package.
+
+    Pending requests do not block a date, because BLESS has not accepted them yet. Sample rows never block.
+    """
+    if not firebase.is_configured():
+        return []
+    rows = repo.list_where(repo.BOOKINGS, Booking, booking_type=booking_type, item_name=item_name)
+    return sorted((b.start_date, b.end_date) for b in rows if b.status in BLOCKING_STATUSES and not b.is_sample)
+
+
+def all_blocked_ranges(booking_type: BookingType, names: list[str]) -> dict[str, list[list[str]]]:
+    """Blocked ranges for several items at once, as ISO strings the booking page can hand to its calendar."""
+    return {name: [[a.isoformat(), b.isoformat()] for a, b in blocked_ranges(booking_type, name)] for name in names}
+
+
+def _check_dates_free(booking_type: BookingType, item_name: str, start: date, end: date) -> None:
+    if any(first <= end and start <= last for first, last in blocked_ranges(booking_type, item_name)):
+        raise FormError(f"{item_name} is already booked on some of those dates. "
+                        "Choose different dates, or message us on Messenger.")
+
+
+def _check_start_date(start: date) -> date:
+    today = today_ph()
+    if start < today:
+        raise FormError("The start date cannot be in the past.")
+    if start > today + timedelta(days=MAX_DAYS_AHEAD):
+        raise FormError("Choose a start date within the next two years.")
+    return today
+
+
+def _find(items, item_id: str, what: str):
+    chosen = next((entry for entry in items if entry.id == item_id), None)
     if chosen is None:
-        raise FormError("Choose a car or tour package from the list.")
+        raise FormError(f"Choose a {what} from the list.")
     if chosen.availability == "unavailable":
         raise FormError(f"{chosen.name} is currently unavailable. Choose another, or message us on Messenger.")
     return chosen
 
 
-def create_public_booking(data: PublicBookingInput) -> Booking:
-    """Saves a website request as a Pending booking. Status and payment are decided here, never by the customer."""
-    chosen = _public_item(data)
-    today = today_ph()
-    if data.start_date < today:
-        raise FormError("The start date cannot be in the past.")
-    if data.start_date > today + timedelta(days=MAX_DAYS_AHEAD):
-        raise FormError("Choose a start date within the next two years.")
-    is_car = data.booking_type == "car"
-    if is_car and chosen.seats and data.passengers > chosen.seats:
-        raise FormError(f"The {chosen.name} seats up to {chosen.seats} passengers.")
+def create_car_booking(data: PublicCarBookingInput) -> Booking:
+    """Saves a website car rental request as a Pending booking. Status and payment are decided here, never by the customer."""
+    car = _find(content.list_vehicles(), data.car, "car")
+    today = _check_start_date(data.start_date)
+    if car.seats and data.passengers > car.seats:
+        raise FormError(f"The {car.name} seats up to {car.seats} passengers.")
+    _check_dates_free("car", car.name, data.start_date, data.end_date)
     booking = Booking(
-        id="",
-        booking_type=data.booking_type,
-        customer_name=data.customer_name,
-        customer_phone=data.customer_phone,
-        customer_email=data.customer_email or "",
-        item_name=data.item_name,
-        start_date=data.start_date,
-        end_date=data.end_date,
-        details=data.details or "",
-        passengers=data.passengers,
-        pickup_location=data.pickup_location or "",
-        driver_option=data.driver_option if is_car else None,
-        requested_on=today,
-        status="pending",
-        payment_status="unpaid",
-        history=[StatusChange(status="pending", changed_on=today)],
-        is_sample=False,
+        id="", booking_type="car", customer_name=data.customer_name, customer_phone=data.customer_phone,
+        customer_email=data.customer_email or "", item_name=car.name,
+        start_date=data.start_date, end_date=data.end_date, start_time=data.start_time, end_time=data.end_time,
+        details=data.details or "", passengers=data.passengers, pickup_location=data.pickup_location,
+        dropoff_location=data.dropoff_location, destination=data.destination, driver_option=data.driver_option,
+        requested_on=today, status="pending", payment_status="unpaid",
+        history=[StatusChange(status="pending", changed_on=today)], is_sample=False,
+    )
+    return booking.model_copy(update={"id": repo.save(repo.BOOKINGS, booking)})
+
+
+def create_tour_booking(data: PublicTourBookingInput) -> Booking:
+    """Saves a website tour request as a Pending booking."""
+    tour = _find(content.list_tours(), data.tour, "tour package")
+    today = _check_start_date(data.start_date)
+    if tour.vehicle_seats and data.guests > tour.vehicle_seats:
+        raise FormError(f"The vehicle for {tour.name} seats up to {tour.vehicle_seats} guests. "
+                        "For a bigger group, message us on Messenger.")
+    _check_dates_free("tour", tour.name, data.start_date, data.end_date)
+    booking = Booking(
+        id="", booking_type="tour", customer_name=data.customer_name, customer_phone=data.customer_phone,
+        customer_email=data.customer_email or "", item_name=tour.name,
+        start_date=data.start_date, end_date=data.end_date, details=data.details or "",
+        passengers=data.guests, pickup_location=data.pickup_location or "",
+        requested_on=today, status="pending", payment_status="unpaid",
+        history=[StatusChange(status="pending", changed_on=today)], is_sample=False,
     )
     return booking.model_copy(update={"id": repo.save(repo.BOOKINGS, booking)})
 

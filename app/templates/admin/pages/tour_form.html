@@ -30,12 +30,22 @@
         {{ field('price_php', 'Price (PHP)', form.price_php, type='number', inputmode='numeric', min=0) }}
         {{ select('availability', 'Availability', availability_labels.items(), form.availability or 'inquire') }}
       </section>
+
+      <section class="form__group" aria-labelledby="tour-vehicle">
+        <h2 id="tour-vehicle">Vehicle for this tour</h2>
+        {{ field('vehicle_name', 'Vehicle name', form.vehicle_name, hint='For example: Toyota Hiace van. Shown on the booking page for this tour only, never in car rental.') }}
+        {{ field('vehicle_seats', 'Seats', form.vehicle_seats, type='number', inputmode='numeric', min=1, hint='Guests cannot book more than this.') }}
+      </section>
     </div>
 
     <div class="form__side">
       <section class="form__group" aria-labelledby="tour-image">
         <h2 id="tour-image">Image</h2>
         {{ image_field('Package image', tour.photo if editing) }}
+      </section>
+      <section class="form__group" aria-labelledby="tour-vehicle-image">
+        <h2 id="tour-vehicle-image">Vehicle image</h2>
+        {{ image_field('Vehicle image', tour.vehicle_photo if editing, name='vehicle_image') }}
       </section>
       {{ form_actions('Save tour package', '/admin/services/tours', 'Delete tour package' if editing, '/admin/services/tours/' ~ tour.id ~ '/delete' if editing, 'Delete this tour package? This cannot be undone.') }}
     </div>
