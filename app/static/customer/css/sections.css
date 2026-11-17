@@ -48,7 +48,7 @@
 
 /* Car Rental carousel: one vehicle per slide on a scroll-snap track. Swiping works without JS; the buttons need main.js. */
 .vcar { margin-top: 3rem; }
-.vcar__track { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: none; }
+.vcar__track { position: relative; display: flex; overflow-x: auto; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: none; }
 .vcar__track::-webkit-scrollbar { display: none; }
 .vslide { flex: 0 0 100%; display: grid; gap: 1.75rem; align-items: center; scroll-snap-align: start; scroll-snap-stop: always; }
 .vslide__stage { position: relative; display: flex; align-items: center; justify-content: center; box-sizing: border-box; width: 100%; max-height: 26rem; aspect-ratio: 4 / 3; padding: 1rem; border-radius: var(--radius-lg); background: #fff; }
@@ -171,3 +171,8 @@
 .footer__legal { padding-block: 1.5rem; border-top: 1px solid var(--night-line); font-size: 0.875rem; color: rgb(255 255 255 / 0.6); }
 @media (min-width: 40em) { .footer__grid { grid-template-columns: repeat(2, 1fr); } }
 @media (min-width: 64em) { .footer__grid { grid-template-columns: 1.4fr 0.8fr 1.2fr 1.2fr; } }
+
+@media (pointer: coarse) {
+  .footer__list { gap: 0.25rem; }
+  .footer__list a { display: inline-flex; align-items: center; min-height: 2.75rem; }
+}

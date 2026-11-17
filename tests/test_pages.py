@@ -168,3 +168,9 @@ def test_slide_captions_come_only_from_the_slide_list(monkeypatch):
     html = client.get("/").text
     assert 'data-caption="Sample caption"' in html and 'alt="Sample alt"' in html
     assert html.count("data-caption=") == 1
+
+
+def test_carousel_track_is_a_positioned_container():
+    # Without it, the sr-only text in off-screen slides escapes the track's clipping and widens the whole page on phones.
+    css = (STATIC_DIR / "customer" / "css" / "sections.css").read_text()
+    assert ".vcar__track { position: relative;" in css
