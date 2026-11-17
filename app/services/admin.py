@@ -86,10 +86,13 @@ def _create(collection, model, folder, placeholder, data, image):
         raise
 
 
-def _update(collection, folder, item, data, image):
+def _update(collection, folder, placeholder, item, data, image, remove_image=False):
     uploaded = _upload(image, folder)
+    removed = remove_image and not uploaded and bool(item.photo.public_id)  # a new file wins over "remove"
     if uploaded:
         photo = Photo(src=uploaded.url, alt=data.name, public_id=uploaded.public_id)
+    elif removed:
+        photo = Photo(src=placeholder, alt=data.name)
     else:
         photo = item.photo.model_copy(update={"alt": data.name})
     updated = item.model_copy(update={**data.model_dump(), "photo": photo, "is_sample": False})
@@ -99,8 +102,8 @@ def _update(collection, folder, item, data, image):
         if uploaded:
             images.delete(uploaded.public_id)
         raise
-    if uploaded:
-        images.delete(item.photo.public_id)  # the replaced image
+    if uploaded or removed:
+        images.delete(item.photo.public_id)  # the replaced or removed image
 
 
 def _remove(collection, item):
@@ -112,8 +115,8 @@ def create_car(data: CarInput, image: UploadFile | None) -> str:
     return _create(repo.CARS, Vehicle, "cars", CAR_PLACEHOLDER, data, image)
 
 
-def update_car(car: Vehicle, data: CarInput, image: UploadFile | None) -> None:
-    _update(repo.CARS, "cars", car, data, image)
+def update_car(car: Vehicle, data: CarInput, image: UploadFile | None, remove_image: bool = False) -> None:
+    _update(repo.CARS, "cars", CAR_PLACEHOLDER, car, data, image, remove_image)
 
 
 def delete_car(car: Vehicle) -> None:
@@ -121,7 +124,8 @@ def delete_car(car: Vehicle) -> None:
 
 
 def _save_tour(item: TourPackage | None, data: TourInput, image: UploadFile | None,
-               vehicle_image: UploadFile | None) -> str:
+               vehicle_image: UploadFile | None, remove_image: bool = False,
+               remove_vehicle_image: bool = False) -> str:
     """Create (item is None) or update a tour package, with its package photo and its own vehicle photo.
 
     The vehicle belongs to the package, so vans stay out of the car rental list.
@@ -148,15 +152,15 @@ def _save_tour(item: TourPackage | None, data: TourInput, image: UploadFile | No
     old_vehicle = item.vehicle_photo if item else None
     if new_photo:
         photo = Photo(src=new_photo.url, alt=data.name, public_id=new_photo.public_id)
-    elif old_photo:
+    elif old_photo and not (remove_image and old_photo.public_id):
         photo = old_photo.model_copy(update={"alt": data.name})
     else:
-        photo = Photo(src=TOUR_PLACEHOLDER, alt=data.name)
+        photo = Photo(src=TOUR_PLACEHOLDER, alt=data.name)  # new package, or its image was removed
     if not data.vehicle_name:
         vehicle_photo = None
     elif new_vehicle:
         vehicle_photo = Photo(src=new_vehicle.url, alt=data.vehicle_name, public_id=new_vehicle.public_id)
-    elif old_vehicle:
+    elif old_vehicle and not (remove_vehicle_image and old_vehicle.public_id):
         vehicle_photo = old_vehicle.model_copy(update={"alt": data.vehicle_name})
     else:
         vehicle_photo = Photo(src=VAN_PLACEHOLDER, alt=data.vehicle_name)
@@ -169,10 +173,10 @@ def _save_tour(item: TourPackage | None, data: TourInput, image: UploadFile | No
         for done in uploads:
             images.delete(done.public_id)
         raise
-    if new_photo and old_photo and old_photo.public_id:
-        images.delete(old_photo.public_id)  # the replaced image
-    if old_vehicle and old_vehicle.public_id and (new_vehicle or vehicle_photo is None):
-        images.delete(old_vehicle.public_id)  # replaced, or the vehicle was removed
+    if old_photo and old_photo.public_id and photo.public_id != old_photo.public_id:
+        images.delete(old_photo.public_id)  # replaced or removed
+    if old_vehicle and old_vehicle.public_id and (vehicle_photo is None or vehicle_photo.public_id != old_vehicle.public_id):
+        images.delete(old_vehicle.public_id)  # replaced or removed, or the vehicle itself was removed
     return doc_id
 
 
@@ -181,8 +185,9 @@ def create_tour_package(data: TourInput, image: UploadFile | None, vehicle_image
 
 
 def update_tour_package(tour: TourPackage, data: TourInput, image: UploadFile | None,
-                        vehicle_image: UploadFile | None = None) -> None:
-    _save_tour(tour, data, image, vehicle_image)
+                        vehicle_image: UploadFile | None = None, remove_image: bool = False,
+                        remove_vehicle_image: bool = False) -> None:
+    _save_tour(tour, data, image, vehicle_image, remove_image, remove_vehicle_image)
 
 
 def delete_tour_package(tour: TourPackage) -> None:

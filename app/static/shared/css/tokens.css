@@ -30,6 +30,8 @@
   --radius-md: 0.75rem;
   --radius-lg: 1.25rem;
   --shadow-card: 0 1px 2px rgb(0 1 65 / 0.06);
-  --header-h: 4.5rem;
+  --island-top: 0.75rem;      /* gap between the viewport edge and the floating navbar */
+  --island-h: 3.75rem;
+  --header-h: calc(var(--island-top) + var(--island-h));  /* space the navbar takes up: pages offset their content by this */
   --container: 80rem;
 }

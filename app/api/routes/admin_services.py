@@ -98,13 +98,13 @@ def car_edit(request: Request, car_id: str) -> HTMLResponse:
 def car_update(
     request: Request, car_id: str, name: str = Form(""), vehicle_type: str = Form(""), seats: str = Form(""),
     transmission: str = Form(""), daily_rate_php: str = Form(""), availability: str = Form("inquire"),
-    image: UploadFile | None = File(None),
+    image: UploadFile | None = File(None), remove_image: str = Form(""),
 ):
     require_configured()
     car = _car_or_404(car_id)
     raw = dict(name=name, vehicle_type=vehicle_type, seats=seats, transmission=transmission,
                daily_rate_php=daily_rate_php, availability=availability)
-    errors = _run(CarInput, raw, lambda data: service.update_car(car, data, image))
+    errors = _run(CarInput, raw, lambda data: service.update_car(car, data, image, bool(remove_image)))
     if not errors:
         return _done("/admin/services/cars", "saved")
     return render(request, "car_form.html", "cars", 422, car=car, form=raw, errors=errors)
@@ -157,13 +157,15 @@ def tour_update(
     summary: str = Form(""), description: str = Form(""), price_php: str = Form(""),
     availability: str = Form("inquire"), vehicle_name: str = Form(""), vehicle_seats: str = Form(""),
     image: UploadFile | None = File(None), vehicle_image: UploadFile | None = File(None),
+    remove_image: str = Form(""), remove_vehicle_image: str = Form(""),
 ):
     require_configured()
     tour = _tour_or_404(tour_id)
     raw = dict(name=name, destination=destination, duration=duration, summary=summary,
                description=description, price_php=price_php, availability=availability,
                vehicle_name=vehicle_name, vehicle_seats=vehicle_seats)
-    errors = _run(TourInput, raw, lambda data: service.update_tour_package(tour, data, image, vehicle_image))
+    errors = _run(TourInput, raw, lambda data: service.update_tour_package(
+        tour, data, image, vehicle_image, bool(remove_image), bool(remove_vehicle_image)))
     if not errors:
         return _done("/admin/services/tours", "saved")
     return render(request, "tour_form.html", "tours", 422, tour=tour, form=raw, errors=errors)

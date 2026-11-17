@@ -12,12 +12,19 @@ from app.schemas.catalog import (
     Destination,
     FaqItem,
     GalleryImage,
+    HeroSlide,
     NavLink,
     Photo,
     TourPackage,
     Testimonial,
     Vehicle,
 )
+
+# Hero carousel. Replace the placeholder files slide-1.webp to slide-8.webp (about 1920x1080, under 250 KB each).
+# To serve them from a CDN later, change HERO_IMAGE_BASE to the CDN folder URL (https://...); nothing else changes.
+# Fill in alt (what the photo shows) and caption (shown in the hero's control strip) with real text only.
+HERO_IMAGE_BASE = "customer/img/hero"
+HERO_SLIDES = [HeroSlide(file=f"slide-{n}.webp") for n in range(1, 9)]
 
 NAV_LINKS = [
     NavLink(label="Home", href="#home", section_id="home"),
@@ -250,6 +257,7 @@ def list_faqs() -> list[FaqItem]:
 def get_home_context() -> dict:
     return {
         "nav_links": NAV_LINKS,
+        "hero_slides": [(f"{HERO_IMAGE_BASE}/{slide.file}", slide) for slide in HERO_SLIDES],
         "tours": list_tours(),
         "destinations": list_destinations(),
         "vehicles": list_vehicles(),

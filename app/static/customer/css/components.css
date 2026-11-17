@@ -9,24 +9,26 @@
 .badge--float { position: absolute; top: 0.75rem; left: 0.75rem; z-index: 2; }
 .pill { align-self: flex-start; padding: 0.25rem 0.75rem; border: 1px solid var(--line); border-radius: 999px; font-size: 0.75rem; font-weight: 600; white-space: nowrap; color: var(--ink); }
 
-/* Header */
-.site-header { position: fixed; inset: 0 0 auto; z-index: 50; background: var(--night); border-bottom: 1px solid var(--night-line); }
-.site-header__bar { display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; height: var(--header-h); }
+/* Header: a floating island. The fixed wrapper is transparent; the bar and the mobile panel are the visible shapes. */
+.site-header { position: fixed; inset: var(--island-top) 0 auto; z-index: 50; width: min(calc(100% - 1.5rem), 78rem); margin-inline: auto; pointer-events: none; }
+.site-header > * { pointer-events: auto; }
+.site-header__bar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; height: var(--island-h); padding-inline: 0.75rem 0.5rem; border: 1px solid var(--night-line); border-radius: 999px; background: var(--night-raised); box-shadow: 0 10px 30px rgb(0 1 65 / 0.35); }
 .site-header__actions { display: flex; align-items: center; gap: 0.5rem; }
 .site-header__cta { display: none; }
 @media (min-width: 40em) { .site-header__cta { display: inline-flex; } }
-.brand { display: inline-flex; align-items: center; gap: 0.75rem; line-height: 1; border-radius: 0.5rem; color: #fff; }
-.brand__logo { height: 3.25rem; width: auto; }
-.brand__text { display: flex; flex-direction: column; }
+.brand { display: inline-flex; align-items: center; gap: 0.75rem; line-height: 1; border-radius: 999px; color: #fff; }
+.brand__logo { height: 2.75rem; width: auto; border-radius: 0.5rem; }
+.brand__text { display: flex; flex-direction: column; min-width: 0; white-space: nowrap; }
+@media (max-width: 39.99em) { .brand__text { font-size: 0.8125rem; } .brand__name { font-size: 0.9375rem; font-weight: 600; } }
 .primary-nav { display: none; }
 .nav-list { display: flex; gap: 0.25rem; }
 .nav__link { position: relative; display: block; padding: 0.5rem 0.75rem; border-radius: 0.25rem; font-size: 0.95rem; font-weight: 500; color: rgb(255 255 255 / 0.85); transition: color 0.15s; }
 .nav__link:hover, .nav__link[aria-current="true"] { color: #fff; }
 .nav__link::after { content: ""; position: absolute; inset: auto 0.75rem -0.1rem; height: 2px; background: var(--cyan); transform: scaleX(0); transform-origin: left; transition: transform 0.2s; }
 .nav__link[aria-current="true"]::after { transform: scaleX(1); }
-.menu-toggle { display: inline-flex; align-items: center; justify-content: center; width: 2.75rem; height: 2.75rem; border: 0; border-radius: var(--radius-md); background: none; color: #fff; cursor: pointer; }
+.menu-toggle { display: inline-flex; align-items: center; justify-content: center; width: 2.75rem; height: 2.75rem; border: 0; border-radius: 50%; background: none; color: #fff; cursor: pointer; }
 .menu-toggle:hover { background: rgb(255 255 255 / 0.1); }
-.mobile-menu { padding-block: 0.75rem 1.25rem; border-top: 1px solid var(--night-line); background: var(--night); }
+.mobile-menu { margin-top: 0.5rem; padding: 0.5rem 1.25rem 1.25rem; max-height: calc(100svh - var(--header-h) - 0.75rem); overflow-y: auto; border: 1px solid var(--night-line); border-radius: var(--radius-lg); background: var(--night-raised); box-shadow: 0 10px 30px rgb(0 1 65 / 0.35); }
 .nav__link--mobile { padding: 0.875rem 0; border-bottom: 1px solid var(--night-line); border-radius: 0; font-size: 1.125rem; }
 .nav__link--mobile::after { display: none; }
 .nav__link--mobile[aria-current="true"] { font-weight: 700; }
@@ -35,6 +37,7 @@
   .primary-nav { display: block; }
   .menu-toggle, .mobile-menu { display: none; }
 }
+@media (prefers-reduced-motion: reduce) { .nav__link, .nav__link::after { transition: none; } }
 
 /* Cards (light surface, even inside dark sections) */
 .card { display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius-lg); background: #fff; color: var(--ink); box-shadow: var(--shadow-card); --focus: var(--night); }

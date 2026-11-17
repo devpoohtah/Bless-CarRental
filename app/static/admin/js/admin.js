@@ -156,3 +156,52 @@ document.addEventListener("submit", (event) => {
   document.addEventListener("visibilitychange", () => { if (document.hidden) stop(); else start(); });
   if (!document.hidden) start();
 })();
+
+// Image fields: preview the chosen file before saving, check its type and size, and let "Remove image"
+// show what will happen. The server checks the real file again; this only saves a round trip.
+(() => {
+  const MAX_BYTES = 5 * 1024 * 1024;
+  const TYPES = ["image/jpeg", "image/png", "image/webp"];
+
+  document.querySelectorAll("[data-image-field]").forEach((field) => {
+    const input = field.querySelector("[data-image-input]");
+    const preview = field.querySelector("[data-image-preview]");
+    const note = field.querySelector("[data-image-note]");
+    const remove = field.querySelector("[data-image-remove]");
+    const original = preview.dataset.original || "";
+    let objectUrl = null;
+
+    const say = (text) => { note.textContent = text; note.hidden = !text; };
+    const reset = () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      objectUrl = null;
+      preview.classList.remove("is-removing");
+      if (original) { preview.src = original; preview.hidden = false; } else { preview.removeAttribute("src"); preview.hidden = true; }
+      say("");
+    };
+
+    input.addEventListener("change", () => {
+      const file = input.files[0];
+      reset();
+      if (remove) remove.checked = false;
+      if (!file) return;
+      if (!TYPES.includes(file.type)) { input.value = ""; say("That file is not a JPEG, PNG or WebP image."); return; }
+      if (file.size > MAX_BYTES) { input.value = ""; say("That image is larger than 5 MB. Choose a smaller file."); return; }
+      objectUrl = URL.createObjectURL(file);
+      preview.src = objectUrl;
+      preview.hidden = false;
+      say(original ? "New image shown above. It replaces the current one when you save." : "New image shown above. It is uploaded when you save.");
+    });
+
+    remove?.addEventListener("change", () => {
+      if (remove.checked) {
+        input.value = "";
+        reset();
+        preview.classList.add("is-removing");
+        say("The image will be removed when you save, and the placeholder is shown instead.");
+      } else {
+        reset();
+      }
+    });
+  });
+})();

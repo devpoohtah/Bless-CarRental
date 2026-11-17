@@ -363,3 +363,62 @@ def test_dashboard_with_an_empty_database_shows_zeros_and_no_requests(fake_db):
     html = client.get("/admin/dashboard").text
     assert "No booking requests yet" in html
     assert dict(re.findall(r"<dt>([^<]+)</dt>\s*<dd>\s*(\d+)\s*</dd>", html))["Total Bookings"] == "0"
+
+
+# ---- remove image ----
+def test_remove_image_on_a_car_deletes_it_and_falls_back_to_the_placeholder(fake_db, uploads):
+    client.post("/admin/services/cars/new", data=CAR, files={"image": ("a.jpg", b"x", "image/jpeg")})
+    car_id = only_id(fake_db, "cars")
+    client.post(f"/admin/services/cars/{car_id}/edit", data={**CAR, "remove_image": "1"})
+    photo = fake_db.data["cars"][car_id]["photo"]
+    assert photo["src"].endswith("service-car-rental-placeholder.svg") and photo["public_id"] is None
+    assert uploads["deleted"] == ["bless/cars/1"]
+
+
+def test_a_new_file_wins_over_remove_image(fake_db, uploads):
+    client.post("/admin/services/cars/new", data=CAR, files={"image": ("a.jpg", b"x", "image/jpeg")})
+    car_id = only_id(fake_db, "cars")
+    client.post(f"/admin/services/cars/{car_id}/edit", data={**CAR, "remove_image": "1"},
+                files={"image": ("b.jpg", b"y", "image/jpeg")})
+    assert fake_db.data["cars"][car_id]["photo"]["public_id"] == "bless/cars/2"
+    assert uploads["deleted"] == ["bless/cars/1"]  # deleted once, not twice
+
+
+def test_remove_image_without_an_uploaded_image_changes_nothing(fake_db, uploads):
+    client.post("/admin/services/cars/new", data=CAR)  # placeholder photo, nothing on Cloudinary
+    car_id = only_id(fake_db, "cars")
+    client.post(f"/admin/services/cars/{car_id}/edit", data={**CAR, "remove_image": "1"})
+    assert uploads["deleted"] == []
+
+
+def test_a_failed_save_keeps_the_image_when_remove_was_requested(fake_db, uploads):
+    client.post("/admin/services/cars/new", data=CAR, files={"image": ("a.jpg", b"x", "image/jpeg")})
+    car_id = only_id(fake_db, "cars")
+    response = client.post(f"/admin/services/cars/{car_id}/edit", data={**CAR, "name": "", "remove_image": "1"})
+    assert response.status_code == 422
+    assert fake_db.data["cars"][car_id]["photo"]["public_id"] == "bless/cars/1" and uploads["deleted"] == []
+
+
+def test_remove_package_and_vehicle_images_independently(fake_db, uploads):
+    data = TOUR | {"vehicle_name": "Hiace"}
+    client.post("/admin/services/tours/new", data=data,
+                files={"image": ("a.jpg", b"x", "image/jpeg"), "vehicle_image": ("v.png", b"x", "image/png")})
+    tour_id = only_id(fake_db, "tours")
+    client.post(f"/admin/services/tours/{tour_id}/edit", data=data | {"remove_vehicle_image": "1"})
+    doc = fake_db.data["tours"][tour_id]
+    assert doc["photo"]["public_id"] == "bless/tours/1"  # package image untouched
+    assert doc["vehicle_photo"]["src"].endswith("vehicle-passenger-van-placeholder.svg")
+    assert doc["vehicle_name"] == "Hiace" and uploads["deleted"] == ["bless/tour-vehicles/2"]
+    client.post(f"/admin/services/tours/{tour_id}/edit", data=data | {"remove_image": "1"})
+    assert fake_db.data["tours"][tour_id]["photo"]["src"].endswith("service-tours-placeholder.svg")
+    assert uploads["deleted"] == ["bless/tour-vehicles/2", "bless/tours/1"]
+
+
+def test_the_remove_checkbox_only_appears_for_an_uploaded_image(fake_db, uploads):
+    client.post("/admin/services/cars/new", data=CAR)
+    car_id = only_id(fake_db, "cars")
+    assert "data-image-remove" not in client.get(f"/admin/services/cars/{car_id}/edit").text
+    assert "data-image-remove" not in client.get("/admin/services/cars/new").text
+    client.post(f"/admin/services/cars/{car_id}/edit", data=CAR, files={"image": ("a.jpg", b"x", "image/jpeg")})
+    html = client.get(f"/admin/services/cars/{car_id}/edit").text
+    assert 'name="remove_image" type="checkbox"' in html and "data-image-preview" in html

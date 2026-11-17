@@ -46,3 +46,41 @@ def test_no_emoji_in_markup():
 def test_favicon_routes():
     assert client.get("/favicon.ico").status_code == 200
     assert (STATIC_DIR / "shared" / "img" / "favicon.svg").exists()
+
+
+# ---- hero slideshow and floating header ----
+def test_hero_has_eight_slides_and_only_the_first_image_loads_with_the_page():
+    html = client.get("/").text
+    assert html.count("data-slide ") == 8
+    assert html.count('fetchpriority="high"') == 2  # first slide + the car
+    assert html.count("data-src=") == 7 and 'src="/static/customer/img/hero/slide-1.webp' in html
+    for n in range(1, 9):
+        assert f"hero/slide-{n}.webp" in html
+
+
+def test_hero_controls_exist_and_are_labelled():
+    html = client.get("/").text
+    for label in ("Previous photo", "Next photo", "Pause slideshow"):
+        assert f'aria-label="{label}"' in html
+    assert html.count("data-hero-dot") == 8 and 'aria-roledescription="carousel"' in html
+
+
+def test_the_hero_keeps_the_car_and_the_headline():
+    html = client.get("/").text
+    assert "hero-car.webp" in html and "Drive with BLESS." in html
+
+
+def test_header_is_a_floating_island_with_the_menu_panel_outside_the_bar():
+    html = client.get("/").text
+    bar = html.index('class="site-header__bar"')
+    assert html.index('id="mobile-menu"') > html.index("</nav>", bar) > bar
+    assert 'class="container site-header__bar"' not in html
+
+
+def test_slide_captions_come_only_from_the_slide_list(monkeypatch):
+    from app.schemas.catalog import HeroSlide
+    from app.services import content
+    monkeypatch.setattr(content, "HERO_SLIDES", [HeroSlide(file="a.webp", alt="Sample alt", caption="Sample caption"), HeroSlide(file="b.webp")])
+    html = client.get("/").text
+    assert 'data-caption="Sample caption"' in html and 'alt="Sample alt"' in html
+    assert html.count("data-caption=") == 1

@@ -25,6 +25,8 @@ ICONS: dict[str, str] = {
     "clipboard-list": (
         '<rect width="8" height="4" x="8" y="2" rx="1" ry="1"/> <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/> <path d="M12 11h4"/> <path d="M12 16h4"/> <path d="M8 11h.01"/> <path d="M8 16h.01"/>'
     ),
+    "pause": '<rect x="14" y="4" width="4" height="16" rx="1"/> <rect x="6" y="4" width="4" height="16" rx="1"/>',
+    "play": '<polygon points="6 3 20 12 6 21 6 3"/>',
     "chevron-left": (
         '<path d="m15 18-6-6 6-6"/>'
     ),

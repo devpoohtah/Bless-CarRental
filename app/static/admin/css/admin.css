@@ -217,6 +217,10 @@ a.chip:hover { filter: brightness(1.15); }
 .form-errors ul { margin: 0.375rem 0 0; padding-left: 1.25rem; }
 
 /* ---------- Image preview in the car and tour forms ---------- */
+.field .check { display: flex; align-items: center; gap: 0.625rem; }
+.field .check input { width: 1.25rem; min-height: 0; height: 1.25rem; flex: none; accent-color: var(--ink); }
+.field .check label { font-weight: 500; }
+.thumb.is-removing { opacity: 0.35; outline: 2px dashed var(--muted); outline-offset: 2px; }
 .thumb { width: 100%; max-width: 20rem; height: auto; aspect-ratio: 4 / 3; object-fit: cover; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); }
 
 /* ---------- Login ---------- */

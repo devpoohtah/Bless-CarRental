@@ -81,6 +81,12 @@ class GalleryImage(BaseModel):
     photo: Photo
 
 
+class HeroSlide(BaseModel):
+    file: str = Field(description="File name under HERO_IMAGE_BASE")
+    alt: str = Field(default="", description="Describe the photo; leave empty and it is treated as decoration")
+    caption: str | None = Field(default=None, description="Short text shown in the hero's control strip, if any")
+
+
 class NavLink(BaseModel):
     label: str
     href: str

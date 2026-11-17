@@ -1,5 +1,16 @@
-<section id="home" class="hero on-dark">
-  {# Hero photo: replace customer/img/hero/hero-placeholder.svg with a real photo (wide, at least 1920px), e.g. hero-photo.jpg, and update the src below. #}
+<section id="home" class="hero on-dark" data-hero aria-roledescription="carousel" aria-label="BLESS travel photos">
+  {# Photo slideshow behind the headline. Slides come from HERO_SLIDES in services/content.py. Only the first image loads with the page; main.js loads each next one just before it is shown. #}
+  <div class="hero__slides">
+    {% for src, slide in hero_slides %}
+    <figure class="hero__slide{{ ' is-active' if loop.first }}" data-slide aria-roledescription="slide" aria-label="{{ loop.index }} of {{ hero_slides|length }}"{% if not loop.first %} aria-hidden="true"{% endif %}{% if slide.caption %} data-caption="{{ slide.caption }}"{% endif %}>
+      {% if loop.first %}
+      <img class="hero__bg" src="{{ static_url(src) }}" alt="{{ slide.alt }}" width="1920" height="1080" fetchpriority="high">
+      {% else %}
+      <img class="hero__bg" data-src="{{ static_url(src) }}" alt="{{ slide.alt }}" width="1920" height="1080" decoding="async">
+      {% endif %}
+    </figure>
+    {% endfor %}
+  </div>
   <img class="hero__car" src="{{ static_url('customer/img/hero/hero-car.webp') }}" alt="White Suzuki Ertiga Hybrid" width="983" height="617" fetchpriority="high">
   <div class="container hero__inner">
     <h1 class="hero__title">
@@ -14,4 +25,19 @@
     </div>
     <p class="hero__place">{{ icon('map-pin', 'icon icon--sm icon--cyan') }}Based in {{ site.location }}</p>
   </div>
+  {% if hero_slides|length > 1 %}
+  {# Hidden until main.js runs: the controls do nothing without it. #}
+  <div class="hero-bar" data-hero-bar hidden>
+    <div class="container hero-bar__inner">
+      <p class="hero-bar__caption" data-hero-caption hidden></p>
+      <div class="hero-bar__controls" role="group" aria-label="Slideshow controls">
+        <div class="hero-dots">
+          {% for src, slide in hero_slides %}
+          <button class="hero-dot" type="button" data-hero-dot aria-label="Show photo {{ loop.index }}"{% if loop.first %} aria-current="true"{% endif %}></button>
+          {% endfor %}
+        </div>  
+      </div>
+    </div>
+  </div>
+  {% endif %}
 </section>
