@@ -16,7 +16,7 @@ def isolate_from_real_services(monkeypatch):
     monkeypatch.setattr(config, "integrations", replace(
         config.integrations, google_credentials="", cloudinary_cloud_name="", cloudinary_api_key="",
         cloudinary_api_secret="", admin_emails=frozenset(), telegram_bot_token="", telegram_chat_id="",
-        admin_base_url=""))
+        admin_base_url="", firebase_vapid_key=""))
     app.dependency_overrides[require_admin] = lambda: AdminUser(email="admin@example.com", uid="test-uid")
     yield
     app.dependency_overrides.clear()

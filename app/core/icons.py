@@ -9,6 +9,7 @@ Add an icon by pasting its inner SVG markup into ICONS; use it in a template wit
 from markupsafe import Markup, escape
 
 ICONS: dict[str, str] = {
+    "bell": '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/> <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
     "panel-left-close": (
         '<rect width="18" height="18" x="3" y="3" rx="2"/> <path d="M9 3v18"/> <path d="m16 15-3-3 3-3"/>'
     ),

@@ -90,6 +90,13 @@ def list_bookings(booking_type: BookingType | None = None) -> list[Booking]:
     return [b for b in rows if booking_type in (None, b.booking_type)]
 
 
+def pending_count() -> int:
+    """Real bookings waiting for a decision. Sample rows are not real requests, so without a database: 0."""
+    if not firebase.is_configured():
+        return 0
+    return repo.count_where(repo.BOOKINGS, status="pending", is_sample=False)
+
+
 def get_booking(booking_id: str) -> Booking | None:
     if firebase.is_configured():
         return repo.get_one(repo.BOOKINGS, booking_id, Booking)

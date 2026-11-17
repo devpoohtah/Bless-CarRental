@@ -61,6 +61,9 @@ class Integrations:
     firebase_project_id: str = field(default_factory=lambda: _env("FIREBASE_PROJECT_ID"))
     firebase_sender_id: str = field(default_factory=lambda: _env("FIREBASE_MESSAGING_SENDER_ID"))
     firebase_app_id: str = field(default_factory=lambda: _env("FIREBASE_APP_ID"))
+    # Public key (Firebase console > Project settings > Cloud Messaging > Web Push certificates).
+    # Browsers need it to subscribe to desktop alerts. Unset means the alerts button is not shown.
+    firebase_vapid_key: str = field(default_factory=lambda: _env("FIREBASE_VAPID_KEY"))
     # Backend only. The API secret never reaches a template or the browser.
     cloudinary_cloud_name: str = field(default_factory=lambda: _env("CLOUDINARY_CLOUD_NAME"))
     cloudinary_api_key: str = field(default_factory=lambda: _env("CLOUDINARY_API_KEY"))
@@ -85,6 +88,15 @@ class Integrations:
             "appId": self.firebase_app_id,
         }
         return config if all(config.values()) else None
+
+    @property
+    def push_web_config(self) -> dict | None:
+        """Public settings the admin pages need for desktop alerts, or None when alerts are not set up.
+        The server also needs the service account to send them."""
+        web = self.firebase_web_config
+        if not (web and self.firebase_vapid_key and self.google_credentials):
+            return None
+        return {"firebase": web, "vapidKey": self.firebase_vapid_key}
 
     @property
     def telegram_ready(self) -> bool:

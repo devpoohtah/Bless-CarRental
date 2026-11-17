@@ -1,6 +1,6 @@
 {% set active = active_nav | default('') %}
-{% macro link(href, key, icon_name, label, active) %}
-<a class="admin-nav__link" href="{{ href }}" title="{{ label }}"{% if active == key %} aria-current="page"{% endif %}>{{ icon(icon_name, 'icon') }}<span class="admin-nav__text">{{ label }}</span></a>
+{% macro link(href, key, icon_name, label, active, badge=false) %}
+<a class="admin-nav__link" href="{{ href }}" title="{{ label }}"{% if active == key %} aria-current="page"{% endif %}>{{ icon(icon_name, 'icon') }}<span class="admin-nav__text">{{ label }}</span>{% if badge %}<span class="admin-nav__badge" data-pending-badge role="status" hidden></span>{% endif %}</a>
 {% endmacro %}
 <aside id="admin-sidebar" class="admin-sidebar on-dark">
   <a class="admin-brand" href="/admin/dashboard" title="{{ site.short_name }} Admin">
@@ -16,7 +16,7 @@
     {{ link('/admin/services/cars', 'cars', 'car-front', 'Cars', active) }}
     {{ link('/admin/services/tours', 'tours', 'compass', 'Tour Packages', active) }}
     <p class="admin-nav__label">Booking Management</p>
-    {{ link('/admin/bookings', 'bookings', 'clipboard-list', 'Bookings', active) }}
+    {{ link('/admin/bookings', 'bookings', 'clipboard-list', 'Bookings', active, badge=true) }}
     {{ link('/admin/calendar', 'calendar', 'calendar', 'Calendar', active) }}
   </nav>
   <div class="admin-sidebar__foot">
@@ -25,6 +25,9 @@
       <span class="admin-collapse__icon admin-collapse__icon--open">{{ icon('panel-left-open', 'icon') }}</span>
       <span class="admin-nav__text" data-collapse-label>Collapse</span>
     </button>
+    {% if push_config() %}
+    <button type="button" class="admin-nav__link admin-nav__btn" data-push-toggle title="Desktop alerts" hidden>{{ icon('bell', 'icon') }}<span class="admin-nav__text" data-push-label>Desktop alerts</span></button>
+    {% endif %}
     <form method="post" action="/admin/logout">
       <button type="submit" class="admin-nav__link admin-nav__btn" title="Sign out">{{ icon('log-out', 'icon') }}<span class="admin-nav__text">Sign out</span></button>
     </form>

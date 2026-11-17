@@ -12,18 +12,15 @@ import urllib.request
 
 from app.core import config
 from app.schemas.booking import Booking
+from app.services import push
 
 log = logging.getLogger(__name__)
 TIMEOUT_SECONDS = 5
 NOTES_LIMIT = 200
 
 
-def _when(day, time: str = "") -> str:
-    return f"{day:%b} {day.day}, {day.year}" + (f" {time}" if time else "")
-
-
-def _place(label: str, when: str, where: str = "") -> str:
-    return f"{label}: {when}" + (f", {where}" if where else "")
+def _when(day) -> str:
+    return f"{day:%b} {day.day}, {day.year}"
 
 
 def booking_alert_text(booking: Booking, admin_base_url: str = "") -> str:
@@ -33,10 +30,8 @@ def booking_alert_text(booking: Booking, admin_base_url: str = "") -> str:
              f"Customer: {booking.customer_name}", f"Phone: {booking.customer_phone}",
              f"{'Car' if is_car else 'Tour package'}: {booking.item_name}"]
     if is_car:
-        lines += [_place("Pick-up", _when(booking.start_date, booking.start_time), booking.pickup_location),
-                  _place("Return", _when(booking.end_date, booking.end_time), booking.dropoff_location)]
-        if booking.destination:
-            lines.append(f"Destination: {booking.destination}")
+        lines.append(f"Pick-up: {_when(booking.start_date)}")
+        lines.append(f"Return: {_when(booking.end_date)}")
         extras = [f"{booking.passengers} passengers"] if booking.passengers else []
         if booking.driver_option:
             extras.append("with a driver" if booking.driver_option == "with_driver" else "self-drive")
@@ -49,8 +44,8 @@ def booking_alert_text(booking: Booking, admin_base_url: str = "") -> str:
         lines.append(f"Date: {when}")
         if booking.passengers:
             lines.append(f"Guests: {booking.passengers}")
-        if booking.pickup_location:
-            lines.append(f"Pick-up: {booking.pickup_location}")
+    if booking.pickup_location:
+        lines.append(f"Meet-up: {booking.pickup_location}")
     if booking.details:
         lines.append("Notes: " + booking.details[:NOTES_LIMIT] + ("..." if len(booking.details) > NOTES_LIMIT else ""))
     if admin_base_url:
@@ -84,8 +79,17 @@ def send_telegram(text: str) -> bool:
 
 
 def notify_new_booking(booking: Booking) -> None:
-    """Tells the group about a new website request. Never raises."""
+    """Tells the Telegram group and the admins' browsers about a new website request. Never raises,
+    and one channel failing never stops the other."""
     try:
         send_telegram(booking_alert_text(booking, config.integrations.admin_base_url))
     except Exception:
         log.exception("Booking alert failed")
+    try:
+        push.send_to_admins(
+            title=f"New {'car rental' if booking.booking_type == 'car' else 'tour'} request",
+            # No phone number: notifications show on lock screens.
+            body=f"{booking.customer_name} - {booking.item_name}, {_when(booking.start_date)}",
+            url=f"/admin/bookings/{booking.id}", tag=booking.id)
+    except Exception:
+        log.exception("Booking push failed")

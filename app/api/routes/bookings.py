@@ -3,13 +3,14 @@ and the customer can only create a Pending, unpaid request."""
 
 import logging
 
-from fastapi import APIRouter, Form, Request
+from fastapi import APIRouter, BackgroundTasks, Form, Request
 from fastapi.responses import JSONResponse
 
 from app.core.ratelimit import RateLimiter
 from app.db import firebase
 from app.schemas.forms import PublicBookingInput, validate
 from app.services import bookings as service
+from app.services import notify
 from app.services.errors import FormError
 
 log = logging.getLogger(__name__)
@@ -28,7 +29,7 @@ def _errors(status_code: int, *messages: str) -> JSONResponse:
 
 @router.post("/bookings")
 def submit_booking(
-    request: Request, item: str = Form(""), start_date: str = Form(""), end_date: str = Form(""),
+    request: Request, background: BackgroundTasks, item: str = Form(""), start_date: str = Form(""), end_date: str = Form(""),
     passengers: str = Form(""), pickup_location: str = Form(""), driver_option: str = Form(""),
     details: str = Form(""), customer_name: str = Form(""), customer_phone: str = Form(""),
     customer_email: str = Form(""), website: str = Form(""),
@@ -55,4 +56,5 @@ def submit_booking(
     except Exception:
         log.exception("Could not save a website booking request")
         return _errors(503, f"We could not save your request. Please try again in a moment, or {MESSENGER_HINT}.")
+    background.add_task(notify.notify_new_booking, booking)  # after the response, so a slow Telegram never delays the customer
     return JSONResponse({"ok": True, "reference": booking.reference}, status_code=201)

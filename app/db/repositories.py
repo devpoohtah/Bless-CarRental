@@ -9,6 +9,7 @@ record cannot take a whole page down.
 import logging
 from typing import TypeVar
 
+from google.cloud.firestore_v1.base_query import FieldFilter
 from pydantic import BaseModel, ValidationError
 
 from app.db import firebase
@@ -18,6 +19,7 @@ log = logging.getLogger(__name__)
 CARS = "cars"
 TOURS = "tours"
 BOOKINGS = "bookings"
+PUSH_TOKENS = "push_tokens"
 
 M = TypeVar("M", bound=BaseModel)
 
@@ -34,6 +36,14 @@ def _parse(model: type[M], doc) -> M | None:
 def list_all(collection: str, model: type[M]) -> list[M]:
     docs = firebase.get_db().collection(collection).stream()
     return [item for item in (_parse(model, doc) for doc in docs) if item is not None]
+
+
+def count_where(collection: str, **equals) -> int:
+    """How many documents have all these field values. Firestore counts on its side, so nothing is downloaded."""
+    query = firebase.get_db().collection(collection)
+    for field, value in equals.items():
+        query = query.where(filter=FieldFilter(field, "==", value))
+    return int(query.count().get()[0][0].value)
 
 
 def get_one(collection: str, doc_id: str, model: type[M]) -> M | None:

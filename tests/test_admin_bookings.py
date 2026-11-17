@@ -3,7 +3,9 @@ from datetime import date
 
 from fastapi.testclient import TestClient
 
+from app.db import repositories as repo
 from app.main import app
+from app.schemas.booking import Booking, StatusChange
 from app.services import bookings as service
 
 client = TestClient(app)
@@ -140,3 +142,40 @@ def test_booking_pages_assets_load():
         html = client.get(url).text
         for path in set(re.findall(r'(?:src|href)="(/static/[^"?]+)', html)):
             assert client.get(path).status_code == 200, (url, path)
+
+
+# ---- pending badge ----
+def test_pending_count_is_zero_without_a_database():
+    response = client.get("/admin/pending-count")
+    assert response.status_code == 200 and response.json() == {"pending": 0}  # sample rows are not real requests
+
+
+def test_pending_count_counts_only_real_pending_bookings(fake_db):
+    def booking(status, is_sample=False):
+        return Booking(id="", booking_type="car", customer_name="A", customer_phone="09171234567", item_name="Car",
+                       start_date=TODAY, end_date=TODAY, requested_on=TODAY, status=status, payment_status="unpaid",
+                       history=[StatusChange(status=status, changed_on=TODAY)], is_sample=is_sample)
+    for row in (booking("pending"), booking("pending"), booking("approved"), booking("pending", is_sample=True)):
+        repo.save(repo.BOOKINGS, row)
+    assert client.get("/admin/pending-count").json() == {"pending": 2}
+    assert "no-store" in client.get("/admin/pending-count").headers["cache-control"]
+
+
+def test_pending_count_failure_is_a_503_not_a_crash(monkeypatch):
+    def broken():
+        raise RuntimeError("firestore down")
+    monkeypatch.setattr(service, "pending_count", broken)
+    response = client.get("/admin/pending-count")
+    assert response.status_code == 503 and response.json() == {"pending": None}
+
+
+def test_pending_count_needs_an_admin_sign_in(real_auth):
+    response = client.get("/admin/pending-count", follow_redirects=False)
+    assert response.status_code in (303, 401, 403)
+
+
+def test_the_bookings_link_carries_the_badge_and_other_links_do_not():
+    html = client.get("/admin/dashboard").text
+    assert html.count("data-pending-badge") == 1
+    bookings_link = html.split('href="/admin/bookings"')[1].split("</a>")[0]
+    assert "data-pending-badge" in bookings_link

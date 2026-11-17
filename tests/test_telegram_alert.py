@@ -5,12 +5,14 @@ import json
 import logging
 import urllib.error
 from dataclasses import replace
-from datetime import date, timedelta
+from datetime import date
 
 import pytest
 from fastapi.testclient import TestClient
 
+from app.api.routes import bookings as bookings_route
 from app.core import config
+from app.core.ratelimit import RateLimiter
 from app.core.clock import today_ph
 from app.db import repositories as repo
 from app.main import app
@@ -28,12 +30,16 @@ PHOTO = Photo(src="customer/img/vehicles/vehicle-compact-sedan-placeholder.svg",
 def car_booking(**changes) -> Booking:
     fields = dict(
         id="abc123", booking_type="car", customer_name="Ana Reyes", customer_phone="0917 123 4567",
-        item_name="Toyota Vios", start_date=date(2027, 3, 4), end_date=date(2027, 3, 6), start_time="09:00",
-        end_time="18:00", pickup_location="Hotel in Iloilo City", dropoff_location="Iloilo Airport",
-        destination="Guimaras", passengers=4, driver_option="with_driver", details="Child seat please.",
+        item_name="Toyota Vios", start_date=date(2027, 3, 4), end_date=date(2027, 3, 6),
+        pickup_location="Hotel in Iloilo City", passengers=4, driver_option="with_driver", details="Child seat please.",
         requested_on=today_ph(), status="pending", payment_status="unpaid", is_sample=False,
         history=[StatusChange(status="pending", changed_on=today_ph())])
     return Booking(**(fields | changes))
+
+
+@pytest.fixture(autouse=True)
+def fresh_limiter(monkeypatch):
+    monkeypatch.setattr(bookings_route, "limiter", RateLimiter(max_hits=50, window_seconds=600))
 
 
 @pytest.fixture
@@ -51,7 +57,7 @@ def alerts(monkeypatch) -> list[str]:
 
 @pytest.fixture
 def catalog(fake_db):
-    repo.save(repo.CARS, Vehicle(id="", name="Toyota Vios", vehicle_type="Sedan", seats=5, availability="available",
+    repo.save(repo.CARS, Vehicle(id="", name="Family SUV", vehicle_type="SUV", seats=7, availability="available",
                                  photo=PHOTO, is_sample=False))
     repo.save(repo.TOURS, TourPackage(id="", name="Island Day Tour", destination="Guimaras", summary="S", description="D",
                                       availability="inquire", photo=PHOTO, is_sample=False))
@@ -62,20 +68,19 @@ def catalog(fake_db):
 def test_a_car_alert_has_everything_the_caller_needs():
     text = notify.booking_alert_text(car_booking(), "https://bless.example")
     for expected in ("New car rental request BLESS-ABC123", "Customer: Ana Reyes", "Phone: 0917 123 4567",
-                     "Car: Toyota Vios", "Pick-up: Mar 4, 2027 09:00, Hotel in Iloilo City",
-                     "Return: Mar 6, 2027 18:00, Iloilo Airport", "Destination: Guimaras",
-                     "Trip: 4 passengers, with a driver", "Notes: Child seat please.",
+                     "Car: Toyota Vios", "Pick-up: Mar 4, 2027", "Return: Mar 6, 2027",
+                     "Trip: 4 passengers, with a driver", "Meet-up: Hotel in Iloilo City", "Notes: Child seat please.",
                      "Open: https://bless.example/admin/bookings/abc123", 'Reply "Calling now"'):
         assert expected in text, expected
 
 
 def test_a_tour_alert_shows_the_dates_and_guests():
-    tour = car_booking(booking_type="tour", item_name="Island Day Tour", start_time="", end_time="", pickup_location="",
-                       dropoff_location="", destination="", driver_option=None, end_date=date(2027, 3, 4), details="")
+    tour = car_booking(booking_type="tour", item_name="Island Day Tour", pickup_location="",
+                       driver_option=None, end_date=date(2027, 3, 4), details="")
     text = notify.booking_alert_text(tour)
     assert "New tour request" in text and "Tour package: Island Day Tour" in text
     assert "Date: Mar 4, 2027\n" in text and "Guests: 4" in text
-    assert "Pick-up" not in text and "Notes" not in text and "Open:" not in text  # nothing to show, no site address set
+    assert "Meet-up" not in text and "Notes" not in text and "Open:" not in text  # nothing to show, no site address set
     assert "Date: Mar 4, 2027 to Mar 6, 2027" in notify.booking_alert_text(replace_tour(tour, end=date(2027, 3, 6)))
 
 
@@ -134,14 +139,14 @@ def test_a_network_failure_is_logged_without_the_token_and_does_not_raise(telegr
 
 # ---- when alerts go out ----
 def test_a_car_request_sends_one_alert_with_its_reference(catalog, alerts):
-    response = client.post("/bookings/car", data=car_request())
+    response = client.post("/bookings", data=car_request())
     assert response.status_code == 201
     (text,) = alerts
-    assert response.json()["reference"] in text and "Ana Reyes" in text and "Toyota Vios" in text
+    assert response.json()["reference"] in text and "Ana Reyes" in text and "Family SUV" in text
 
 
 def test_a_tour_request_sends_one_alert(catalog, alerts):
-    assert client.post("/bookings/tour", data=tour_request()).status_code == 201
+    assert client.post("/bookings", data=tour_request()).status_code == 201
     (text,) = alerts
     assert "New tour request" in text and "Ben Cruz" in text
 
@@ -149,30 +154,26 @@ def test_a_tour_request_sends_one_alert(catalog, alerts):
 def test_the_alert_links_to_the_booking_when_the_site_address_is_set(catalog, telegram_on, monkeypatch):
     sent = []
     monkeypatch.setattr(notify.urllib.request, "urlopen", lambda request, timeout: sent.append(json.loads(request.data)) or FakeResponse())
-    client.post("/bookings/car", data=car_request())
+    client.post("/bookings", data=car_request())
     booking_id = next(iter(catalog.data["bookings"]))
     assert f"Open: https://bless.example/admin/bookings/{booking_id}" in sent[0]["text"]
 
 
 def test_no_alert_for_requests_that_were_not_saved(catalog, alerts):
-    client.post("/bookings/car", data=car_request(customer_name=""))                  # invalid
-    client.post("/bookings/car", data=car_request(website="http://spam.example"))      # bot
-    client.post("/bookings/car", data=car_request(car="Nope"))                         # unknown car
+    client.post("/bookings", data=car_request(customer_name=""))                  # invalid
+    client.post("/bookings", data=car_request(website="http://spam.example"))      # bot
+    client.post("/bookings", data=car_request(item="car:Nope"))                         # unknown car
     assert alerts == []
 
 
-def test_no_alert_when_the_car_is_already_taken(catalog, alerts):
-    today = today_ph()
-    repo.save(repo.BOOKINGS, Booking(
-        id="", booking_type="car", customer_name="Earlier", customer_phone="09170000000", item_name="Toyota Vios",
-        start_date=today + timedelta(days=5), end_date=today + timedelta(days=7), requested_on=today, status="approved",
-        payment_status="unpaid", history=[StatusChange(status="approved", changed_on=today)], is_sample=False))
-    assert client.post("/bookings/car", data=car_request()).status_code == 422
+def test_no_alert_when_the_request_is_rejected_by_the_business_rules(catalog, alerts):
+    assert client.post("/bookings", data=car_request(passengers="9")).status_code == 422   # Family SUV seats 7
+    assert client.post("/bookings", data=car_request(start_date=when(-2), end_date=when(1))).status_code == 422
     assert alerts == []
 
 
 def test_no_alert_without_a_database(alerts):
-    assert client.post("/bookings/car", data=car_request()).status_code == 503
+    assert client.post("/bookings", data=car_request()).status_code == 503
     assert alerts == []
 
 
@@ -180,12 +181,12 @@ def test_the_booking_is_saved_and_the_customer_told_even_if_the_alert_blows_up(c
     def explode(text):
         raise RuntimeError("telegram is down")
     monkeypatch.setattr(notify, "send_telegram", explode)
-    response = client.post("/bookings/car", data=car_request())
+    response = client.post("/bookings", data=car_request())
     assert response.status_code == 201 and response.json()["reference"].startswith("BLESS-")
     assert len(catalog.data["bookings"]) == 1
 
 
 def test_admin_added_bookings_do_not_alert(catalog, alerts):
-    client.post("/admin/bookings/new", data={"item": "car:Toyota Vios", "customer_name": "Walk In", "customer_phone": "09171234567",
+    client.post("/admin/bookings/new", data={"item": "car:Family SUV", "customer_name": "Walk In", "customer_phone": "09171234567",
                                              "start_date": when(3), "end_date": when(4)})
     assert len(catalog.data["bookings"]) == 1 and alerts == []

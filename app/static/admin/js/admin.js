@@ -123,3 +123,36 @@ document.addEventListener("submit", (event) => {
     resetBusyButtons();
   });
 })();
+
+// Badge on the Bookings link: how many bookings wait for a decision. The server counts them behind the
+// admin sign-in, so no database access is opened to the browser. Polls while the tab is visible and
+// shows the number in the tab title too, so a background tab still shows it.
+(() => {
+  const badge = document.querySelector("[data-pending-badge]");
+  if (!badge) return;
+  const INTERVAL_MS = 30000;
+  const baseTitle = document.title;
+  let timer = null;
+
+  const show = (count) => {
+    badge.textContent = count > 99 ? "99+" : String(count);
+    badge.title = `${count} pending booking${count === 1 ? "" : "s"}`;
+    badge.hidden = count < 1;
+    document.title = count > 0 ? `(${count}) ${baseTitle}` : baseTitle;
+  };
+  const stop = () => { clearInterval(timer); timer = null; };
+
+  async function refresh() {
+    try {
+      const response = await fetch("/admin/pending-count", { credentials: "same-origin", headers: { Accept: "application/json" } });
+      if (response.redirected) return stop(); // signed out: the sign-in page came back instead of a number
+      if (!response.ok) return; // keep the last number; try again next time
+      const { pending } = await response.json();
+      if (Number.isInteger(pending)) show(pending);
+    } catch (error) { /* offline: keep the last number */ }
+  }
+  const start = () => { if (!timer) { refresh(); timer = setInterval(refresh, INTERVAL_MS); } };
+
+  document.addEventListener("visibilitychange", () => { if (document.hidden) stop(); else start(); });
+  if (!document.hidden) start();
+})();

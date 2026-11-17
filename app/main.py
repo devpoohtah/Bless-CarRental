@@ -4,7 +4,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.api.routes import admin, admin_bookings, admin_services, auth, bookings, pages
+from app.api.routes import admin, admin_bookings, admin_push, admin_services, auth, bookings, pages
 from app.core.auth import LoginRequired
 from app.core.config import STATIC_DIR, settings
 from app.db import firebase
@@ -21,6 +21,7 @@ def create_app() -> FastAPI:
     app.include_router(admin.router)
     app.include_router(admin_services.router)
     app.include_router(admin_bookings.router)
+    app.include_router(admin_push.router)
 
     @app.exception_handler(LoginRequired)
     async def send_to_login(request: Request, exc: LoginRequired) -> RedirectResponse:

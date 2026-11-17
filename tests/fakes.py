@@ -40,6 +40,23 @@ class FakeCollection:
     def stream(self):
         return [FakeSnapshot(k, v) for k, v in list(self._store.items())]
 
+    def where(self, *, filter):
+        assert filter.op_string == "==", "the fake only supports =="
+        kept = {k: v for k, v in self._store.items() if v.get(filter.field_path) == filter.value}
+        return FakeCollection(kept, self._counter)
+
+    def count(self):
+        total = len(self._store)
+
+        class _Result:
+            value = total
+
+        class _Query:
+            def get(self):
+                return [[_Result()]]
+
+        return _Query()
+
 
 class FakeDb:
     def __init__(self):

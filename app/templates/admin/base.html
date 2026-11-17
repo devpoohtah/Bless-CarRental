@@ -33,5 +33,10 @@
   </main>
   {% include 'admin/components/skeletons.html' %}
   <script src="{{ static_url('admin/js/admin.js') }}" defer></script>
+  {% if push_config() %}
+  {# Public Firebase web config and VAPID key only; the service account never reaches the browser. #}
+  <script type="application/json" id="push-config">{{ push_config() | tojson }}</script>
+  <script type="module" src="{{ static_url('admin/js/push.js') }}"></script>
+  {% endif %}
 </body>
 </html>

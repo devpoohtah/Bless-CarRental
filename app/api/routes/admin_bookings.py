@@ -1,9 +1,10 @@
 """Booking management and the booking calendar."""
 
+import logging
 from datetime import date
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 from app.core.auth import require_admin
 from app.core.templating import notice_for, templates
@@ -12,6 +13,7 @@ from app.schemas.forms import BookingInput, validate
 from app.services import bookings as service
 from app.services.errors import FormError
 
+log = logging.getLogger(__name__)
 router = APIRouter(prefix="/admin", include_in_schema=False, dependencies=[Depends(require_admin)])
 
 LABELS = {
@@ -72,6 +74,16 @@ def booking_create(
             errors = [str(exc)]
     return render(request, "booking_form.html", "bookings", 422, form=raw, errors=errors,
                   item_choices=service.item_choices())
+
+
+@router.get("/pending-count")
+def pending_count() -> JSONResponse:
+    """Polled by the sidebar badge. Behind the same admin sign-in as every /admin page."""
+    try:
+        return JSONResponse({"pending": service.pending_count()})
+    except Exception:
+        log.exception("Could not count pending bookings")
+        return JSONResponse({"pending": None}, status_code=503)
 
 
 @router.get("/bookings/{booking_id}", response_class=HTMLResponse)

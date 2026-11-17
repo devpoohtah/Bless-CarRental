@@ -37,7 +37,7 @@ def php(amount: int | None, fallback: str = "Contact for rates") -> str:
 # firebase_config is the PUBLIC web SDK config (never secrets); only the login page reads it.
 templates.env.globals.update(
     icon=icon, static_url=static_url, site=settings, firebase_config=config.integrations.firebase_web_config,
-    database_ready=lambda: firebase.is_configured(),
+    database_ready=lambda: firebase.is_configured(), push_config=lambda: config.integrations.push_web_config,
 )
 
 # Short confirmations shown after a redirect (?notice=key). Only these keys are ever shown.
