@@ -1,0 +1,116 @@
+{# The booking request form, in one dialog for both cars and tour packages. booking.js opens it from any
+   [data-book] button, shows the fields that fit the chosen item, and posts to /bookings.
+   Needs: vehicles, tours, today_iso. #}
+{% set cars = vehicles | rejectattr('availability', 'equalto', 'unavailable') | list %}
+{% set packages = tours | rejectattr('availability', 'equalto', 'unavailable') | list %}
+<dialog id="booking-dialog" class="detail-dialog booking-dialog" aria-labelledby="booking-title" data-no-backdrop-close>
+  <div class="booking-dialog__body">
+    <div id="booking-view-form">
+      <div class="booking-dialog__head">
+        <div>
+          <h2 id="booking-title">Book a car or tour</h2>
+          <p class="booking-dialog__lead">Send your request and BLESS will contact you to confirm availability and the rate. Nothing is booked until BLESS confirms.</p>
+        </div>
+        <form method="dialog"><button class="icon-btn" aria-label="Close booking form">{{ icon('x', 'icon') }}</button></form>
+      </div>
+
+      <form id="booking-form" class="booking-form" method="post" action="/bookings" data-today="{{ today_iso }}">
+        <div id="booking-errors" class="form-errors" role="alert" tabindex="-1" hidden>
+          <p><strong>Please fix the following:</strong></p>
+          <ul></ul>
+        </div>
+
+        <fieldset>
+          <legend>Trip details</legend>
+          <div class="booking-form__grid">
+            <div class="field field--wide">
+              <label for="bk-item">Car or tour package</label>
+              <select id="bk-item" name="item" required>
+                <option value="">Choose one</option>
+                {% if cars %}
+                <optgroup label="Cars">
+                  {% for v in cars %}<option value="car:{{ v.name }}">{{ v.name }}</option>{% endfor %}
+                </optgroup>
+                {% endif %}
+                {% if packages %}
+                <optgroup label="Tour packages">
+                  {% for t in packages %}<option value="tour:{{ t.name }}">{{ t.name }}</option>{% endfor %}
+                </optgroup>
+                {% endif %}
+              </select>
+            </div>
+            <div class="field">
+              <label for="bk-start" data-label-car="Pick-up date" data-label-tour="Tour date">Start date</label>
+              <input id="bk-start" name="start_date" type="date" min="{{ today_iso }}" required>
+            </div>
+            <div class="field">
+              <label for="bk-end" data-label-car="Return date" data-label-tour="Last day of the tour (optional)">End date (optional)</label>
+              <input id="bk-end" name="end_date" type="date" min="{{ today_iso }}">
+            </div>
+            <div class="field">
+              <label for="bk-passengers" data-label-car="Number of passengers" data-label-tour="Number of guests">Number of people</label>
+              <input id="bk-passengers" name="passengers" type="number" inputmode="numeric" min="1" max="60" required>
+            </div>
+            <div class="field" data-for="car" hidden>
+              <label for="bk-driver">Driver (optional)</label>
+              <select id="bk-driver" name="driver_option" disabled>
+                <option value="">Not sure yet</option>
+                <option value="with_driver">With a driver</option>
+                <option value="self_drive">Self-drive</option>
+              </select>
+            </div>
+            <div class="field field--wide">
+              <label for="bk-pickup">Pick-up location (optional)</label>
+              <input id="bk-pickup" name="pickup_location" type="text" maxlength="200" autocomplete="off" aria-describedby="bk-pickup-hint">
+              <p class="field__hint" id="bk-pickup-hint">A hotel, address or landmark. Leave blank if you are not sure yet.</p>
+            </div>
+            <div class="field field--wide">
+              <label for="bk-details">Anything else we should know? (optional)</label>
+              <textarea id="bk-details" name="details" rows="3" maxlength="2000"></textarea>
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Your information</legend>
+          <div class="booking-form__grid">
+            <div class="field field--wide">
+              <label for="bk-name">Full name</label>
+              <input id="bk-name" name="customer_name" type="text" maxlength="120" autocomplete="name" required>
+            </div>
+            <div class="field">
+              <label for="bk-phone">Phone number</label>
+              <input id="bk-phone" name="customer_phone" type="tel" maxlength="40" autocomplete="tel" required aria-describedby="bk-phone-hint">
+              <p class="field__hint" id="bk-phone-hint">We use this to reach you about your request.</p>
+            </div>
+            <div class="field">
+              <label for="bk-email">Email (optional)</label>
+              <input id="bk-email" name="customer_email" type="email" maxlength="120" autocomplete="email">
+            </div>
+          </div>
+        </fieldset>
+
+        {# Bots fill every field they find. People never see this one. #}
+        <div class="booking-form__trap" aria-hidden="true">
+          <label>Website<input type="text" name="website" tabindex="-1" autocomplete="off"></label>
+        </div>
+
+        <div class="booking-form__actions">
+          <button type="submit" class="btn btn--primary" data-busy-label="Sending…">Send booking request</button>
+          <p class="booking-form__alt">Prefer to chat? <a class="link" href="{{ site.messenger_url }}" target="_blank" rel="noopener noreferrer">Message us on Messenger<span class="sr-only"> (opens in a new tab)</span></a></p>
+        </div>
+      </form>
+    </div>
+
+    <div id="booking-view-done" tabindex="-1" hidden>
+      <h2 id="booking-done-title">Request received</h2>
+      <p class="booking-dialog__lead">Thank you, <span data-done-name></span>. BLESS will contact you at <span data-done-phone></span> to confirm availability and the rate.</p>
+      <p class="booking-done__ref" data-done-ref-row hidden>Your reference: <strong data-done-ref></strong></p>
+      <p class="booking-dialog__lead">This is a request, not a confirmed booking. Keep your reference in case you message us about it.</p>
+      <div class="detail-dialog__actions">
+        <form method="dialog"><button class="btn btn--primary">Close</button></form>
+        <a class="btn btn--outline" href="{{ site.messenger_url }}" target="_blank" rel="noopener noreferrer">Message us on Messenger<span class="sr-only"> (opens in a new tab)</span></a>
+      </div>
+    </div>
+  </div>
+</dialog>

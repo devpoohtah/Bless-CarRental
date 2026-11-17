@@ -1,4 +1,5 @@
 {% extends 'admin/base.html' %}
+{% from 'admin/components/empty.html' import empty_state %}
 {% block title %}Tour Package Management | {{ site.short_name }} Admin{% endblock %}
 
 {% block content %}
@@ -41,7 +42,7 @@
   <p class="page-note">These packages are sample data shared with the landing page, not saved records.</p>
   {% endif %}
   {% else %}
-  <p class="page-note">No tour packages yet. Use Add tour package to create the first one.</p>
+  {{ empty_state('No tour packages yet', 'Packages you add here are listed on the website and can be chosen when a booking is made.', '/admin/services/tours/new', 'Add tour package') }}
   {% endif %}
 </div>
 {% endblock %}

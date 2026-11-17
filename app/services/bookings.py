@@ -11,7 +11,8 @@ from datetime import date, timedelta
 from app.db import firebase
 from app.db import repositories as repo
 from app.schemas.booking import Booking, BookingStatus, BookingType, StatusChange
-from app.schemas.forms import BookingInput
+from app.core.clock import today_ph
+from app.schemas.forms import BookingInput, PublicBookingInput
 from app.services import content
 from app.services.errors import FormError
 
@@ -25,6 +26,7 @@ STATUS_LABELS = {
 }
 PAYMENT_LABELS = {"unpaid": "Unpaid", "partial": "Partially paid", "paid": "Paid"}
 TYPE_LABELS = {"car": "Car rental", "tour": "Tour booking"}
+DRIVER_LABELS = {"with_driver": "With a driver", "self_drive": "Self-drive"}
 
 # Which statuses a booking can move to from its current one. Rejected, completed and
 # cancelled are final.
@@ -124,6 +126,55 @@ def create_booking(data: BookingInput) -> str:
         is_sample=False,
     )
     return repo.save(repo.BOOKINGS, booking)
+
+
+MAX_DAYS_AHEAD = 730  # website requests may be made up to two years ahead
+
+
+def _public_item(data: PublicBookingInput):
+    """The car or tour package the customer chose, or a FormError if it cannot be booked."""
+    if data.booking_type is None:
+        raise FormError("Choose a car or tour package from the list.")
+    items = content.list_vehicles() if data.booking_type == "car" else content.list_tours()
+    chosen = next((entry for entry in items if entry.name == data.item_name), None)
+    if chosen is None:
+        raise FormError("Choose a car or tour package from the list.")
+    if chosen.availability == "unavailable":
+        raise FormError(f"{chosen.name} is currently unavailable. Choose another, or message us on Messenger.")
+    return chosen
+
+
+def create_public_booking(data: PublicBookingInput) -> Booking:
+    """Saves a website request as a Pending booking. Status and payment are decided here, never by the customer."""
+    chosen = _public_item(data)
+    today = today_ph()
+    if data.start_date < today:
+        raise FormError("The start date cannot be in the past.")
+    if data.start_date > today + timedelta(days=MAX_DAYS_AHEAD):
+        raise FormError("Choose a start date within the next two years.")
+    is_car = data.booking_type == "car"
+    if is_car and chosen.seats and data.passengers > chosen.seats:
+        raise FormError(f"The {chosen.name} seats up to {chosen.seats} passengers.")
+    booking = Booking(
+        id="",
+        booking_type=data.booking_type,
+        customer_name=data.customer_name,
+        customer_phone=data.customer_phone,
+        customer_email=data.customer_email or "",
+        item_name=data.item_name,
+        start_date=data.start_date,
+        end_date=data.end_date,
+        details=data.details or "",
+        passengers=data.passengers,
+        pickup_location=data.pickup_location or "",
+        driver_option=data.driver_option if is_car else None,
+        requested_on=today,
+        status="pending",
+        payment_status="unpaid",
+        history=[StatusChange(status="pending", changed_on=today)],
+        is_sample=False,
+    )
+    return booking.model_copy(update={"id": repo.save(repo.BOOKINGS, booking)})
 
 
 def change_status(booking: Booking, new_status: str) -> None:

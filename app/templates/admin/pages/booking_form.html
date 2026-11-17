@@ -51,7 +51,7 @@
     <p class="note">{{ icon('info', 'icon icon--sm') }}<span>The database is not connected, so saving is unavailable. Set GOOGLE_APPLICATION_CREDENTIALS in .env.</span></p>
     {% endif %}
     <div class="form__actions">
-      <button type="submit" class="btn btn--primary"{% if not database_ready() %} disabled{% endif %}>Save booking</button>
+      <button type="submit" class="btn btn--primary" data-busy-label="Saving…"{% if not database_ready() %} disabled{% endif %}>Save booking</button>
       <a class="btn btn--outline" href="/admin/bookings">Cancel</a>
     </div>
   </form>

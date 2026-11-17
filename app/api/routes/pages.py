@@ -3,6 +3,7 @@ from datetime import date
 from fastapi import APIRouter, Request
 from fastapi.responses import FileResponse, HTMLResponse
 
+from app.core.clock import today_ph
 from app.core.config import STATIC_DIR
 from app.core.templating import templates
 from app.services.content import get_home_context
@@ -12,7 +13,7 @@ router = APIRouter()
 
 @router.get("/", response_class=HTMLResponse, include_in_schema=False)
 def home(request: Request) -> HTMLResponse:
-    context = get_home_context() | {"current_year": date.today().year}
+    context = get_home_context() | {"current_year": date.today().year, "today_iso": today_ph().isoformat()}
     return templates.TemplateResponse(request, "customer/pages/home.html", context)
 
 

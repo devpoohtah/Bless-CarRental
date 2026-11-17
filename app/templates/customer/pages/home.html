@@ -30,9 +30,11 @@
 {% block dialogs %}
 {% for tour in tours %}
 {{ detail_dialog('tour-' ~ tour.id, tour.name, tour.destination, tour.photo, tour.description,
-  [('Duration', tour.duration or 'To be confirmed', 'clock'), ('Price', tour.price_php | php, 'tag')], tour.is_sample) }}
+  [('Duration', tour.duration or 'To be confirmed', 'clock'), ('Price', tour.price_php | php, 'tag')], tour.is_sample,
+  book_item=('tour:' ~ tour.name) if tour.availability != 'unavailable' else None) }}
 {% endfor %}
 {% for dest in destinations %}
 {{ detail_dialog('destination-' ~ dest.id, dest.name, dest.region, dest.photo, dest.description, [], dest.is_sample) }}
 {% endfor %}
+{% include 'customer/components/booking_dialog.html' %}
 {% endblock %}

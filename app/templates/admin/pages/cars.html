@@ -1,4 +1,5 @@
 {% extends 'admin/base.html' %}
+{% from 'admin/components/empty.html' import empty_state %}
 {% block title %}Car Management | {{ site.short_name }} Admin{% endblock %}
 
 {% block content %}
@@ -43,7 +44,7 @@
   <p class="page-note">These cars are sample data shared with the landing page, not saved records.</p>
   {% endif %}
   {% else %}
-  <p class="page-note">No cars yet. Use Add car to create the first one.</p>
+  {{ empty_state('No cars yet', 'Cars you add here are listed on the website and can be chosen when a booking is made.', '/admin/services/cars/new', 'Add car') }}
   {% endif %}
 </div>
 {% endblock %}

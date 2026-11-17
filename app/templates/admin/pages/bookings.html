@@ -1,4 +1,5 @@
 {% extends 'admin/base.html' %}
+{% from 'admin/components/empty.html' import empty_state %}
 {% block title %}Booking Management | {{ site.short_name }} Admin{% endblock %}
 
 {% block content %}
@@ -49,7 +50,11 @@
   <p class="page-note">These bookings are sample data, not real bookings.</p>
   {% endif %}
   {% else %}
-  <p class="page-note">No bookings match this filter.</p>
+  {% if active_type %}
+  {{ empty_state('No ' ~ ('car rentals' if active_type == 'car' else 'tour bookings') ~ ' yet', 'Nothing has been booked under this filter.', '/admin/bookings', 'Show all bookings', None) }}
+  {% else %}
+  {{ empty_state('No bookings yet', 'Requests sent from the website booking form appear here. You can also add a booking yourself, for example one arranged on Messenger or by phone.', '/admin/bookings/new', 'Add booking') }}
+  {% endif %}
   {% endif %}
 </div>
 {% endblock %}

@@ -41,7 +41,7 @@ def render(**context):
 
 def test_dashboard_empty_state():
     html = render(stats=DashboardStats(), recent_bookings=[])
-    assert "No booking requests yet." in html
+    assert "No booking requests yet" in html
     assert "<table" not in html
 
 

@@ -18,6 +18,7 @@ LABELS = {
     "status_labels": service.STATUS_LABELS,
     "payment_labels": service.PAYMENT_LABELS,
     "type_labels": service.TYPE_LABELS,
+    "driver_labels": service.DRIVER_LABELS,
 }
 
 

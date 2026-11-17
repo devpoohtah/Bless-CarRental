@@ -225,3 +225,23 @@ a.chip:hover { filter: brightness(1.15); }
 .login__or { margin: 0; text-align: center; font-size: 0.875rem; color: var(--muted); }
 .login__card .form { gap: 1rem; }
 .login__card [hidden] { display: none; }
+
+/* ---------- Loading placeholders (markup lives in components/skeletons.html) ---------- */
+.skel--title { width: min(16rem, 70%); height: 2rem; }
+.skel--line { height: 1rem; }
+.skel--w60 { width: min(26rem, 60%); margin-top: 0.75rem; }
+.skel--stat { height: 6.25rem; border-radius: var(--radius-lg); }
+.skel--calendar { height: 30rem; border-radius: var(--radius-lg); }
+.skel--field { height: 3rem; }
+.skel-gap { height: 2.5rem; }
+.skel-table { display: grid; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--white); box-shadow: var(--shadow-card); }
+.skel-table__row { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 1.5rem; padding: 1.125rem 1rem; border-bottom: 1px solid var(--line); }
+.skel-table__row:last-child { border-bottom: 0; }
+.skel-form { display: grid; gap: 1.25rem; padding: 1.5rem; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--white); box-shadow: var(--shadow-card); }
+@media (min-width: 40em) { .skel-form { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* ---------- Empty states ---------- */
+.empty-state { display: grid; justify-items: center; gap: 0.5rem; padding: 2.5rem 1.5rem; border: 1px dashed var(--muted); border-radius: var(--radius-lg); background: var(--white); text-align: center; }
+.empty-state__title { font-family: var(--font-display); font-size: 1.25rem; font-weight: 700; }
+.empty-state__text { max-width: 32rem; color: var(--muted); }
+.empty-state .btn { margin-top: 0.75rem; }

@@ -1,11 +1,12 @@
 """Validation for the admin forms. Raw form strings go in; clean values or messages come out."""
 
+import re
 from datetime import date
 from typing import Literal
 
-from pydantic import BaseModel, Field, ValidationError, model_validator
+from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
 
-from app.schemas.booking import PaymentStatus
+from app.schemas.booking import DriverOption, PaymentStatus
 from app.schemas.catalog import Availability
 
 
@@ -32,9 +33,21 @@ class TourInput(BaseModel):
     availability: Availability = "inquire"
 
 
-class BookingInput(BaseModel):
+class _ItemInput(BaseModel):
     # "car:<name>" or "tour:<name>": the type comes from the choice, so they cannot disagree.
     item: str = Field(min_length=3, max_length=200)
+
+    @property
+    def booking_type(self) -> Literal["car", "tour"] | None:
+        kind = self.item.split(":", 1)[0]
+        return kind if kind in ("car", "tour") else None
+
+    @property
+    def item_name(self) -> str:
+        return self.item.split(":", 1)[1]
+
+
+class BookingInput(_ItemInput):
     customer_name: str = Field(min_length=1, max_length=120)
     customer_phone: str = Field(min_length=1, max_length=40)
     customer_email: str | None = Field(default=None, max_length=120)
@@ -49,14 +62,46 @@ class BookingInput(BaseModel):
             raise ValueError("the end date cannot be before the start date")
         return self
 
-    @property
-    def booking_type(self) -> Literal["car", "tour"] | None:
-        kind = self.item.split(":", 1)[0]
-        return kind if kind in ("car", "tour") else None
 
-    @property
-    def item_name(self) -> str:
-        return self.item.split(":", 1)[1]
+_PHONE_CHARACTERS = re.compile(r"^[0-9+()\-.\s]+$")
+_EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+class PublicBookingInput(_ItemInput):
+    """A booking request from the website. The customer cannot set status or payment."""
+
+    customer_name: str = Field(min_length=1, max_length=120)
+    customer_phone: str = Field(min_length=1, max_length=40)
+    customer_email: str | None = Field(default=None, max_length=120)
+    start_date: date
+    end_date: date | None = None  # left blank for a one-day tour: it then equals the start date
+    passengers: int = Field(ge=1, le=60)
+    pickup_location: str | None = Field(default=None, max_length=200)
+    driver_option: DriverOption | None = None
+    details: str | None = Field(default=None, max_length=2000)
+
+    @field_validator("customer_phone")
+    @classmethod
+    def _phone(cls, value: str) -> str:
+        digits = sum(ch.isdigit() for ch in value)
+        if not _PHONE_CHARACTERS.match(value) or not 7 <= digits <= 15:
+            raise ValueError("must be a valid phone number")
+        return value
+
+    @field_validator("customer_email")
+    @classmethod
+    def _email_shape(cls, value: str | None) -> str | None:
+        if value is not None and not _EMAIL.match(value):
+            raise ValueError("must be a valid email address")
+        return value
+
+    @model_validator(mode="after")
+    def _dates_in_order(self):
+        if self.end_date is None:
+            self.end_date = self.start_date
+        elif self.end_date < self.start_date:
+            raise ValueError("the end date cannot be before the start date")
+        return self
 
 
 LABELS = {
@@ -66,7 +111,8 @@ LABELS = {
     "price_php": "Price", "item": "Car or tour", "customer_name": "Customer name",
     "customer_phone": "Customer phone", "customer_email": "Customer email",
     "start_date": "Start date", "end_date": "End date", "details": "Details",
-    "payment_status": "Payment status",
+    "payment_status": "Payment status", "passengers": "Number of people",
+    "pickup_location": "Pick-up location", "driver_option": "Driver option",
 }
 
 

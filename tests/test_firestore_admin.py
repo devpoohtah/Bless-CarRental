@@ -298,5 +298,5 @@ def test_dashboard_shows_real_counts(fake_db, uploads):
 
 def test_dashboard_with_an_empty_database_shows_zeros_and_no_requests(fake_db):
     html = client.get("/admin/dashboard").text
-    assert "No booking requests yet." in html
+    assert "No booking requests yet" in html
     assert dict(re.findall(r"<dt>([^<]+)</dt>\s*<dd>\s*(\d+)\s*</dd>", html))["Total Bookings"] == "0"

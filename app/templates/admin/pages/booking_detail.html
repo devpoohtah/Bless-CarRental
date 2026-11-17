@@ -37,7 +37,11 @@
           {{ fact('Selected car' if is_car else 'Selected tour package', booking.item_name) }}
           {{ fact('Pick-up date' if is_car else 'Start date', booking.start_date | long_date) }}
           {{ fact('Return date' if is_car else 'End date', booking.end_date | long_date) }}
+          {{ fact('Reference', booking.reference) }}
           {{ fact('Requested on', booking.requested_on | long_date) }}
+          {% if booking.passengers %}{{ fact('Passengers' if is_car else 'Guests', booking.passengers) }}{% endif %}
+          {% if is_car and booking.driver_option %}{{ fact('Driver', driver_labels[booking.driver_option]) }}{% endif %}
+          {% if booking.pickup_location %}{{ fact('Pick-up location', booking.pickup_location, wide=True) }}{% endif %}
           {{ fact('Details', booking.details or 'None', wide=True) }}
         </dl>
       </section>
@@ -65,17 +69,17 @@
         {% elif next_options %}
         {% if booking.status == 'pending' %}
         <form class="action-row" method="post" action="{{ base }}/status">
-          <button type="submit" name="status" value="approved" class="btn btn--primary">Approve</button>
-          <button type="submit" name="status" value="rejected" class="btn btn--outline" data-confirm="Reject this booking?">Reject</button>
+          <button type="submit" name="status" value="approved" class="btn btn--primary" data-busy-label="Approving…">Approve</button>
+          <button type="submit" name="status" value="rejected" class="btn btn--outline" data-confirm="Reject this booking?" data-busy-label="Rejecting…">Reject</button>
         </form>
         {% endif %}
         <form class="stack" method="post" action="{{ base }}/status">
           {{ select('status', 'Update status', next_options, next_options[0][0]) }}
-          <button type="submit" class="btn btn--outline">Save status</button>
+          <button type="submit" class="btn btn--outline" data-busy-label="Saving…">Save status</button>
         </form>
         {% if 'cancelled' in next_options | map(attribute=0) | list %}
         <form method="post" action="{{ base }}/status">
-          <button type="submit" name="status" value="cancelled" class="btn btn--outline btn--block" data-confirm="Cancel this booking?">Cancel booking</button>
+          <button type="submit" name="status" value="cancelled" class="btn btn--outline btn--block" data-confirm="Cancel this booking?" data-busy-label="Cancelling…">Cancel booking</button>
         </form>
         {% endif %}
         {% else %}
@@ -91,7 +95,7 @@
         {% else %}
         <form class="stack" method="post" action="{{ base }}/payment">
           {{ select('payment_status', 'Update payment status', payment_labels.items(), booking.payment_status) }}
-          <button type="submit" class="btn btn--outline">Save payment status</button>
+          <button type="submit" class="btn btn--outline" data-busy-label="Saving…">Save payment status</button>
         </form>
         {% endif %}
       </section>

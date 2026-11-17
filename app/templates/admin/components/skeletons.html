@@ -1,0 +1,56 @@
+{# Page placeholders. admin.js shows one of these only when the next admin page is slow to arrive.
+   They sit inside <template>, so they are inert and cost nothing until used. #}
+{% macro head() %}
+<div class="page-head">
+  <div>
+    <span class="skel skel--title"></span>
+    <span class="skel skel--line skel--w60"></span>
+  </div>
+</div>
+{% endmacro %}
+
+{% macro table_rows(count=5) %}
+<div class="skel-table">
+  {% for _ in range(count) %}
+  <div class="skel-table__row"><span class="skel skel--line"></span><span class="skel skel--line"></span><span class="skel skel--line"></span></div>
+  {% endfor %}
+</div>
+{% endmacro %}
+
+<template id="skeleton-table">
+  <div class="page" aria-hidden="true">
+    {{ head() }}
+    {{ table_rows(6) }}
+  </div>
+  <p class="sr-only" role="status">Loading the page.</p>
+</template>
+
+<template id="skeleton-dashboard">
+  <div class="page" aria-hidden="true">
+    {{ head() }}
+    <div class="stat-grid">
+      <span class="skel skel--stat"></span><span class="skel skel--stat"></span><span class="skel skel--stat"></span>
+    </div>
+    <div class="skel-gap"></div>
+    {{ table_rows(4) }}
+  </div>
+  <p class="sr-only" role="status">Loading the page.</p>
+</template>
+
+<template id="skeleton-calendar">
+  <div class="page" aria-hidden="true">
+    {{ head() }}
+    <span class="skel skel--calendar"></span>
+  </div>
+  <p class="sr-only" role="status">Loading the page.</p>
+</template>
+
+<template id="skeleton-form">
+  <div class="page" aria-hidden="true">
+    {{ head() }}
+    <div class="skel-form">
+      {% for _ in range(6) %}<span class="skel skel--field"></span>{% endfor %}
+    </div>
+  </div>
+  <p class="sr-only" role="status">Loading the page.</p>
+</template>

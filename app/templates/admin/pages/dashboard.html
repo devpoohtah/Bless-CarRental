@@ -1,4 +1,5 @@
 {% extends 'admin/base.html' %}
+{% from 'admin/components/empty.html' import empty_state %}
 {% block title %}Dashboard Overview | {{ site.short_name }} Admin{% endblock %}
 
 {% macro stat(label, value) %}
@@ -69,7 +70,7 @@
       <p class="page-note">These rows are sample data, not real bookings.</p>
       {% endif %}
       {% else %}
-      <p class="page-note">No booking requests yet.</p>
+      {{ empty_state('No booking requests yet', 'New requests from the website booking form appear here.') }}
       {% endif %}
     </section>
   </div>

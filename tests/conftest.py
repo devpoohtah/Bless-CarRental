@@ -11,11 +11,12 @@ from tests.fakes import FakeDb
 
 @pytest.fixture(autouse=True)
 def isolate_from_real_services(monkeypatch):
-    """Tests must never reach the real Firebase or Cloudinary, even when .env has credentials.
+    """Tests must never reach the real Firebase, Cloudinary or Telegram, even when .env has credentials.
     Without a database the app serves sample data; admin pages are opened as a test admin."""
     monkeypatch.setattr(config, "integrations", replace(
         config.integrations, google_credentials="", cloudinary_cloud_name="", cloudinary_api_key="",
-        cloudinary_api_secret="", admin_emails=frozenset()))
+        cloudinary_api_secret="", admin_emails=frozenset(), telegram_bot_token="", telegram_chat_id="",
+        admin_base_url=""))
     app.dependency_overrides[require_admin] = lambda: AdminUser(email="admin@example.com", uid="test-uid")
     yield
     app.dependency_overrides.clear()

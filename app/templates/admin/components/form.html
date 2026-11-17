@@ -48,8 +48,8 @@
 <p class="note">{{ icon('info', 'icon icon--sm') }}<span>The database is not connected, so saving and deleting are unavailable. Set GOOGLE_APPLICATION_CREDENTIALS in .env.</span></p>
 {% endif %}
 <div class="form__actions">
-  <button type="submit" class="btn btn--primary"{% if not database_ready() %} disabled{% endif %}>{{ save_label }}</button>
+  <button type="submit" class="btn btn--primary" data-busy-label="Saving…"{% if not database_ready() %} disabled{% endif %}>{{ save_label }}</button>
   <a class="btn btn--outline" href="{{ cancel_href }}">Cancel</a>
-  {% if delete_label %}<button type="submit" class="btn btn--outline form__delete" formaction="{{ delete_url }}" formnovalidate data-confirm="{{ delete_confirm }}"{% if not database_ready() %} disabled{% endif %}>{{ delete_label }}</button>{% endif %}
+  {% if delete_label %}<button type="submit" class="btn btn--outline form__delete" formaction="{{ delete_url }}" formnovalidate data-confirm="{{ delete_confirm }}" data-busy-label="Deleting…"{% if not database_ready() %} disabled{% endif %}>{{ delete_label }}</button>{% endif %}
 </div>
 {% endmacro %}

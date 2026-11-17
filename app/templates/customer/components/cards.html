@@ -1,5 +1,14 @@
 {# Card macros for tours, destinations, services and vehicles. #}
 
+{# Opens the booking dialog with this car or tour chosen. Unavailable items cannot be booked. #}
+{% macro book_button(kind, entry, label, extra='') %}
+{% if entry.availability == 'unavailable' %}
+<button type="button" class="btn btn--primary{{ ' ' ~ extra if extra }}" disabled>Currently unavailable</button>
+{% else %}
+<button type="button" class="btn btn--primary{{ ' ' ~ extra if extra }}" data-book="{{ kind }}:{{ entry.name }}">{{ label }}<span class="sr-only"> {{ entry.name }}</span></button>
+{% endif %}
+{% endmacro %}
+
 {% macro tour_card(tour) %}
 <article class="card">
   <div class="card__media">
@@ -16,7 +25,7 @@
     </dl>
     <div class="card__actions">
       <button type="button" class="btn btn--outline" data-open-dialog="tour-{{ tour.id }}">View details<span class="sr-only"> for {{ tour.name }}</span></button>
-      <a class="btn btn--primary" href="{{ site.messenger_url }}" target="_blank" rel="noopener noreferrer" aria-label="Inquire about {{ tour.name }} on Messenger (opens in a new tab)">Inquire</a>
+      {{ book_button('tour', tour, 'Book now') }}
     </div>
   </div>
 </article>
@@ -69,12 +78,12 @@
       <p class="rate__label">Rental rate</p>
       <p class="rate__value">{{ v.daily_rate_php | php }}</p>
     </div>
-    <a class="btn btn--primary btn--block" href="{{ site.messenger_url }}" target="_blank" rel="noopener noreferrer" aria-label="Inquire about the {{ v.name }} on Messenger (opens in a new tab)">Inquire about this vehicle</a>
+    {{ book_button('car', v, 'Book this vehicle', 'btn--block') }}
   </div>
 </article>
 {% endmacro %}
 
-{% macro detail_dialog(dom_id, title, subtitle, photo, description, facts, is_sample) %}
+{% macro detail_dialog(dom_id, title, subtitle, photo, description, facts, is_sample, book_item=None) %}
 <dialog id="{{ dom_id }}" aria-labelledby="{{ dom_id }}-title" class="detail-dialog">
   <div class="detail-dialog__media">
     <img src="{{ static_url(photo.src) }}" alt="{{ photo.alt }}" width="1200" height="900" loading="lazy" decoding="async">
@@ -97,7 +106,12 @@
     <p class="notice">{{ icon('info', 'icon') }}This is a sample listing. BLESS will confirm the details and rates when you inquire.</p>
     {% endif %}
     <div class="detail-dialog__actions">
+      {% if book_item %}
+      <button type="button" class="btn btn--primary" data-book="{{ book_item }}">Book now</button>
+      <a class="btn btn--outline" href="{{ site.messenger_url }}" target="_blank" rel="noopener noreferrer">Message us on Messenger<span class="sr-only"> (opens in a new tab)</span></a>
+      {% else %}
       <a class="btn btn--primary" href="{{ site.messenger_url }}" target="_blank" rel="noopener noreferrer">Inquire on Messenger<span class="sr-only"> (opens in a new tab)</span></a>
+      {% endif %}
       <form method="dialog"><button class="btn btn--outline">Close</button></form>
     </div>
   </div>

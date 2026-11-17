@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="{{ static_url('shared/css/tokens.css') }}">
   <link rel="stylesheet" href="{{ static_url('shared/css/base.css') }}">
   <link rel="stylesheet" href="{{ static_url('shared/css/buttons.css') }}">
+  <link rel="stylesheet" href="{{ static_url('shared/css/loading.css') }}">
   <link rel="stylesheet" href="{{ static_url('admin/css/admin.css') }}">
 </head>
 <body>
@@ -28,7 +29,8 @@
 
       {% if firebase_config %}
       <div id="login-error" class="form-errors" role="alert" hidden></div>
-      <button type="button" class="btn btn--outline btn--block" id="google-signin">Continue with Google</button>
+      <p id="login-status" class="sr-only" role="status"></p>
+      <button type="button" class="btn btn--outline btn--block" id="google-signin" data-busy-label="Signing in…">Continue with Google</button>
       <p class="login__or">or sign in with email</p>
       <form class="form" id="password-form">
         <div class="field">
@@ -39,7 +41,7 @@
           <label for="password">Password</label>
           <input id="password" name="password" type="password" autocomplete="current-password" required>
         </div>
-        <button type="submit" class="btn btn--primary btn--block">Sign in</button>
+        <button type="submit" class="btn btn--primary btn--block" data-busy-label="Signing in…">Sign in</button>
       </form>
       {# Public Firebase web config (not secrets), read by login.js. tojson escapes it safely. #}
       <script type="application/json" id="firebase-config">{{ firebase_config | tojson }}</script>

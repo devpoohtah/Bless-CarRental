@@ -67,6 +67,12 @@ class Integrations:
     cloudinary_api_secret: str = field(default_factory=lambda: _env("CLOUDINARY_API_SECRET"))
     # Lower-case emails allowed into /admin. Empty means nobody can sign in.
     admin_emails: frozenset[str] = field(default_factory=_admin_emails)
+    # Backend only. Booking alerts go to this Telegram group; unset means alerts are skipped.
+    telegram_bot_token: str = field(default_factory=lambda: _env("TELEGRAM_BOT_TOKEN"))
+    telegram_chat_id: str = field(default_factory=lambda: _env("TELEGRAM_CHAT_ID"))
+    # Public address of this site, for the link in an alert (for example https://example.com).
+    # Unset means alerts carry no link.
+    admin_base_url: str = field(default_factory=lambda: _env("ADMIN_BASE_URL").rstrip("/"))
 
     @property
     def firebase_web_config(self) -> dict[str, str] | None:
@@ -79,6 +85,10 @@ class Integrations:
             "appId": self.firebase_app_id,
         }
         return config if all(config.values()) else None
+
+    @property
+    def telegram_ready(self) -> bool:
+        return bool(self.telegram_bot_token and self.telegram_chat_id)
 
     @property
     def cloudinary_ready(self) -> bool:

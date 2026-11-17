@@ -16,6 +16,7 @@
   <link rel="stylesheet" href="{{ static_url('shared/css/tokens.css') }}">
   <link rel="stylesheet" href="{{ static_url('shared/css/base.css') }}">
   <link rel="stylesheet" href="{{ static_url('shared/css/buttons.css') }}">
+  <link rel="stylesheet" href="{{ static_url('shared/css/loading.css') }}">
   <link rel="stylesheet" href="{{ static_url('admin/css/admin.css') }}">
   {% block head_extra %}{% endblock %}
 </head>
@@ -30,6 +31,7 @@
   <main id="main" class="admin-main">
     {% block content %}{% endblock %}
   </main>
+  {% include 'admin/components/skeletons.html' %}
   <script src="{{ static_url('admin/js/admin.js') }}" defer></script>
 </body>
 </html>

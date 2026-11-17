@@ -10,7 +10,7 @@
       </ul>
     </nav>
     <div class="site-header__actions">
-      <a class="btn btn--action btn--sm site-header__cta" href="{{ site.messenger_url }}" target="_blank" rel="noopener noreferrer">Book Now<span class="sr-only"> (opens Messenger in a new tab)</span></a>
+      <button type="button" class="btn btn--action btn--sm site-header__cta" data-book>Book Now</button>
       <button id="menu-toggle" class="menu-toggle" type="button" aria-expanded="false" aria-controls="mobile-menu" aria-label="Open menu">
         <span data-icon="open">{{ icon('menu', 'icon icon--lg') }}</span>
         <span data-icon="close" hidden>{{ icon('x', 'icon icon--lg') }}</span>
@@ -24,7 +24,7 @@
         <li><a class="nav__link nav__link--mobile" href="{{ link.href }}" data-section="{{ link.section_id }}">{{ link.label }}</a></li>
         {% endfor %}
       </ul>
-      <a class="btn btn--action btn--block" href="{{ site.messenger_url }}" target="_blank" rel="noopener noreferrer">Book Now<span class="sr-only"> (opens Messenger in a new tab)</span></a>
+      <button type="button" class="btn btn--action btn--block" data-book>Book Now</button>
     </nav>
   </div>
 </header>

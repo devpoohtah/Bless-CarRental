@@ -7,7 +7,9 @@ import {
 
 const auth = getAuth(initializeApp(JSON.parse(document.getElementById("firebase-config").textContent)));
 const errorBox = document.getElementById("login-error");
-const buttons = document.querySelectorAll("#google-signin, #password-form button");
+const status = document.getElementById("login-status");
+// Everything that can start a sign-in or change what is being signed in with.
+const controls = document.querySelectorAll("#google-signin, #password-form button, #password-form input");
 
 const MESSAGES = {
   "auth/invalid-credential": "The email or password is incorrect.",
@@ -23,8 +25,22 @@ function showError(message) {
   errorBox.hidden = !message;
 }
 
-function busy(state) {
-  buttons.forEach((button) => { button.disabled = state; });
+// While a sign-in is running the clicked button shows a spinner and "Signing in…" and everything
+// else is disabled. The clicked button is marked aria-busy instead of disabled so it keeps its look.
+let working = false;
+function busy(state, button) {
+  working = state;
+  controls.forEach((control) => { control.disabled = state && control !== button; });
+  if (!button) return;
+  if (state) {
+    button.dataset.label = button.textContent;
+    button.textContent = button.dataset.busyLabel;
+    button.setAttribute("aria-busy", "true");
+  } else {
+    button.textContent = button.dataset.label || button.textContent;
+    button.removeAttribute("aria-busy");
+  }
+  status.textContent = state ? button.dataset.busyLabel : "";
 }
 
 async function finish(user) {
@@ -43,27 +59,30 @@ async function finish(user) {
   window.location.assign("/admin/dashboard");
 }
 
-async function run(signIn) {
+async function run(signIn, button) {
+  if (working) return;
   showError("");
-  busy(true);
+  busy(true, button);
   try {
     await finish((await signIn()).user);
   } catch (error) {
     if (error.code === "auth/popup-closed-by-user" || error.code === "auth/cancelled-popup-request") {
-      busy(false);
+      busy(false, button);
       return;
     }
     showError(MESSAGES[error.code] || (error.code ? "Sign-in failed. Try again." : error.message));
-    busy(false);
+    busy(false, button);
   }
 }
 
-document.getElementById("google-signin").addEventListener("click", () => {
-  run(() => signInWithPopup(auth, new GoogleAuthProvider()));
+const googleButton = document.getElementById("google-signin");
+googleButton.addEventListener("click", () => {
+  run(() => signInWithPopup(auth, new GoogleAuthProvider()), googleButton);
 });
 
 document.getElementById("password-form").addEventListener("submit", (event) => {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
-  run(() => signInWithEmailAndPassword(auth, form.get("email"), form.get("password")));
+  run(() => signInWithEmailAndPassword(auth, form.get("email"), form.get("password")),
+    event.currentTarget.querySelector('[type="submit"]'));
 });

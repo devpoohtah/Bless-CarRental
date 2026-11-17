@@ -56,7 +56,7 @@ def test_unknown_ids_return_404():
 def test_without_a_database_saving_is_disabled_and_posts_are_refused():
     for url in ("/admin/services/cars/family-suv/edit", "/admin/services/tours/island-day-tour/edit"):
         html = client.get(url).text
-        assert re.search(r'<button type="submit" class="btn btn--primary" disabled>', html), url
+        assert re.search(r'<button type="submit" class="btn btn--primary"[^>]* disabled>', html), url
         assert "database is not connected" in html
     assert client.post("/admin/services/cars/new", data={"name": "X"}).status_code == 503
     assert client.post("/admin/services/cars/family-suv/delete").status_code == 503

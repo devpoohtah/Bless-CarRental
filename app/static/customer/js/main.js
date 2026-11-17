@@ -14,7 +14,7 @@
     toggle.querySelector('[data-icon="close"]').hidden = !open;
   };
   toggle.addEventListener("click", () => setMenu(menu.hidden));
-  menu.addEventListener("click", (e) => { if (e.target.closest("a")) setMenu(false); });
+  menu.addEventListener("click", (e) => { if (e.target.closest("a, [data-book]")) setMenu(false); });
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && !menu.hidden) { setMenu(false); toggle.focus(); }
   });
@@ -40,6 +40,7 @@
     btn.addEventListener("click", () => document.getElementById(btn.dataset.openDialog)?.showModal())
   );
   document.querySelectorAll("dialog").forEach((dialog) =>
-    dialog.addEventListener("click", (e) => { if (e.target === dialog) dialog.close(); })
+    // The booking form keeps its own dialog open on a stray click, so typed answers are not lost.
+    dialog.addEventListener("click", (e) => { if (e.target === dialog && !dialog.hasAttribute("data-no-backdrop-close")) dialog.close(); })
   );
 })();
