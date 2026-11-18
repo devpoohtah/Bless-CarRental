@@ -24,6 +24,7 @@
     <table class="data-table">
       <thead>
         <tr>
+          <th scope="col">Reference</th>
           <th scope="col">Customer</th>
           <th scope="col">Car or tour</th>
           <th scope="col">Dates</th>
@@ -35,6 +36,7 @@
       <tbody>
         {% for b in bookings %}
         <tr>
+          <td data-label="Reference" class="cell-ref">{{ b.reference }}</td>
           <th scope="row"><span class="cell-title">{{ b.customer_name }}</span><span class="cell-sub">{{ type_labels[b.booking_type] }}</span></th>
           <td data-label="Car or tour">{{ b.item_name }}</td>
           <td data-label="Dates">{{ b.start_date | date_range(b.end_date) }}</td>

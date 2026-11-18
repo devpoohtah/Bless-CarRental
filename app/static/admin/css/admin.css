@@ -252,3 +252,9 @@ a.chip:hover { filter: brightness(1.15); }
 .empty-state__title { font-family: var(--font-display); font-size: 1.25rem; font-weight: 700; }
 .empty-state__text { max-width: 32rem; color: var(--muted); }
 .empty-state .btn { margin-top: 0.75rem; }
+
+/* SweetAlert2: use the site fonts and shape; its buttons are the shared .btn styles. */
+.swal2-title { font-family: var(--font-display); font-weight: 700; color: var(--ink); }
+.swal2-popup { border-radius: var(--radius-lg); }
+.swal2-actions { gap: 0.5rem; }
+.cell-ref { font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }

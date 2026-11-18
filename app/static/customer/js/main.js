@@ -137,6 +137,7 @@
     const controls = root.querySelector("[data-vcar-controls]");
     if (!track || !controls) return;
     const slides = [...track.querySelectorAll("[data-vslide]")];
+    const infos = [...root.querySelectorAll("[data-vinfo]")];
     const count = controls.querySelector("[data-vcar-count]");
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
     let index = 0;
@@ -144,6 +145,7 @@
       index = Math.min(slides.length - 1, Math.max(0, Math.round(track.scrollLeft / track.clientWidth)));
       count.textContent = `${index + 1} of ${slides.length}`;
       slides.forEach((slide, n) => slide.toggleAttribute("inert", n !== index));
+      infos.forEach((info, n) => { info.hidden = n !== index; });
     };
     const goTo = (i) => track.scrollTo({ left: ((i + slides.length) % slides.length) * track.clientWidth, behavior: reduced.matches ? "auto" : "smooth" });
     controls.querySelector("[data-vcar-prev]").addEventListener("click", () => goTo(index - 1));
@@ -152,6 +154,7 @@
     track.addEventListener("scroll", () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(update); }, { passive: true });
     window.addEventListener("resize", () => track.scrollTo({ left: index * track.clientWidth, behavior: "auto" }));
     controls.hidden = false;
+    root.dataset.ready = "";
     update();
   });
 

@@ -1,34 +1,47 @@
-{% from 'customer/components/cards.html' import vehicle_slide %}
+{% from 'customer/components/cards.html' import vehicle_stage, vehicle_info %}
+{% macro car_head() %}
+<div class="section__head vcar__head">
+  <h2>Car rental services</h2>
+  <p class="section__lead">Choose a vehicle type, then message us with your dates to ask about availability and rates.</p>
+  {% if vehicles | selectattr('is_sample') | list %}
+  <p class="note">{{ icon('info', 'icon icon--sm') }}Sample listings. Vehicles, specifications and rates will be confirmed by BLESS.</p>
+  {% endif %}
+</div>
+{% endmacro %}
 <section id="car-rental" class="section section--dark on-dark">
   <div class="container">
-    <div class="section__head">
-      <h2>Car rental services</h2>
-      <p class="section__lead">Choose a vehicle type, then message us with your dates to ask about availability and rates.</p>
-      {% if vehicles | selectattr('is_sample') | list %}
-      <p class="note">{{ icon('info', 'icon icon--sm') }}Sample listings. Vehicles, specifications and rates will be confirmed by BLESS.</p>
-      {% endif %}
-    </div>
     {% if vehicles %}
-    {# One vehicle per slide, straight from the admin's car list: a new car appears here by itself. Swiping works without JavaScript; main.js adds the buttons. #}
+    {# Text on the left, photo on the right. Swiping the photos or using the buttons changes the details beside them. #}
     <div class="vcar" data-vcar role="group" aria-roledescription="carousel" aria-label="Vehicles for rent">
-      <div class="vcar__track" data-vcar-track>
-        {% for v in vehicles %}
-        {{ vehicle_slide(v, loop.index, loop.length) }}
-        {% endfor %}
+      {{ car_head() }}
+      <div class="vcar__infos" aria-live="polite">
+        {% for v in vehicles %}{{ vehicle_info(v, loop.first) }}{% endfor %}
       </div>
-      <div class="vcar__bar">
+      <div class="vcar__media">
+        <div class="vcar__track" data-vcar-track>
+          {% for v in vehicles %}{{ vehicle_stage(v, loop.index, loop.length) }}{% endfor %}
+        </div>
         {% if vehicles | length > 1 %}
         <div class="vcar__controls" data-vcar-controls hidden>
           <button type="button" class="icon-btn" data-vcar-prev aria-label="Previous vehicle">{{ icon('chevron-left', 'icon') }}</button>
-          <span class="vcar__count" data-vcar-count aria-live="polite">1 of {{ vehicles | length }}</span>
+          <span class="vcar__count" data-vcar-count>1 of {{ vehicles | length }}</span>
           <button type="button" class="icon-btn" data-vcar-next aria-label="Next vehicle">{{ icon('chevron-right', 'icon') }}</button>
         </div>
         {% endif %}
-        <a class="btn btn--outline-light" href="/cars">View all cars</a>
       </div>
     </div>
     {% else %}
+    {{ car_head() }}
     <p class="vcar__empty">No vehicles are listed right now. Message us on Messenger to ask about availability.</p>
     {% endif %}
+    <div id="requirements" class="reqs">
+      <h3>What you need to rent a car</h3>
+      <ul class="reqs__list">
+        <li>{{ icon('circle-check', 'icon', 1.75) }}<span><strong>Driver's license</strong> that is valid for the whole rental</span></li>
+        <li>{{ icon('circle-check', 'icon', 1.75) }}<span><strong>Valid ID</strong> to go with your license</span></li>
+        <li>{{ icon('circle-check', 'icon', 1.75) }}<span><strong>Downpayment</strong> to reserve your dates</span></li>
+        <li>{{ icon('circle-check', 'icon', 1.75) }}<span><strong>Security deposit</strong>, amount confirmed by BLESS when you book</span></li>
+      </ul>
+    </div>
   </div>
 </section>

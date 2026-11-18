@@ -42,11 +42,42 @@
   if (collapseButton) syncCollapse();
 })();
 
-// Buttons with data-confirm ask before they submit (delete, reject, cancel).
-document.addEventListener("click", (event) => {
+// Buttons with data-confirm ask before they submit (delete, reject, cancel). The dialog is SweetAlert2;
+// if it did not load, the browser's own dialog is used so the check is never skipped.
+document.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-confirm]");
-  if (button && !window.confirm(button.dataset.confirm)) event.preventDefault();
+  if (!button || !button.form) return;
+  event.preventDefault();
+  const form = button.form;
+  let confirmed;
+  if (window.Swal) {
+    const result = await Swal.fire({
+      title: button.dataset.confirm,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: (button.dataset.label || button.textContent).trim(),
+      cancelButtonText: "Go back",
+      reverseButtons: true,
+      focusCancel: true,
+      buttonsStyling: false,
+      customClass: { confirmButton: "btn btn--primary", cancelButton: "btn btn--outline" },
+    });
+    confirmed = result.isConfirmed;
+  } else {
+    confirmed = window.confirm(button.dataset.confirm);
+  }
+  // requestSubmit keeps the clicked button as the submitter, so its name, value and formaction are sent.
+  if (confirmed) form.requestSubmit(button);
 });
+
+// The "saved" notice rendered by the server becomes a toast. Without SweetAlert2 it stays on the page.
+(() => {
+  const notice = document.querySelector(".notice[role='status']");
+  if (!notice || !window.Swal) return;
+  const text = notice.textContent.trim();
+  notice.hidden = true;
+  Swal.fire({ toast: true, position: "top-end", icon: "success", title: text, showConfirmButton: false, timer: 4000, timerProgressBar: true });
+})();
 
 // Submit buttons show a busy state while a form posts, and a second click cannot post it twice.
 // The button is marked aria-busy rather than disabled on purpose: a disabled button's name and

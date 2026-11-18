@@ -67,6 +67,9 @@ class Testimonial(BaseModel):
     service: str
     rating: int | None = Field(default=None, ge=1, le=5)
     photo: Photo | None = None
+    translation: str | None = None  # English version of a quote written in Tagalog or Taglish
+    source: str | None = None  # where the customer wrote it, e.g. a Facebook message
+    tag: str | None = None  # short label such as "Returning customer"
     is_placeholder: bool = True
 
 

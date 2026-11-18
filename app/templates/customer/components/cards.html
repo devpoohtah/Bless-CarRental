@@ -84,25 +84,32 @@
 {% endmacro %}
 
 {# One slide of the Car Rental carousel on the landing page. #}
-{% macro vehicle_slide(v, position, total) %}
-{% set status = {'inquire': 'Ask for availability', 'available': 'Available', 'unavailable': 'Currently unavailable'}[v.availability] %}
-<article class="vslide" data-vslide role="group" aria-roledescription="slide" aria-label="{{ position }} of {{ total }}">
+{# The car carousel is two parts: the photos slide in one track, and the details of the car on show sit in the text column. main.js keeps them in step. #}
+{% macro vehicle_stage(v, position, total) %}
+<div class="vslide" data-vslide role="group" aria-roledescription="slide" aria-label="{{ position }} of {{ total }}: {{ v.name }}">
   <div class="vslide__stage">
     <img src="{{ static_url(v.photo.src) }}" alt="{{ v.photo.alt }}" width="1200" height="900" loading="lazy" decoding="async">
     {% if v.is_sample %}<span class="badge badge--float">Sample</span>{% endif %}
   </div>
-  <div class="vslide__info">
-    <p class="vslide__type">{{ v.vehicle_type }}</p>
-    <h3 class="vslide__name">{{ v.name }}</h3>
-    <dl class="vslide__facts">
-      <div><dt>Passengers</dt><dd>{{ v.seats if v.seats else 'To be confirmed' }}</dd></div>
-      <div><dt>Transmission</dt><dd>{{ v.transmission or 'To be confirmed' }}</dd></div>
-      <div><dt>Rental rate</dt><dd class="vslide__rate">{{ v.daily_rate_php | php }}</dd></div>
-    </dl>
-    <p class="vslide__status">{{ status }}</p>
+</div>
+{% endmacro %}
+
+{% macro vehicle_info(v, shown) %}
+{% set status = {'inquire': 'Ask for availability', 'available': 'Available', 'unavailable': 'Currently unavailable'}[v.availability] %}
+<div class="vinfo" data-vinfo{% if not shown %} hidden{% endif %}>
+  <p class="vslide__type">{{ v.vehicle_type }}</p>
+  <h3 class="vslide__name">{{ v.name }}</h3>
+  <dl class="vslide__facts">
+    <div><dt>Passengers</dt><dd>{{ v.seats if v.seats else 'To be confirmed' }}</dd></div>
+    <div><dt>Transmission</dt><dd>{{ v.transmission or 'To be confirmed' }}</dd></div>
+    <div><dt>Rental rate</dt><dd class="vslide__rate">{{ v.daily_rate_php | php }}</dd></div>
+  </dl>
+  <p class="vslide__status">{{ status }}</p>
+  <div class="vinfo__actions">
     {{ book_button('car', v, 'Book this vehicle', 'btn--lg', 'action') }}
+    <a class="btn btn--outline-light btn--lg" href="/cars">View all cars</a>
   </div>
-</article>
+</div>
 {% endmacro %}
 
 {# The details dialogs for a list of tours: opened by the tour cards' "View details" buttons. #}

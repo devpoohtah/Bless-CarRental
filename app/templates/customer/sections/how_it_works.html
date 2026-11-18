@@ -1,0 +1,24 @@
+{% set steps = [
+  ('Choose your tour or car', 'Browse the tour packages or the vehicle list and pick what fits your trip.'),
+  ('Send your request', 'Fill in the form with your dates and trip details, then verify your email with a 6-digit code.'),
+  ('Get your reference number', 'Your request goes straight to BLESS. Keep the reference number in case you message us.'),
+  ('Wait for approval', 'BLESS reviews your request and emails you once it is approved. Until then it is a request, not a confirmed booking.'),
+] %}
+<section id="how-it-works" class="section section--tight section--white">
+  <div class="container">
+    <div class="section__head">
+      <h2>How booking works</h2>
+      <p class="section__lead">Four steps, the same for tours and car rentals.</p>
+    </div>
+    <ol class="steps">
+      {% for title, text in steps %}
+      <li class="steps__item">
+        <span class="steps__num" aria-hidden="true">{{ loop.index }}</span>
+        <h3>{{ title }}</h3>
+        <p>{{ text }}</p>
+      </li>
+      {% endfor %}
+    </ol>
+    <p class="note">{{ icon('info', 'icon icon--sm') }}Tour inclusions and group size are confirmed with you when we review your request.</p>
+  </div>
+</section>

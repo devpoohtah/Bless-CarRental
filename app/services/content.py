@@ -30,11 +30,11 @@ HERO_SLIDES = [HeroSlide(file=f"slide-{n}.webp") for n in range(1, 9)]
 TOURS_ON_HOME = 3
 
 NAV_LINKS = [
-    NavLink(label="Home", href="#home", section_id="home"),
-    NavLink(label="About", href="#about", section_id="about"),
     NavLink(label="Tours", href="#tours", section_id="tours"),
     NavLink(label="Destinations", href="#destinations", section_id="destinations"),
     NavLink(label="Car Rental", href="#car-rental", section_id="car-rental"),
+    NavLink(label="How it works", href="#how-it-works", section_id="how-it-works"),
+    NavLink(label="About", href="#about", section_id="about"),
     NavLink(label="Gallery", href="#gallery", section_id="gallery"),
     NavLink(label="FAQ", href="#faq", section_id="faq"),
     NavLink(label="Contact", href="#contact", section_id="contact"),
@@ -189,11 +189,29 @@ def _sample_vehicles() -> list[Vehicle]:
 
 
 def list_testimonials() -> list[Testimonial]:
-    quote = "Customer feedback goes here. Replace this placeholder with a verified review."
+    # Real customer messages from the BLESS Facebook page, shown in the customers' own words (spacing and
+    # one typo corrected; "..." marks a cut). Names are not known yet: replace "BLESS customer" once the
+    # customer agrees to be named, and get the business's approval before the site goes live.
     return [
-        Testimonial(id="placeholder-1", quote=quote, author="Customer name", service="Tour package"),
-        Testimonial(id="placeholder-2", quote=quote, author="Customer name", service="Car rental"),
-        Testimonial(id="placeholder-3", quote=quote, author="Customer name", service="Tour package"),
+        Testimonial(
+            id="fb-itinerary",
+            quote=(
+                "Super thank you. Nag enjoy po ang family/friends. Itinerary: well organize, lahat ng "
+                "tourist spot napuntahan. ... Sobrang bait, accommodating all throughout the tour, "
+                "knowledgeable sa mga tourist spot, manageable sa time, always on time sila."
+            ),
+            author="BLESS customer", service="Tour", source="Facebook message", is_placeholder=False,
+        ),
+        Testimonial(
+            id="fb-recommend",
+            quote="Napakabait at naging maayos ang Bacolod, Iloilo, Gigantes at Guimaras tour namin. Recommendable ang Travel agency nyo.",
+            author="BLESS customer", service="Bacolod, Iloilo, Gigantes and Guimaras tour", source="Facebook message", is_placeholder=False,
+        ),
+        Testimonial(
+            id="fb-returning",
+            quote="Magrerent po sana ulit kami ng service.",
+            author="BLESS customer", service="Car rental", source="Facebook message", tag="Returning customer", is_placeholder=False,
+        ),
     ]
 
 
@@ -219,24 +237,25 @@ def list_faqs() -> list[FaqItem]:
         FaqItem(
             question="How can I book a tour?",
             answer=(
-                "For now, tour bookings are arranged through our Facebook page and Messenger, or by "
-                "phone. Tell us which tour or destination you are interested in and BLESS will "
-                "confirm the next steps with you. An online booking system is planned for later."
+                "Choose a tour, fill in the booking request form and verify your email with a 6-digit "
+                "code. You receive a reference number, and BLESS emails you once your request is "
+                "approved. You can also ask us first by Messenger or phone."
             ),
         ),
         FaqItem(
             question="How can I rent a vehicle?",
             answer=(
-                "Send us a message on Messenger or call us with the vehicle type you need and your "
-                "travel dates. Rental terms, requirements and rates are confirmed by BLESS when you inquire."
+                "Pick a car, send the rental request form and verify your email. You will need a "
+                "driver's license, a valid ID, a downpayment and a security deposit. BLESS confirms "
+                "availability and the final rate. You can also message or call us first."
             ),
         ),
         FaqItem(
             question="What information is needed for a booking?",
             answer=(
-                "BLESS confirms the exact requirements when you inquire. It helps to have your "
-                "preferred dates, the number of travelers, the tour or vehicle you are interested in, "
-                "and your contact details ready."
+                "Have your preferred dates, the number of travelers, the tour or vehicle you want and "
+                "your contact details ready. Car rentals also need your pick-up and drop-off "
+                "locations. Tour inclusions and group size are confirmed when BLESS reviews your request."
             ),
         ),
         FaqItem(
