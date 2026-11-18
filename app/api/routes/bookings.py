@@ -89,7 +89,7 @@ def tour_page(request: Request, tour: str = "") -> HTMLResponse:
                  blocked=service.all_blocked_ranges("tour", [t.name for t in tours]))
 
 
-def _submit(request: Request, kind: str, raw: dict, honeypot: str, token: str):
+def _submit(request: Request, kind: str, raw: dict, honeypot: str, token: str, agree: str = ""):
     """Checks a request and emails a code. Saves nothing: /book/verify does that once the code is right."""
     client = _client(request)
     if not limiter.allow(client):
@@ -99,6 +99,8 @@ def _submit(request: Request, kind: str, raw: dict, honeypot: str, token: str):
         return JSONResponse({"ok": True, "reference": ""}, status_code=201)
     if not firebase.is_configured() or not config.integrations.otp_mode:
         return _errors(503, f"Online booking is not available right now. Please {MESSENGER_HINT}.")
+    if agree != "yes":
+        return _errors(422, "Please tick the box to agree to the Terms and Conditions and the Privacy Policy.")
     model, build, _create = FORMS[kind]
     data, errors = validate(model, raw)
     if data is None:
@@ -162,13 +164,13 @@ def submit_car(
     pickup_location: str = Form(""), dropoff_location: str = Form(""), destination: str = Form(""),
     passengers: str = Form(""), driver_option: str = Form(""), details: str = Form(""),
     customer_name: str = Form(""), customer_phone: str = Form(""), customer_email: str = Form(""),
-    website: str = Form(""), cf_turnstile_response: str = Form("", alias="cf-turnstile-response"),
+    website: str = Form(""), agree: str = Form(""), cf_turnstile_response: str = Form("", alias="cf-turnstile-response"),
 ):
     raw = dict(car=car, start_date=start_date, start_time=start_time, end_date=end_date, end_time=end_time,
                pickup_location=pickup_location, dropoff_location=dropoff_location, destination=destination,
                passengers=passengers, driver_option=driver_option, details=details, customer_name=customer_name,
                customer_phone=customer_phone, customer_email=customer_email)
-    return _submit(request, "car", raw, website, cf_turnstile_response)
+    return _submit(request, "car", raw, website, cf_turnstile_response, agree)
 
 
 @router.post("/book/tour")
@@ -176,9 +178,9 @@ def submit_tour(
     request: Request, tour: str = Form(""), start_date: str = Form(""),
     end_date: str = Form(""), guests: str = Form(""), pickup_location: str = Form(""), details: str = Form(""),
     customer_name: str = Form(""), customer_phone: str = Form(""), customer_email: str = Form(""),
-    website: str = Form(""), cf_turnstile_response: str = Form("", alias="cf-turnstile-response"),
+    website: str = Form(""), agree: str = Form(""), cf_turnstile_response: str = Form("", alias="cf-turnstile-response"),
 ):
     raw = dict(tour=tour, start_date=start_date, end_date=end_date, guests=guests, pickup_location=pickup_location,
                details=details, customer_name=customer_name, customer_phone=customer_phone,
                customer_email=customer_email)
-    return _submit(request, "tour", raw, website, cf_turnstile_response)
+    return _submit(request, "tour", raw, website, cf_turnstile_response, agree)

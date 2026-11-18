@@ -60,13 +60,13 @@ def car_request(**changes) -> dict:
     data = dict(car="family-suv", start_date=when(5), start_time="09:00", end_date=when(7), end_time="17:30",
                 pickup_location="Hotel in Iloilo City", dropoff_location="Iloilo Airport", destination="Guimaras",
                 passengers="4", driver_option="with_driver", details="Child seat please.",
-                customer_name="Ana Reyes", customer_phone="0917 123 4567", customer_email="ana@example.com")
+                customer_name="Ana Reyes", customer_phone="0917 123 4567", customer_email="ana@example.com", agree="yes")
     return data | changes
 
 
 def tour_request(**changes) -> dict:
     data = dict(tour="island-day-tour", start_date=when(10), end_date="", guests="6",
-                customer_name="Ben Cruz", customer_phone="+63 917 765 4321", customer_email="Ben@Example.com")
+                customer_name="Ben Cruz", customer_phone="+63 917 765 4321", customer_email="Ben@Example.com", agree="yes")
     return data | changes
 
 
@@ -418,3 +418,17 @@ def test_the_tour_details_dialog_links_to_the_tour_booking_page(catalog):
     html = client.get("/").text
     dialog = html.split('id="tour-island-day-tour"')[1].split("</dialog>")[0]
     assert 'href="/book/tour?tour=island-day-tour"' in dialog and "Toyota Hiace (10 seats)" in dialog
+
+
+def test_the_form_has_a_required_agree_checkbox_for_the_terms_and_privacy_policy():
+    html = client.get("/book/car").text
+    assert 'name="agree"' in html and 'type="checkbox"' in html and "required" in html.split('name="agree"')[1][:60]
+    assert 'href="/terms"' in html and 'href="/privacy"' in html
+
+
+def test_a_request_without_the_agree_box_is_refused_and_sends_no_code(fake_db):
+    for path, data in (("/book/car", car_request()), ("/book/tour", tour_request())):
+        for missing in ({"agree": ""}, {"agree": "no"}):
+            response = client.post(path, data=data | missing)
+            assert response.status_code == 422 and "Terms and Conditions" in response.json()["errors"][0]
+    assert saved_bookings(fake_db) == []

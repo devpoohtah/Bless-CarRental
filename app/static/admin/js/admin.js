@@ -236,3 +236,23 @@ document.addEventListener("submit", (event) => {
     });
   });
 })();
+
+// The sidebar clock shows Philippine time as "Nov 18, 2026 - 9:00 AM" and keeps itself current.
+(() => {
+  const clock = document.querySelector("[data-admin-clock]");
+  if (!clock) return;
+  const format = new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Manila", month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true });
+  const tick = () => {
+    const p = Object.fromEntries(format.formatToParts(new Date()).map((part) => [part.type, part.value]));
+    clock.textContent = `${p.month} ${p.day}, ${p.year} - ${p.hour}:${p.minute} ${p.dayPeriod}`;
+  };
+  tick();
+  setInterval(tick, 15000);
+})();
+
+// "+N more" on a calendar day opens that day's full list of bookings. Clicking outside the list closes it.
+document.addEventListener("click", (event) => {
+  const opener = event.target.closest("[data-day-open]");
+  if (opener) document.getElementById(opener.dataset.dayOpen)?.showModal();
+  else if (event.target.matches("dialog.day-dialog")) event.target.close();
+});

@@ -40,6 +40,10 @@ class Settings:
     # shows a "not yet available" line while this is empty and links it once it is set.
     email: str | None = None
 
+    # The public address of the site, e.g. https://blesstravel.example (no trailing slash). Used for the canonical
+    # link, sitemap and share preview. Empty means "use the address the request came in on".
+    public_base_url: str = field(default_factory=lambda: _env("PUBLIC_BASE_URL").rstrip("/"))
+
 
 def _env(name: str) -> str:
     return os.environ.get(name, "").strip()

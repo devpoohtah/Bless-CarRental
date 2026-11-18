@@ -10,6 +10,7 @@
       <span class="admin-brand__sub">Admin</span>
     </span>
   </a>
+  <p class="admin-clock"><span class="sr-only">Philippine time: </span><time data-admin-clock>{{ now_label() }}</time></p>
   <nav class="admin-nav" aria-label="Admin">
     {{ link('/admin/dashboard', 'dashboard', 'layout-dashboard', 'Dashboard', active) }}
     <p class="admin-nav__label">Service Management</p>

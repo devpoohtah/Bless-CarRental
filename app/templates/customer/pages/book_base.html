@@ -59,6 +59,11 @@
             {% endif %}
 
             <div class="booking-form__actions">
+              <p class="booking-form__legal">This is a request only. Nothing is booked until BLESS approves it and emails you.</p>
+              <label class="booking-form__agree">
+                <input type="checkbox" name="agree" value="yes" required>
+                <span>I confirm my details are correct and I agree to the <a class="link" href="/terms" target="_blank" rel="noopener">Terms and Conditions<span class="sr-only"> (opens in a new tab)</span></a> and the <a class="link" href="/privacy" target="_blank" rel="noopener">Privacy Policy<span class="sr-only"> (opens in a new tab)</span></a>.</span>
+              </label>
               <button type="submit" class="btn btn--primary btn--lg btn--block" data-busy-label="Sending…">Send booking request</button>
               <p class="booking-form__alt">Prefer to chat? <a class="link" href="{{ site.messenger_url }}" target="_blank" rel="noopener noreferrer">Message us on Messenger<span class="sr-only"> (opens in a new tab)</span></a></p>
             </div>
@@ -82,6 +87,7 @@
                 <span aria-hidden="true"> · </span>
                 <button type="button" class="link link--button" data-code-back>Change my details</button>
               </p>
+              <p class="booking-form__legal">We use your email only to send this code and updates about your request. See our <a class="link" href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>.</p>
             </div>
           </form>
         </div>

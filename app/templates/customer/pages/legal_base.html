@@ -1,0 +1,28 @@
+{% extends 'customer/base.html' %}
+{% block title %}{% block doc_title %}{% endblock %} | {{ site.business_name }}{% endblock %}
+
+{% block content %}
+<section class="catalog">
+  <div class="container">
+    <nav class="crumbs" aria-label="Breadcrumb">
+      <ol>
+        <li><a href="/">Home</a></li>
+        <li aria-current="page">{{ self.doc_title() }}</li>
+      </ol>
+    </nav>
+    <div class="section__head">
+      <h1>{{ self.doc_title() }}</h1>
+      <p class="section__lead">{% block doc_lead %}{% endblock %}</p>
+      <p class="legal__updated">Last updated: {{ legal_updated }}</p>
+      {% if legal_is_draft %}
+      <p class="note">{{ icon('info', 'icon icon--sm') }}Draft for review. BLESS should confirm this wording, ideally with a lawyer, before launch (edit LEGAL_IS_DRAFT in app/services/content.py to hide this note).</p>
+      {% endif %}
+    </div>
+    <div class="legal">
+      {% block body %}{% endblock %}
+      <h2>Contact us</h2>
+      <p>Questions about this page? Call <a href="{{ site.phone_href }}">{{ site.phone_display }}</a>, message us on <a href="{{ site.messenger_url }}" target="_blank" rel="noopener noreferrer">Messenger<span class="sr-only"> (opens in a new tab)</span></a>{% if site.email %}, or email <a href="mailto:{{ site.email }}">{{ site.email }}</a>{% endif %}.</p>
+    </div>
+  </div>
+</section>
+{% endblock %}

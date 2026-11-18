@@ -38,5 +38,11 @@
       </ul>
     </div>
   </div>
-  <div class="container footer__legal">&copy; {{ current_year }} {{ site.business_name }}. All rights reserved.</div>
+  <div class="container footer__legal">
+    <span>&copy; {{ current_year }} {{ site.business_name }}. All rights reserved.</span>
+    <nav class="footer__legal-links" aria-label="Legal">
+      <a href="/privacy">Privacy Policy</a>
+      <a href="/terms">Terms and Conditions</a>
+    </nav>
+  </div>
 </footer>

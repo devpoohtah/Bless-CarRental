@@ -6,9 +6,19 @@
   <title>{% block title %}{{ site.business_name }} | Iloilo City{% endblock %}</title>
   <meta name="description" content="{{ site.site_description }}">
   <meta name="theme-color" content="#000141">
+  {% set page_url = absolute_url(request, request.url.path) %}
+  {% set share_image = absolute_url(request, '/static/shared/img/og-share.png') %}
+  <link rel="canonical" href="{{ page_url }}">
   <meta property="og:type" content="website">
+  <meta property="og:site_name" content="{{ site.short_name }}">
+  <meta property="og:url" content="{{ page_url }}">
   <meta property="og:title" content="{{ site.business_name }}">
   <meta property="og:description" content="{{ site.site_description }}">
+  <meta property="og:image" content="{{ share_image }}">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="{{ site.business_name }}">
+  <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" href="{{ static_url('shared/img/bless-logo.webp') }}" type="image/webp">
   {# Fonts degrade gracefully to the system stack in tokens.css if Google Fonts is unreachable. #}
   <link rel="preconnect" href="https://fonts.googleapis.com">

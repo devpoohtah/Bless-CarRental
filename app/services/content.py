@@ -20,6 +20,11 @@ from app.schemas.catalog import (
     Vehicle,
 )
 
+# Privacy Policy and Terms. While LEGAL_IS_DRAFT is True the two pages show a "draft, to be reviewed" note.
+# Set it to False once BLESS (and a lawyer) have approved the wording, and update LEGAL_UPDATED when it changes.
+LEGAL_IS_DRAFT = True
+LEGAL_UPDATED = "November 18, 2026"
+
 # Hero carousel. Replace the placeholder files slide-1.webp to slide-8.webp (about 1920x1080, under 250 KB each).
 # To serve them from a CDN later, change HERO_IMAGE_BASE to the CDN folder URL (https://...); nothing else changes.
 # Fill in alt (what the photo shows) and caption (shown in the hero's control strip) with real text only.

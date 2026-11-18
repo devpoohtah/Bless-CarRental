@@ -179,3 +179,32 @@ def test_the_bookings_link_carries_the_badge_and_other_links_do_not():
     assert html.count("data-pending-badge") == 1
     bookings_link = html.split('href="/admin/bookings"')[1].split("</a>")[0]
     assert "data-pending-badge" in bookings_link
+
+
+def test_date_time_filter_and_sidebar_clock():
+    from datetime import date, time
+    from app.core.templating import date_time
+    assert date_time(date(2026, 11, 18), time(9, 0)) == "Nov 18, 2026 - 9:00 AM"
+    assert date_time(date(2026, 11, 18), time(17, 30)) == "Nov 18, 2026 - 5:30 PM"
+    assert date_time(date(2026, 11, 18)) == "Nov 18, 2026"
+    html = client.get("/admin/dashboard").text
+    assert "data-admin-clock" in html and re.search(r"[A-Z][a-z]{2} \d{1,2}, \d{4} - \d{1,2}:\d{2} (AM|PM)", html)
+
+
+def test_calendar_legend_group_and_chip_details():
+    html = client.get("/admin/calendar").text
+    assert 'class="legend-group"' in html and 'role="tooltip"' in html
+    assert "Pick-up" in html and "Continues" in html or "Same day" in html or "All day" in html
+    assert "Pick-up: " in html or "Starts: " in html  # the hover text carries the full date and time
+
+
+def test_a_busy_day_shows_two_bookings_and_a_more_button_that_lists_them_all(monkeypatch):
+    from datetime import timedelta
+    base = service.get_booking("sample-3")
+    day = TODAY + timedelta(days=1)
+    copies = [base.model_copy(update={"id": f"busy-{n}", "start_date": day, "end_date": day, "customer_name": f"Guest {n}"}) for n in range(4)]
+    monkeypatch.setattr(service, "list_bookings", lambda: copies)
+    html = client.get(f"/admin/calendar?month={day:%Y-%m}").text
+    assert "+2 more" in html and f'data-day-open="day-{day.isoformat()}"' in html
+    dialog = html.split(f'<dialog id="day-{day.isoformat()}"')[1].split("</dialog>")[0]
+    assert all(f"Guest {n}" in dialog for n in range(4))

@@ -3,12 +3,50 @@
 
 {% macro chip_icon(b) %}{{ icon('car-front' if b.booking_type == 'car' else 'compass', 'icon icon--sm') }}{% endmacro %}
 
+{# What a booking does on one day: pick-up, return or still going. Tours have dates but no times. #}
+{% macro stage(b, day) -%}
+{%- set first = day == b.start_date -%}
+{%- set last = day == b.end_date -%}
+{%- if b.booking_type == 'car' -%}
+  {%- if first and last -%}{{ (b.start_time | clock ~ ' - ' ~ b.end_time | clock) if b.start_time and b.end_time else 'Same day' }}
+  {%- elif first -%}Pick-up{{ ' ' ~ (b.start_time | clock) if b.start_time }}
+  {%- elif last -%}Return{{ ' ' ~ (b.end_time | clock) if b.end_time }}
+  {%- else -%}Continues{%- endif -%}
+{%- else -%}
+  {%- if first and last -%}All day{%- elif first -%}Starts{%- elif last -%}Ends{%- else -%}Continues{%- endif -%}
+{%- endif -%}
+{%- endmacro %}
+
+{% macro shape(b, day) -%}
+{%- set first = day == b.start_date -%}{%- set last = day == b.end_date -%}
+{%- if first and not last %} chip--starts{% elif last and not first %} chip--ends{% elif not first and not last %} chip--cont{% endif -%}
+{%- endmacro %}
+
+{# The hover text: who, what, and the full date and time of each end of the booking. #}
+{% macro tip(b) -%}
+{{ b.customer_name }}, {{ b.item_name }}
+{{ type_labels[b.booking_type] }}, {{ status_labels[b.status] }}
+{{ 'Pick-up' if b.booking_type == 'car' else 'Starts' }}: {{ b.start_date | date_time(b.start_time) }}
+{{ 'Return' if b.booking_type == 'car' else 'Ends' }}: {{ b.end_date | date_time(b.end_time) }}
+{%- endmacro %}
+
 {% block content %}
 <div class="page">
   <div class="page-head">
     <div>
       <h1>Booking Calendar</h1>
       <p class="page-lead">Scheduled car rentals and tour bookings by reservation date.</p>
+    </div>
+    <div class="legend-group">
+      <ul class="legend" aria-label="Legend">
+        <li><span class="chip chip--pending">Pending</span></li>
+        <li><span class="chip chip--approved">Approved</span></li>
+        <li><span class="chip chip--ongoing">Ongoing</span></li>
+        <li class="legend__type">{{ icon('car-front', 'icon icon--sm') }} Car rental</li>
+        <li class="legend__type">{{ icon('compass', 'icon icon--sm') }} Tour booking</li>
+      </ul>
+      <button type="button" class="legend-group__info" aria-label="About the legend" aria-describedby="legend-tip">{{ icon('info', 'icon') }}</button>
+      <p class="legend-group__tip" id="legend-tip" role="tooltip">The color shows the status: pending is dashed amber, approved is navy and ongoing is teal. The icon shows a car rental or a tour. Hover a booking for its full dates and times, or click it to open the booking.</p>
     </div>
   </div>
 
@@ -20,14 +58,6 @@
       <a class="btn btn--outline btn--sm" href="/admin/calendar?month={{ next_month }}" aria-label="Next month">{{ icon('chevron-right', 'icon') }}</a>
     </nav>
   </div>
-
-  <ul class="legend" aria-label="Legend">
-    <li><span class="chip chip--pending">Pending</span></li>
-    <li><span class="chip chip--approved">Approved</span></li>
-    <li><span class="chip chip--ongoing">Ongoing</span></li>
-    <li class="legend__type">{{ icon('car-front', 'icon icon--sm') }} Car rental</li>
-    <li class="legend__type">{{ icon('compass', 'icon icon--sm') }} Tour booking</li>
-  </ul>
 
   {% if not agenda %}
   <p class="page-note">No scheduled bookings this month.</p>
@@ -43,12 +73,23 @@
         <tr>
           {% for cell in week %}
           <td class="calendar__day{{ ' is-outside' if not cell.in_month }}{{ ' is-today' if cell.is_today }}">
-            <span class="calendar__date"><span class="sr-only">{{ cell.date | long_date }}{{ ' (today)' if cell.is_today }}</span><span aria-hidden="true">{{ cell.date.day }}</span></span>
+            <div class="calendar__head">
+              <span class="calendar__date"><span class="sr-only">{{ cell.date | long_date }}{{ ' (today)' if cell.is_today }}{{ ', ' ~ cell.bookings | length ~ (' booking' if cell.bookings | length == 1 else ' bookings') if cell.bookings }}</span><span aria-hidden="true">{{ cell.date.day }}</span></span>
+              {% if cell.bookings %}<span class="calendar__count" aria-hidden="true">{{ cell.bookings | length }}</span>{% endif %}
+            </div>
             {% if cell.bookings %}
             <ul class="calendar__list">
-              {% for b in cell.bookings %}
-              <li><a class="chip chip--{{ b.status }}" href="/admin/bookings/{{ b.id }}" title="{{ b.customer_name }} &middot; {{ b.item_name }} &middot; {{ status_labels[b.status] }}">{{ chip_icon(b) }}<span class="chip__text">{{ b.customer_name }}</span><span class="sr-only">, {{ type_labels[b.booking_type] }}, {{ status_labels[b.status] }}</span></a></li>
+              {% for b in cell.bookings[:2] %}
+              <li><a class="chip chip--{{ b.status }}{{ shape(b, cell.date) }}" href="/admin/bookings/{{ b.id }}" title="{{ tip(b) }}">
+                <span class="chip__when">{{ chip_icon(b) }}{{ stage(b, cell.date) }}</span>
+                <span class="chip__text">{{ b.customer_name }}</span>
+                <span class="chip__sub">{{ b.item_name }}</span>
+                <span class="sr-only">, {{ type_labels[b.booking_type] }}, {{ status_labels[b.status] }}</span>
+              </a></li>
               {% endfor %}
+              {% if cell.bookings | length > 2 %}
+              <li><button type="button" class="calendar__more" data-day-open="day-{{ cell.date.isoformat() }}">+{{ cell.bookings | length - 2 }} more<span class="sr-only"> on {{ cell.date | long_date }}</span></button></li>
+              {% endif %}
             </ul>
             {% endif %}
           </td>
@@ -59,6 +100,25 @@
     </table>
   </div>
 
+  {# One list per busy day, opened by its "+N more" button. Every item opens the booking. #}
+  {% for week in weeks %}{% for cell in week %}{% if cell.bookings | length > 2 %}
+  <dialog id="day-{{ cell.date.isoformat() }}" class="day-dialog" aria-labelledby="day-{{ cell.date.isoformat() }}-title">
+    <div class="day-dialog__body">
+      <h3 id="day-{{ cell.date.isoformat() }}-title">{{ cell.date | long_date }}</h3>
+      <ul class="agenda__list">
+        {% for b in cell.bookings %}
+        <li><a class="agenda__item" href="/admin/bookings/{{ b.id }}">
+          {{ chip_icon(b) }}
+          <span class="agenda__main"><strong>{{ b.customer_name }}</strong><span class="cell-sub">{{ b.item_name }} &middot; {{ stage(b, cell.date) }}</span></span>
+          <span class="chip chip--{{ b.status }}">{{ status_labels[b.status] }}</span>
+        </a></li>
+        {% endfor %}
+      </ul>
+      <form method="dialog" class="day-dialog__close"><button class="btn btn--outline btn--sm">Close</button></form>
+    </div>
+  </dialog>
+  {% endif %}{% endfor %}{% endfor %}
+
   {% if agenda %}
   <div class="agenda">
     {% for day, items in agenda %}
@@ -68,7 +128,7 @@
         {% for b in items %}
         <li><a class="agenda__item" href="/admin/bookings/{{ b.id }}">
           {{ chip_icon(b) }}
-          <span class="agenda__main"><strong>{{ b.customer_name }}</strong><span class="cell-sub">{{ b.item_name }} &middot; {{ type_labels[b.booking_type] }}</span></span>
+          <span class="agenda__main"><strong>{{ b.customer_name }}</strong><span class="cell-sub">{{ b.item_name }} &middot; {{ type_labels[b.booking_type] }} &middot; {{ stage(b, day) }}</span></span>
           <span class="chip chip--{{ b.status }}">{{ status_labels[b.status] }}</span>
         </a></li>
         {% endfor %}

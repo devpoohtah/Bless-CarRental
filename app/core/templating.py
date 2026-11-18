@@ -6,6 +6,7 @@ from pathlib import Path
 from fastapi.templating import Jinja2Templates
 
 from app.core import config
+from app.core.clock import now_ph
 from app.core.config import STATIC_DIR, TEMPLATES_DIR, settings
 from app.core.icons import icon
 from app.db import firebase
@@ -29,6 +30,12 @@ def static_url(path: str) -> str:
         return url
 
 
+def absolute_url(request, path: str = "/") -> str:
+    """Full https URL for a path. Social sites and search engines need absolute links."""
+    base = settings.public_base_url or str(request.base_url).rstrip("/")
+    return f"{base}{path}"
+
+
 def php(amount: int | None, fallback: str = "Contact for rates") -> str:
     """Format a peso amount, or return a neutral fallback when no price is set."""
     return f"PHP {amount:,}" if amount is not None else fallback
@@ -36,7 +43,7 @@ def php(amount: int | None, fallback: str = "Contact for rates") -> str:
 
 # firebase_config is the PUBLIC web SDK config (never secrets); only the login page reads it.
 templates.env.globals.update(
-    icon=icon, static_url=static_url, site=settings, firebase_config=config.integrations.firebase_web_config,
+    icon=icon, static_url=static_url, absolute_url=absolute_url, site=settings, firebase_config=config.integrations.firebase_web_config,
     database_ready=lambda: firebase.is_configured(), push_config=lambda: config.integrations.push_web_config,
 )
 
@@ -68,9 +75,23 @@ def date_range(start: date, end: date) -> str:
     return f"{short_date(start)} \u2013 {short_date(end)}, {end.year}"
 
 
+def date_time(day: date, at: time | None = None) -> str:
+    """'Nov 18, 2026 - 9:00 AM', or just 'Nov 18, 2026' when there is no time."""
+    text = f"{short_date(day)}, {day.year}"
+    return f"{text} - {clock(at)}" if at else text
+
+
+def now_label() -> str:
+    """The current Philippine date and time, written the same way. The sidebar clock keeps it fresh."""
+    now = now_ph()
+    return date_time(now.date(), now.time())
+
+
 def clock(value: time) -> str:
     """'9:30 AM'."""
     return f"{value:%I:%M %p}".lstrip("0")
 
 
-templates.env.filters.update(php=php, short_date=short_date, long_date=long_date, date_range=date_range, clock=clock)
+templates.env.filters.update(php=php, short_date=short_date, long_date=long_date, date_range=date_range, clock=clock,
+                             date_time=date_time)
+templates.env.globals["now_label"] = now_label
