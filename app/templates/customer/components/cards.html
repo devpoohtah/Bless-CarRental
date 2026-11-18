@@ -78,7 +78,10 @@
       <p class="rate__label">Rental rate</p>
       <p class="rate__value">{{ v.daily_rate_php | php }}</p>
     </div>
-    {{ book_button('car', v, 'Book this vehicle', 'btn--block') }}
+    <div class="card__actions">
+      <a class="btn btn--outline" href="/cars/{{ v.id }}">View details<span class="sr-only"> for {{ v.name }}</span></a>
+      {{ book_button('car', v, 'Book this vehicle', 'btn--block') }}
+    </div>
   </div>
 </article>
 {% endmacro %}
@@ -107,6 +110,7 @@
   <p class="vslide__status">{{ status }}</p>
   <div class="vinfo__actions">
     {{ book_button('car', v, 'Book this vehicle', 'btn--lg', 'action') }}
+    <a class="btn btn--outline-light btn--lg" href="/cars/{{ v.id }}">View details</a>
     <a class="btn btn--outline-light btn--lg" href="/cars">View all cars</a>
   </div>
 </div>

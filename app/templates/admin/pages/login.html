@@ -33,6 +33,7 @@
       <button type="button" class="btn btn--outline btn--block" id="google-signin" data-busy-label="Signing in…">Continue with Google</button>
       <p class="login__or">or sign in with email</p>
       <form class="form" id="password-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
         <div class="field">
           <label for="email">Email</label>
           <input id="email" name="email" type="email" autocomplete="username" required>

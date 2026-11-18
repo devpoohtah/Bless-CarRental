@@ -1,0 +1,17 @@
+{% extends 'admin/base.html' %}
+{% block title %}Service Unavailable | {{ site.short_name }} Admin{% endblock %}
+
+{% block content %}
+<div class="admin-error">
+  <div class="admin-error__card">
+    <div class="admin-error__icon">{{ icon('alert-triangle', 'icon icon--xl') }}</div>
+    <h1 class="admin-error__code">503</h1>
+    <h2 class="admin-error__title">Service unavailable</h2>
+    <p class="admin-error__message">We're temporarily unable to handle your request. Please try again in a moment.</p>
+    <div class="admin-error__actions">
+      <a class="btn btn--primary" href="/admin/dashboard">Back to dashboard</a>
+      <a class="btn btn--outline" href="javascript:history.back()">Go back</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

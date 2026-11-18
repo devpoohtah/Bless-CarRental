@@ -108,12 +108,20 @@ def booking_approved_text(booking: Booking) -> tuple[str, str]:
 
 
 def notify_booking_approved(booking: Booking) -> None:
-    """Emails the customer when the admin approves their booking. Skipped without an address or Resend settings. Never raises."""
+    """Emails the customer when the admin approves their booking. Uses APPROVAL_EMAIL_MODE (falls back to OTP_DELIVERY). Never raises."""
     if not booking.customer_email:
         return
     try:
         subject, body = booking_approved_text(booking)
-        if not send_resend(booking.customer_email, subject, body):
-            log.warning("Approval email for %s was not sent", booking.reference)
+        mode = config.integrations.approval_email_mode
+        sent = False
+        if mode == "gmail":
+            sent = send_gmail(booking.customer_email, subject, body)
+        elif mode == "resend":
+            sent = send_resend(booking.customer_email, subject, body)
+        elif mode == "simulated":
+            sent = send_resend(booking.customer_email, subject, body)  # tests mock this
+        if not sent:
+            log.warning("Approval email for %s was not sent (mode=%s)", booking.reference, mode)
     except Exception:
         log.exception("Approval email failed")

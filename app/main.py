@@ -1,15 +1,22 @@
 import logging
 
-from fastapi import FastAPI, Request
-from fastapi.responses import RedirectResponse
+from fastapi import FastAPI, Request, HTTPException
+from fastapi.responses import RedirectResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.api.routes import admin, admin_bookings, admin_push, admin_services, auth, bookings, pages
 from app.core.auth import LoginRequired
 from app.core.config import STATIC_DIR, integrations, settings
+from app.core.csrf import CSRFMiddleware, csrf_token
+from app.core.security import SecurityHeadersMiddleware
+from app.core.templating import templates
 from app.db import firebase
 
 log = logging.getLogger(__name__)
+
+
+def is_admin_request(request: Request) -> bool:
+    return request.url.path.startswith("/admin")
 
 
 def create_app() -> FastAPI:
@@ -23,9 +30,40 @@ def create_app() -> FastAPI:
     app.include_router(admin_bookings.router)
     app.include_router(admin_push.router)
 
+    # Middleware order matters: first added = outermost = runs first on request, last on response
+    app.add_middleware(SecurityHeadersMiddleware)
+    app.add_middleware(CSRFMiddleware)
+
     @app.exception_handler(LoginRequired)
     async def send_to_login(request: Request, exc: LoginRequired) -> RedirectResponse:
         return RedirectResponse("/admin/login", status_code=303)
+
+    @app.exception_handler(HTTPException)
+    async def http_exception_handler(request: Request, exc: HTTPException) -> HTMLResponse:
+        status = exc.status_code
+        admin = is_admin_request(request)
+        template_dir = "admin/errors" if admin else "customer/errors"
+        template = f"{template_dir}/{status}.html"
+        fallback = f"{template_dir}/500.html"
+        context = {"active_nav": "dashboard" if admin else None}
+        try:
+            return templates.TemplateResponse(request, template, context, status_code=status)
+        except Exception:
+            # Fallback to 500 if error template not found
+            return templates.TemplateResponse(request, fallback, context, status_code=500)
+
+    @app.exception_handler(Exception)
+    async def unhandled_exception_handler(request: Request, exc: Exception) -> HTMLResponse:
+        log.exception("Unhandled error")
+        admin = is_admin_request(request)
+        template_dir = "admin/errors" if admin else "customer/errors"
+        context = {"active_nav": "dashboard" if admin else None}
+        return templates.TemplateResponse(
+            request,
+            f"{template_dir}/500.html",
+            context,
+            status_code=500,
+        )
 
     @app.middleware("http")
     async def no_store_for_admin(request: Request, call_next):
@@ -33,6 +71,22 @@ def create_app() -> FastAPI:
         response = await call_next(request)
         if request.url.path.startswith("/admin"):
             response.headers["Cache-Control"] = "no-store"
+        return response
+
+    @app.middleware("http")
+    async def custom_404_handler(request: Request, call_next):
+        # Intercept 404 responses and render custom error page
+        response = await call_next(request)
+        if response.status_code == 404:
+            admin = is_admin_request(request)
+            template_dir = "admin/errors" if admin else "customer/errors"
+            context = {"active_nav": "dashboard" if admin else None}
+            try:
+                return templates.TemplateResponse(
+                    request, f"{template_dir}/404.html", context, status_code=404
+                )
+            except Exception:
+                pass  # Fall through to default 404
         return response
 
     if firebase.is_configured():

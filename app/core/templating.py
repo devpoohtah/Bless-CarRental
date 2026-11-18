@@ -8,6 +8,7 @@ from fastapi.templating import Jinja2Templates
 from app.core import config
 from app.core.clock import now_ph
 from app.core.config import STATIC_DIR, TEMPLATES_DIR, settings
+from app.core.csrf import csrf_token
 from app.core.icons import icon
 from app.db import firebase
 
@@ -45,6 +46,7 @@ def php(amount: int | None, fallback: str = "Contact for rates") -> str:
 templates.env.globals.update(
     icon=icon, static_url=static_url, absolute_url=absolute_url, site=settings, firebase_config=config.integrations.firebase_web_config,
     database_ready=lambda: firebase.is_configured(), push_config=lambda: config.integrations.push_web_config,
+    csrf_token=csrf_token,
 )
 
 # Short confirmations shown after a redirect (?notice=key). Only these keys are ever shown.

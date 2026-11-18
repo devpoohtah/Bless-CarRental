@@ -1,0 +1,19 @@
+{% extends 'customer/base.html' %}
+{% block title %}Sign In Required | {{ site.business_name }}{% endblock %}
+
+{% block content %}
+<section class="error-page">
+  <div class="container">
+    <div class="error-page__card">
+      <div class="error-page__icon">{{ icon('lock', 'icon icon--xl') }}</div>
+      <h1 class="error-page__code">401</h1>
+      <h2 class="error-page__title">Sign in required</h2>
+      <p class="error-page__message">You need to sign in to access this page.</p>
+      <div class="error-page__actions">
+        <a class="btn btn--primary" href="/admin/login">Go to sign in</a>
+        <a class="btn btn--outline" href="/">Back to home</a>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

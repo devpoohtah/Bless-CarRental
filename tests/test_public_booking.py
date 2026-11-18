@@ -44,12 +44,20 @@ def catalog(fake_db):
     return fake_db
 
 
+def _get_csrf_token():
+    """Get a fresh CSRF token from the cookie."""
+    client.get("/")  # sets the cookie
+    return client.cookies.get("csrf_token", "")
+
+
 def book(url: str, data: dict):
     """A customer's whole journey: send the form, then enter the code. Returns the last response."""
-    response = client.post(url, data=data)
+    csrf_token = _get_csrf_token()
+    headers = {"X-CSRF-Token": csrf_token}
+    response = client.post(url, data=data, headers=headers)
     if response.status_code != 202:
         return response  # refused, or a bot: there is no code step
-    return client.post("/book/verify", data={"challenge": response.json()["challenge"], "code": "123456"})
+    return client.post("/book/verify", data={"challenge": response.json()["challenge"], "code": "123456"}, headers=headers)
 
 
 def when(days: int) -> str:

@@ -1,0 +1,17 @@
+{% extends 'admin/base.html' %}
+{% block title %}Page Not Found | {{ site.short_name }} Admin{% endblock %}
+
+{% block content %}
+<div class="admin-error">
+  <div class="admin-error__card">
+    <div class="admin-error__icon">{{ icon('map-pin', 'icon icon--xl') }}</div>
+    <h1 class="admin-error__code">404</h1>
+    <h2 class="admin-error__title">Page not found</h2>
+    <p class="admin-error__message">The page you're looking for doesn't exist or has been moved.</p>
+    <div class="admin-error__actions">
+      <a class="btn btn--primary" href="/admin/dashboard">Back to dashboard</a>
+      <a class="btn btn--outline" href="javascript:history.back()">Go back</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -14,7 +14,7 @@ from app.db import firebase
 
 COOKIE_NAME = "bless_admin_session"
 COOKIE_PATH = "/admin"
-SESSION_LENGTH = timedelta(days=5)
+SESSION_LENGTH = timedelta(hours=12)
 
 AUTH_ERRORS = (ValueError, FirebaseError)
 

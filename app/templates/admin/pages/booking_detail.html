@@ -73,16 +73,19 @@
         {% elif next_options %}
         {% if booking.status == 'pending' %}
         <form class="action-row" method="post" action="{{ base }}/status">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
           <button type="submit" name="status" value="approved" class="btn btn--primary" data-busy-label="Approving…">Approve</button>
           <button type="submit" name="status" value="rejected" class="btn btn--outline" data-confirm="Reject this booking?" data-busy-label="Rejecting…">Reject</button>
         </form>
         {% endif %}
         <form class="stack" method="post" action="{{ base }}/status">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
           {{ select('status', 'Update status', next_options, next_options[0][0]) }}
           <button type="submit" class="btn btn--outline" data-busy-label="Saving…">Save status</button>
         </form>
         {% if 'cancelled' in next_options | map(attribute=0) | list %}
         <form method="post" action="{{ base }}/status">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
           <button type="submit" name="status" value="cancelled" class="btn btn--outline btn--block" data-confirm="Cancel this booking?" data-busy-label="Cancelling…">Cancel booking</button>
         </form>
         {% endif %}
@@ -98,6 +101,7 @@
         <p class="page-note">This is a sample booking, so its payment status cannot be changed.</p>
         {% else %}
         <form class="stack" method="post" action="{{ base }}/payment">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
           {{ select('payment_status', 'Update payment status', payment_labels.items(), booking.payment_status) }}
           <button type="submit" class="btn btn--outline" data-busy-label="Saving…">Save payment status</button>
         </form>

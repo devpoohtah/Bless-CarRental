@@ -54,13 +54,22 @@ def test_unknown_ids_return_404():
     assert client.get("/admin/services/tours/nope/edit").status_code == 404
 
 
+def _post_with_csrf(url: str, data: dict):
+    """Helper to POST with CSRF token from the cookie."""
+    # Get the page first to set the CSRF cookie
+    client.get(url.replace("/edit", "").replace("/delete", ""))
+    csrf_token = client.cookies.get("csrf_token", "")
+    headers = {"X-CSRF-Token": csrf_token}
+    return client.post(url, data=data, headers=headers)
+
+
 def test_without_a_database_saving_is_disabled_and_posts_are_refused():
     for url in ("/admin/services/cars/family-suv/edit", "/admin/services/tours/island-day-tour/edit"):
         html = client.get(url).text
         assert re.search(r'<button type="submit" class="btn btn--primary"[^>]* disabled>', html), url
         assert "database is not connected" in html
-    assert client.post("/admin/services/cars/new", data={"name": "X"}).status_code == 503
-    assert client.post("/admin/services/cars/family-suv/delete").status_code == 503
+    assert _post_with_csrf("/admin/services/cars/new", {"name": "X"}).status_code == 503
+    assert _post_with_csrf("/admin/services/cars/family-suv/delete", {}).status_code == 503
 
 
 def test_every_field_has_a_label():

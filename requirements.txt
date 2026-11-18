@@ -5,6 +5,7 @@ python-multipart>=0.0.9  # form posts and image uploads
 python-dotenv>=1.0
 firebase-admin>=6.5  # Firebase Auth verification and Firestore
 cloudinary>=1.40  # image storage
+bleach>=6.1  # HTML sanitization for user inputs
 # Development and tests only:
 pytest>=8
 httpx>=0.27

@@ -146,6 +146,19 @@ class Integrations:
         return ""
 
     @property
+    def approval_email_mode(self) -> str:
+        """Channel for approval emails: "gmail", "resend", "simulated", or "".
+        Falls back to otp_mode if not explicitly set."""
+        mode = _env("APPROVAL_EMAIL_MODE").lower() or self.otp_mode
+        if mode == "simulated":
+            return mode
+        if mode == "gmail" and self.gmail_ready:
+            return mode
+        if mode == "resend" and self.resend_ready:
+            return mode
+        return ""
+
+    @property
     def cloudinary_ready(self) -> bool:
         return all((self.cloudinary_cloud_name, self.cloudinary_api_key, self.cloudinary_api_secret))
 

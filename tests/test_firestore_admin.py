@@ -12,6 +12,16 @@ from app.services import images
 client = TestClient(app)
 TODAY = date.today()
 
+
+def _post_with_csrf(url: str, data: dict, files: dict | None = None, **kwargs):
+    """Helper to POST with CSRF token from the cookie."""
+    # GET first to set the CSRF cookie
+    client.get(url.replace("/edit", "").replace("/delete", "").replace("/new", "").replace("/status", "").replace("/payment", ""))
+    csrf_token = client.cookies.get("csrf_token", "")
+    # Send CSRF token in header (middleware checks header first)
+    headers = {"X-CSRF-Token": csrf_token}
+    return client.post(url, data=data, files=files, headers=headers, **kwargs)
+
 CAR = dict(name="Toyota Vios", vehicle_type="Sedan", seats="5", transmission="Automatic",
            daily_rate_php="2500", availability="available")
 TOUR = dict(name="Guimaras Day Trip", destination="Guimaras", duration="1 day", summary="Island day trip.",
@@ -40,7 +50,7 @@ def only_id(db, collection):
 
 # ---- cars ----
 def test_create_car_saves_a_real_record_with_placeholder_photo(fake_db, uploads):
-    response = client.post("/admin/services/cars/new", data=CAR, follow_redirects=False)
+    response = _post_with_csrf("/admin/services/cars/new", CAR, follow_redirects=False)
     assert response.status_code == 303 and response.headers["location"] == "/admin/services/cars?notice=saved"
     doc = fake_db.data["cars"][only_id(fake_db, "cars")]
     assert doc["name"] == "Toyota Vios" and doc["seats"] == 5 and doc["daily_rate_php"] == 2500
@@ -53,14 +63,14 @@ def test_create_car_saves_a_real_record_with_placeholder_photo(fake_db, uploads)
 
 
 def test_create_car_with_image_stores_the_cloudinary_url_and_id(fake_db, uploads):
-    client.post("/admin/services/cars/new", data=CAR, files={"image": ("vios.jpg", b"x", "image/jpeg")})
+    _post_with_csrf("/admin/services/cars/new", CAR, files={"image": ("vios.jpg", b"x", "image/jpeg")})
     photo = fake_db.data["cars"][only_id(fake_db, "cars")]["photo"]
     assert photo["src"] == "https://res.cloudinary.com/demo/cars/1.webp" and photo["public_id"] == "bless/cars/1"
     assert 'src="https://res.cloudinary.com/demo/cars/1.webp"' in client.get("/").text  # public site, unchanged URL
 
 
 def test_invalid_car_shows_messages_and_keeps_what_was_typed(fake_db, uploads):
-    response = client.post("/admin/services/cars/new", data={**CAR, "name": "", "seats": "abc", "daily_rate_php": "-5"})
+    response = _post_with_csrf("/admin/services/cars/new", {**CAR, "name": "", "seats": "abc", "daily_rate_php": "-5"})
     assert response.status_code == 422
     html = response.text
     assert "Name is required." in html and "Seats must be a whole number." in html
@@ -73,16 +83,16 @@ def test_image_problem_is_shown_on_the_form_and_nothing_is_saved(fake_db, monkey
     def refuse(file, folder):
         raise images.ImageError("The file must be a JPEG, PNG or WebP image.")
     monkeypatch.setattr(images, "upload", refuse)
-    response = client.post("/admin/services/cars/new", data=CAR, files={"image": ("a.txt", b"x", "text/plain")})
+    response = _post_with_csrf("/admin/services/cars/new", CAR, files={"image": ("a.txt", b"x", "text/plain")})
     assert response.status_code == 422 and "JPEG, PNG or WebP" in response.text
     assert fake_db.data.get("cars", {}) == {}
 
 
 def test_edit_car_updates_fields_and_replacing_the_image_deletes_the_old_one(fake_db, uploads):
-    client.post("/admin/services/cars/new", data=CAR, files={"image": ("a.jpg", b"x", "image/jpeg")})
+    _post_with_csrf("/admin/services/cars/new", CAR, files={"image": ("a.jpg", b"x", "image/jpeg")})
     car_id = only_id(fake_db, "cars")
     assert 'value="Toyota Vios"' in client.get(f"/admin/services/cars/{car_id}/edit").text
-    client.post(f"/admin/services/cars/{car_id}/edit", data={**CAR, "daily_rate_php": "3000"},
+    _post_with_csrf(f"/admin/services/cars/{car_id}/edit", {**CAR, "daily_rate_php": "3000"},
                 files={"image": ("b.jpg", b"y", "image/jpeg")})
     doc = fake_db.data["cars"][car_id]
     assert doc["daily_rate_php"] == 3000 and doc["photo"]["public_id"] == "bless/cars/2"
@@ -90,30 +100,30 @@ def test_edit_car_updates_fields_and_replacing_the_image_deletes_the_old_one(fak
 
 
 def test_edit_without_a_new_file_keeps_the_existing_image(fake_db, uploads):
-    client.post("/admin/services/cars/new", data=CAR, files={"image": ("a.jpg", b"x", "image/jpeg")})
+    _post_with_csrf("/admin/services/cars/new", CAR, files={"image": ("a.jpg", b"x", "image/jpeg")})
     car_id = only_id(fake_db, "cars")
-    client.post(f"/admin/services/cars/{car_id}/edit", data={**CAR, "name": "Vios G"})
+    _post_with_csrf(f"/admin/services/cars/{car_id}/edit", {**CAR, "name": "Vios G"})
     doc = fake_db.data["cars"][car_id]
     assert doc["name"] == "Vios G" and doc["photo"]["public_id"] == "bless/cars/1"
     assert uploads["deleted"] == [] and len(uploads["uploaded"]) == 1
 
 
 def test_delete_car_removes_the_record_and_its_image(fake_db, uploads):
-    client.post("/admin/services/cars/new", data=CAR, files={"image": ("a.jpg", b"x", "image/jpeg")})
+    _post_with_csrf("/admin/services/cars/new", CAR, files={"image": ("a.jpg", b"x", "image/jpeg")})
     car_id = only_id(fake_db, "cars")
-    response = client.post(f"/admin/services/cars/{car_id}/delete", follow_redirects=False)
+    response = _post_with_csrf(f"/admin/services/cars/{car_id}/delete", {}, follow_redirects=False)
     assert response.headers["location"].endswith("notice=deleted")
     assert fake_db.data["cars"] == {} and uploads["deleted"] == ["bless/cars/1"]
-    assert client.post(f"/admin/services/cars/{car_id}/delete").status_code == 404
+    assert _post_with_csrf(f"/admin/services/cars/{car_id}/delete", {}).status_code == 404
 
 
 def test_unknown_car_is_404_when_connected(fake_db):
     assert client.get("/admin/services/cars/nope/edit").status_code == 404
-    assert client.post("/admin/services/cars/nope/edit", data=CAR).status_code == 404
+    assert _post_with_csrf("/admin/services/cars/nope/edit", CAR).status_code == 404
 
 
 def test_car_form_enables_save_delete_and_upload_when_connected(fake_db, uploads):
-    client.post("/admin/services/cars/new", data=CAR)
+    _post_with_csrf("/admin/services/cars/new", CAR)
     html = client.get(f"/admin/services/cars/{only_id(fake_db, 'cars')}/edit").text
     assert not re.search(r"<button[^>]*disabled", html)
     assert 'type="file"' in html and "license plate" in html and "data-confirm" in html
@@ -121,20 +131,20 @@ def test_car_form_enables_save_delete_and_upload_when_connected(fake_db, uploads
 
 # ---- tours ----
 def test_tour_create_edit_delete(fake_db, uploads):
-    client.post("/admin/services/tours/new", data=TOUR)
+    _post_with_csrf("/admin/services/tours/new", TOUR)
     tour_id = only_id(fake_db, "tours")
     assert fake_db.data["tours"][tour_id]["price_php"] == 1800
-    bad = client.post("/admin/services/tours/new", data={**TOUR, "summary": "", "description": ""})
+    bad = _post_with_csrf("/admin/services/tours/new", {**TOUR, "summary": "", "description": ""})
     assert bad.status_code == 422 and "Short summary is required." in bad.text
-    client.post(f"/admin/services/tours/{tour_id}/edit", data={**TOUR, "duration": "2 days"})
+    _post_with_csrf(f"/admin/services/tours/{tour_id}/edit", {**TOUR, "duration": "2 days"})
     assert fake_db.data["tours"][tour_id]["duration"] == "2 days"
-    client.post(f"/admin/services/tours/{tour_id}/delete")
+    _post_with_csrf(f"/admin/services/tours/{tour_id}/delete", {})
     assert fake_db.data["tours"] == {}
 
 
 def test_a_tour_package_keeps_its_own_vehicle_and_never_adds_it_to_car_rental(fake_db, uploads):
     van = {"vehicle_name": "Toyota Hiace", "vehicle_seats": "12"}
-    client.post("/admin/services/tours/new", data=TOUR | van, files={"vehicle_image": ("van.png", b"x", "image/png")})
+    _post_with_csrf("/admin/services/tours/new", TOUR | van, files={"vehicle_image": ("van.png", b"x", "image/png")})
     tour_id = only_id(fake_db, "tours")
     saved = fake_db.data["tours"][tour_id]
     assert saved["vehicle_name"] == "Toyota Hiace" and saved["vehicle_seats"] == 12
@@ -146,44 +156,44 @@ def test_a_tour_package_keeps_its_own_vehicle_and_never_adds_it_to_car_rental(fa
 
 
 def test_a_vehicle_without_a_new_photo_gets_the_placeholder_and_keeps_it_on_edit(fake_db, uploads):
-    client.post("/admin/services/tours/new", data=TOUR | {"vehicle_name": "Toyota Hiace"})
+    _post_with_csrf("/admin/services/tours/new", TOUR | {"vehicle_name": "Toyota Hiace"})
     tour_id = only_id(fake_db, "tours")
     assert fake_db.data["tours"][tour_id]["vehicle_photo"]["src"].endswith("vehicle-passenger-van-placeholder.svg")
-    client.post(f"/admin/services/tours/{tour_id}/edit", data=TOUR | {"vehicle_name": "Toyota Hiace", "vehicle_seats": "9"},
+    _post_with_csrf(f"/admin/services/tours/{tour_id}/edit", TOUR | {"vehicle_name": "Toyota Hiace", "vehicle_seats": "9"},
                 files={"vehicle_image": ("van.png", b"x", "image/png")})
     first = fake_db.data["tours"][tour_id]["vehicle_photo"]
     assert first["public_id"] == "bless/tour-vehicles/1"
-    client.post(f"/admin/services/tours/{tour_id}/edit", data=TOUR | {"vehicle_name": "Toyota Hiace", "vehicle_seats": "9"})
+    _post_with_csrf(f"/admin/services/tours/{tour_id}/edit", TOUR | {"vehicle_name": "Toyota Hiace", "vehicle_seats": "9"})
     assert fake_db.data["tours"][tour_id]["vehicle_photo"]["public_id"] == "bless/tour-vehicles/1"  # kept
     assert uploads["deleted"] == []
 
 
 def test_replacing_or_removing_the_vehicle_deletes_its_old_image(fake_db, uploads):
-    client.post("/admin/services/tours/new", data=TOUR | {"vehicle_name": "Hiace"}, files={"vehicle_image": ("a.png", b"x", "image/png")})
+    _post_with_csrf("/admin/services/tours/new", TOUR | {"vehicle_name": "Hiace"}, files={"vehicle_image": ("a.png", b"x", "image/png")})
     tour_id = only_id(fake_db, "tours")
-    client.post(f"/admin/services/tours/{tour_id}/edit", data=TOUR | {"vehicle_name": "Hiace"}, files={"vehicle_image": ("b.png", b"x", "image/png")})
+    _post_with_csrf(f"/admin/services/tours/{tour_id}/edit", TOUR | {"vehicle_name": "Hiace"}, files={"vehicle_image": ("b.png", b"x", "image/png")})
     assert uploads["deleted"] == ["bless/tour-vehicles/1"]
-    client.post(f"/admin/services/tours/{tour_id}/edit", data=TOUR)  # vehicle name cleared
+    _post_with_csrf(f"/admin/services/tours/{tour_id}/edit", TOUR)  # vehicle name cleared
     saved = fake_db.data["tours"][tour_id]
     assert saved["vehicle_name"] is None and saved["vehicle_photo"] is None
     assert uploads["deleted"] == ["bless/tour-vehicles/1", "bless/tour-vehicles/2"]
 
 
 def test_deleting_a_tour_also_deletes_its_vehicle_image(fake_db, uploads):
-    client.post("/admin/services/tours/new", data=TOUR | {"vehicle_name": "Hiace"}, files={"vehicle_image": ("a.png", b"x", "image/png")})
-    client.post(f"/admin/services/tours/{only_id(fake_db, 'tours')}/delete")
+    _post_with_csrf("/admin/services/tours/new", TOUR | {"vehicle_name": "Hiace"}, files={"vehicle_image": ("a.png", b"x", "image/png")})
+    _post_with_csrf(f"/admin/services/tours/{only_id(fake_db, 'tours')}/delete", {})
     assert fake_db.data["tours"] == {} and "bless/tour-vehicles/1" in uploads["deleted"]
 
 
 def test_a_vehicle_image_needs_a_vehicle_name_and_nothing_is_uploaded_or_saved(fake_db, uploads):
-    response = client.post("/admin/services/tours/new", data=TOUR, files={"vehicle_image": ("van.png", b"x", "image/png")})
+    response = _post_with_csrf("/admin/services/tours/new", TOUR, files={"vehicle_image": ("van.png", b"x", "image/png")})
     assert response.status_code == 422 and "Enter the vehicle name" in response.text
     assert fake_db.data.get("tours", {}) == {} and uploads["uploaded"] == []
 
 
 def test_the_vehicle_seats_must_be_a_sensible_whole_number(fake_db, uploads):
     for seats in ("0", "99", "many"):
-        response = client.post("/admin/services/tours/new", data=TOUR | {"vehicle_name": "Hiace", "vehicle_seats": seats})
+        response = _post_with_csrf("/admin/services/tours/new", TOUR | {"vehicle_name": "Hiace", "vehicle_seats": seats})
         assert response.status_code == 422 and "Vehicle seats" in response.text, seats
     assert fake_db.data.get("tours", {}) == {}
 
@@ -197,8 +207,8 @@ def test_the_tour_form_has_vehicle_fields_and_its_own_image_input(fake_db):
 
 # ---- public site ----
 def test_public_site_shows_firestore_items_and_drops_the_sample_notes(fake_db, uploads):
-    client.post("/admin/services/cars/new", data=CAR)
-    client.post("/admin/services/tours/new", data=TOUR)
+    _post_with_csrf("/admin/services/cars/new", CAR)
+    _post_with_csrf("/admin/services/tours/new", TOUR)
     html = client.get("/").text
     assert "Toyota Vios" in html and "Guimaras Day Trip" in html
     assert "Compact Sedan" not in html and "Island Day Tour" not in html
@@ -212,7 +222,7 @@ def test_public_site_empty_state_when_connected_but_nothing_added(fake_db):
 
 
 def test_one_broken_document_does_not_take_the_page_down(fake_db, uploads):
-    client.post("/admin/services/cars/new", data=CAR)
+    _post_with_csrf("/admin/services/cars/new", CAR)
     fake_db.data["cars"]["broken"] = {"name": "No type or photo"}
     html = client.get("/admin/services/cars").text
     assert "Toyota Vios" in html and "No type or photo" not in html
@@ -220,8 +230,8 @@ def test_one_broken_document_does_not_take_the_page_down(fake_db, uploads):
 
 # ---- bookings ----
 def make_inventory(fake_db, uploads):
-    client.post("/admin/services/cars/new", data=CAR)
-    client.post("/admin/services/tours/new", data=TOUR)
+    _post_with_csrf("/admin/services/cars/new", CAR)
+    _post_with_csrf("/admin/services/tours/new", TOUR)
 
 
 def booking_form(**overrides):
@@ -243,7 +253,7 @@ def test_booking_form_lists_cars_and_tours_and_is_linked_from_the_list(fake_db, 
 
 def test_create_booking_starts_pending_with_history_and_appears_everywhere(fake_db, uploads):
     make_inventory(fake_db, uploads)
-    response = client.post("/admin/bookings/new", data=booking_form(), follow_redirects=False)
+    response = _post_with_csrf("/admin/bookings/new", booking_form(), follow_redirects=False)
     booking_id = only_id(fake_db, "bookings")
     assert response.headers["location"] == f"/admin/bookings/{booking_id}?notice=created"
     doc = fake_db.data["bookings"][booking_id]
@@ -259,7 +269,7 @@ def test_create_booking_starts_pending_with_history_and_appears_everywhere(fake_
 
 def test_tour_booking_gets_the_tour_type(fake_db, uploads):
     make_inventory(fake_db, uploads)
-    client.post("/admin/bookings/new", data=booking_form(item="tour:Guimaras Day Trip"))
+    _post_with_csrf("/admin/bookings/new", booking_form(item="tour:Guimaras Day Trip"))
     assert fake_db.data["bookings"][only_id(fake_db, "bookings")]["booking_type"] == "tour"
 
 
@@ -274,72 +284,72 @@ def test_tour_booking_gets_the_tour_type(fake_db, uploads):
 ])
 def test_invalid_bookings_are_refused_with_a_message(fake_db, uploads, overrides, message):
     make_inventory(fake_db, uploads)
-    response = client.post("/admin/bookings/new", data=booking_form(**overrides))
+    response = _post_with_csrf("/admin/bookings/new", booking_form(**overrides))
     assert response.status_code == 422 and message in response.text
     assert fake_db.data.get("bookings", {}) == {}
 
 
 def test_email_is_optional(fake_db, uploads):
     make_inventory(fake_db, uploads)
-    client.post("/admin/bookings/new", data=booking_form(customer_email=""))
+    _post_with_csrf("/admin/bookings/new", booking_form(customer_email=""))
     booking_id = only_id(fake_db, "bookings")
     assert "Not provided" in client.get(f"/admin/bookings/{booking_id}").text
 
 
 def test_status_flow_is_enforced_and_recorded_in_history(fake_db, uploads):
     make_inventory(fake_db, uploads)
-    client.post("/admin/bookings/new", data=booking_form())
+    _post_with_csrf("/admin/bookings/new", booking_form())
     booking_id = only_id(fake_db, "bookings")
     url = f"/admin/bookings/{booking_id}/status"
 
-    skip = client.post(url, data={"status": "completed"})  # pending cannot jump to completed
+    skip = _post_with_csrf(url, {"status": "completed"})  # pending cannot jump to completed
     assert skip.status_code == 422 and "not allowed" in skip.text
     assert fake_db.data["bookings"][booking_id]["status"] == "pending"
 
-    ok = client.post(url, data={"status": "approved"}, follow_redirects=False)
+    ok = _post_with_csrf(url, {"status": "approved"}, follow_redirects=False)
     assert ok.headers["location"].endswith("notice=status")
-    client.post(url, data={"status": "ongoing"})
-    client.post(url, data={"status": "completed"})
+    _post_with_csrf(url, {"status": "ongoing"})
+    _post_with_csrf(url, {"status": "completed"})
     doc = fake_db.data["bookings"][booking_id]
     assert [h["status"] for h in doc["history"]] == ["pending", "approved", "ongoing", "completed"]
     final = client.get(f"/admin/bookings/{booking_id}").text
     assert "can no longer be changed" in final and "Save status" not in final
-    assert client.post(url, data={"status": "pending"}).status_code == 422  # final states are final
+    assert _post_with_csrf(url, {"status": "pending"}).status_code == 422  # final states are final
 
 
 def test_reject_and_cancel_buttons_post_the_expected_status(fake_db, uploads):
     make_inventory(fake_db, uploads)
-    client.post("/admin/bookings/new", data=booking_form())
+    _post_with_csrf("/admin/bookings/new", booking_form())
     booking_id = only_id(fake_db, "bookings")
     html = client.get(f"/admin/bookings/{booking_id}").text
     assert 'name="status" value="approved"' in html and 'name="status" value="rejected"' in html
     assert 'name="status" value="cancelled"' in html and "data-confirm" in html
-    client.post(f"/admin/bookings/{booking_id}/status", data={"status": "rejected"})
+    _post_with_csrf(f"/admin/bookings/{booking_id}/status", {"status": "rejected"})
     assert fake_db.data["bookings"][booking_id]["status"] == "rejected"
 
 
 def test_payment_status_changes_and_rejects_unknown_values(fake_db, uploads):
     make_inventory(fake_db, uploads)
-    client.post("/admin/bookings/new", data=booking_form())
+    _post_with_csrf("/admin/bookings/new", booking_form())
     booking_id = only_id(fake_db, "bookings")
     url = f"/admin/bookings/{booking_id}/payment"
-    assert client.post(url, data={"payment_status": "paid"}, follow_redirects=False).headers["location"].endswith("notice=payment")
+    assert _post_with_csrf(url, {"payment_status": "paid"}, follow_redirects=False).headers["location"].endswith("notice=payment")
     assert fake_db.data["bookings"][booking_id]["payment_status"] == "paid"
-    assert client.post(url, data={"payment_status": "free"}).status_code == 422
+    assert _post_with_csrf(url, {"payment_status": "free"}).status_code == 422
     assert fake_db.data["bookings"][booking_id]["payment_status"] == "paid"
 
 
 def test_unknown_booking_is_404_when_connected(fake_db):
     assert client.get("/admin/bookings/nope").status_code == 404
-    assert client.post("/admin/bookings/nope/status", data={"status": "approved"}).status_code == 404
+    assert _post_with_csrf("/admin/bookings/nope/status", {"status": "approved"}).status_code == 404
 
 
 def test_only_pending_and_approved_show_on_the_calendar_but_all_are_listed(fake_db, uploads):
     make_inventory(fake_db, uploads)
-    client.post("/admin/bookings/new", data=booking_form(customer_name="Ana Reyes"))
-    client.post("/admin/bookings/new", data=booking_form(customer_name="Ben Cruz"))
+    _post_with_csrf("/admin/bookings/new", booking_form(customer_name="Ana Reyes"))
+    _post_with_csrf("/admin/bookings/new", booking_form(customer_name="Ben Cruz"))
     ben = [i for i, d in fake_db.data["bookings"].items() if d["customer_name"] == "Ben Cruz"][0]
-    client.post(f"/admin/bookings/{ben}/status", data={"status": "rejected"})
+    _post_with_csrf(f"/admin/bookings/{ben}/status", {"status": "rejected"})
     assert "Ben Cruz" in client.get("/admin/bookings").text
     calendar = client.get("/admin/calendar").text
     assert "Ana Reyes" in calendar and "Ben Cruz" not in calendar
@@ -348,10 +358,10 @@ def test_only_pending_and_approved_show_on_the_calendar_but_all_are_listed(fake_
 # ---- dashboard ----
 def test_dashboard_shows_real_counts(fake_db, uploads):
     make_inventory(fake_db, uploads)
-    client.post("/admin/bookings/new", data=booking_form(customer_name="Ana Reyes"))
-    client.post("/admin/bookings/new", data=booking_form(customer_name="Ben Cruz"))
+    _post_with_csrf("/admin/bookings/new", booking_form(customer_name="Ana Reyes"))
+    _post_with_csrf("/admin/bookings/new", booking_form(customer_name="Ben Cruz"))
     ben = [i for i, d in fake_db.data["bookings"].items() if d["customer_name"] == "Ben Cruz"][0]
-    client.post(f"/admin/bookings/{ben}/status", data={"status": "approved"})
+    _post_with_csrf(f"/admin/bookings/{ben}/status", {"status": "approved"})
     html = client.get("/admin/dashboard").text
     stats = dict(re.findall(r"<dt>([^<]+)</dt>\s*<dd>\s*(\d+)\s*</dd>", html))
     assert stats == {"Total Cars": "1", "Total Tour Packages": "1", "Total Bookings": "2",
@@ -367,58 +377,58 @@ def test_dashboard_with_an_empty_database_shows_zeros_and_no_requests(fake_db):
 
 # ---- remove image ----
 def test_remove_image_on_a_car_deletes_it_and_falls_back_to_the_placeholder(fake_db, uploads):
-    client.post("/admin/services/cars/new", data=CAR, files={"image": ("a.jpg", b"x", "image/jpeg")})
+    _post_with_csrf("/admin/services/cars/new", CAR, files={"image": ("a.jpg", b"x", "image/jpeg")})
     car_id = only_id(fake_db, "cars")
-    client.post(f"/admin/services/cars/{car_id}/edit", data={**CAR, "remove_image": "1"})
+    _post_with_csrf(f"/admin/services/cars/{car_id}/edit", {**CAR, "remove_image": "1"})
     photo = fake_db.data["cars"][car_id]["photo"]
     assert photo["src"].endswith("service-car-rental-placeholder.svg") and photo["public_id"] is None
     assert uploads["deleted"] == ["bless/cars/1"]
 
 
 def test_a_new_file_wins_over_remove_image(fake_db, uploads):
-    client.post("/admin/services/cars/new", data=CAR, files={"image": ("a.jpg", b"x", "image/jpeg")})
+    _post_with_csrf("/admin/services/cars/new", CAR, files={"image": ("a.jpg", b"x", "image/jpeg")})
     car_id = only_id(fake_db, "cars")
-    client.post(f"/admin/services/cars/{car_id}/edit", data={**CAR, "remove_image": "1"},
+    _post_with_csrf(f"/admin/services/cars/{car_id}/edit", {**CAR, "remove_image": "1"},
                 files={"image": ("b.jpg", b"y", "image/jpeg")})
     assert fake_db.data["cars"][car_id]["photo"]["public_id"] == "bless/cars/2"
     assert uploads["deleted"] == ["bless/cars/1"]  # deleted once, not twice
 
 
 def test_remove_image_without_an_uploaded_image_changes_nothing(fake_db, uploads):
-    client.post("/admin/services/cars/new", data=CAR)  # placeholder photo, nothing on Cloudinary
+    _post_with_csrf("/admin/services/cars/new", CAR)  # placeholder photo, nothing on Cloudinary
     car_id = only_id(fake_db, "cars")
-    client.post(f"/admin/services/cars/{car_id}/edit", data={**CAR, "remove_image": "1"})
+    _post_with_csrf(f"/admin/services/cars/{car_id}/edit", {**CAR, "remove_image": "1"})
     assert uploads["deleted"] == []
 
 
 def test_a_failed_save_keeps_the_image_when_remove_was_requested(fake_db, uploads):
-    client.post("/admin/services/cars/new", data=CAR, files={"image": ("a.jpg", b"x", "image/jpeg")})
+    _post_with_csrf("/admin/services/cars/new", CAR, files={"image": ("a.jpg", b"x", "image/jpeg")})
     car_id = only_id(fake_db, "cars")
-    response = client.post(f"/admin/services/cars/{car_id}/edit", data={**CAR, "name": "", "remove_image": "1"})
+    response = _post_with_csrf(f"/admin/services/cars/{car_id}/edit", {**CAR, "name": "", "remove_image": "1"})
     assert response.status_code == 422
     assert fake_db.data["cars"][car_id]["photo"]["public_id"] == "bless/cars/1" and uploads["deleted"] == []
 
 
 def test_remove_package_and_vehicle_images_independently(fake_db, uploads):
     data = TOUR | {"vehicle_name": "Hiace"}
-    client.post("/admin/services/tours/new", data=data,
+    _post_with_csrf("/admin/services/tours/new", data,
                 files={"image": ("a.jpg", b"x", "image/jpeg"), "vehicle_image": ("v.png", b"x", "image/png")})
     tour_id = only_id(fake_db, "tours")
-    client.post(f"/admin/services/tours/{tour_id}/edit", data=data | {"remove_vehicle_image": "1"})
+    _post_with_csrf(f"/admin/services/tours/{tour_id}/edit", data | {"remove_vehicle_image": "1"})
     doc = fake_db.data["tours"][tour_id]
     assert doc["photo"]["public_id"] == "bless/tours/1"  # package image untouched
     assert doc["vehicle_photo"]["src"].endswith("vehicle-passenger-van-placeholder.svg")
     assert doc["vehicle_name"] == "Hiace" and uploads["deleted"] == ["bless/tour-vehicles/2"]
-    client.post(f"/admin/services/tours/{tour_id}/edit", data=data | {"remove_image": "1"})
+    _post_with_csrf(f"/admin/services/tours/{tour_id}/edit", data | {"remove_image": "1"})
     assert fake_db.data["tours"][tour_id]["photo"]["src"].endswith("service-tours-placeholder.svg")
     assert uploads["deleted"] == ["bless/tour-vehicles/2", "bless/tours/1"]
 
 
 def test_the_remove_checkbox_only_appears_for_an_uploaded_image(fake_db, uploads):
-    client.post("/admin/services/cars/new", data=CAR)
+    _post_with_csrf("/admin/services/cars/new", CAR)
     car_id = only_id(fake_db, "cars")
     assert "data-image-remove" not in client.get(f"/admin/services/cars/{car_id}/edit").text
     assert "data-image-remove" not in client.get("/admin/services/cars/new").text
-    client.post(f"/admin/services/cars/{car_id}/edit", data=CAR, files={"image": ("a.jpg", b"x", "image/jpeg")})
+    _post_with_csrf(f"/admin/services/cars/{car_id}/edit", CAR, files={"image": ("a.jpg", b"x", "image/jpeg")})
     html = client.get(f"/admin/services/cars/{car_id}/edit").text
     assert 'name="remove_image" type="checkbox"' in html and "data-image-preview" in html

@@ -15,6 +15,7 @@
 
   {{ errors_box(errors) }}
   <form class="form form--split" method="post" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
     <div class="form__main">
       <section class="form__group" aria-labelledby="car-details">
         <h2 id="car-details">Details</h2>

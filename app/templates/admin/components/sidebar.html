@@ -30,6 +30,7 @@
     <button type="button" class="admin-nav__link admin-nav__btn" data-push-toggle title="Desktop alerts" hidden>{{ icon('bell', 'icon') }}<span class="admin-nav__text" data-push-label>Desktop alerts</span></button>
     {% endif %}
     <form method="post" action="/admin/logout">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
       <button type="submit" class="admin-nav__link admin-nav__btn" title="Sign out">{{ icon('log-out', 'icon') }}<span class="admin-nav__text">Sign out</span></button>
     </form>
   </div>

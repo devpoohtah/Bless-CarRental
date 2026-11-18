@@ -57,6 +57,7 @@ class Vehicle(BaseModel):
     daily_rate_php: int | None = None
     availability: Availability = "inquire"
     photo: Photo
+    description: str | None = None
     is_sample: bool = True
 
 

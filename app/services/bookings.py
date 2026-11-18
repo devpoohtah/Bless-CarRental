@@ -115,6 +115,7 @@ def create_booking(data: BookingInput) -> str:
     choices = {value for group in item_choices().values() for value, _ in group}
     if data.item not in choices:
         raise FormError("Choose a car or tour package from the list.")
+    _check_dates_free(data.booking_type, data.item_name, data.start_date, data.end_date)
     today = date.today()
     booking = Booking(
         id="",
@@ -233,6 +234,8 @@ def change_status(booking: Booking, new_status: str) -> Booking:
     """Moves the booking to new_status, saves it and returns the updated booking."""
     if new_status not in NEXT_STATUSES[booking.status]:
         raise FormError("That status change is not allowed for this booking.")
+    if new_status in BLOCKING_STATUSES and booking.status not in BLOCKING_STATUSES:
+        _check_dates_free(booking.booking_type, booking.item_name, booking.start_date, booking.end_date)
     history = [*booking.history, StatusChange(status=new_status, changed_on=date.today())]
     updated = booking.model_copy(update={"status": new_status, "history": history})
     repo.save(repo.BOOKINGS, updated, booking.id)

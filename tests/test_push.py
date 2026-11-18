@@ -18,6 +18,13 @@ TOKEN_A = "fAkEtOkEn_aaaaaaaaaaaaaaaaaaaaaaaaaaa:APA91b-AAAAAAAAAAAAAAAAAAAA"
 TOKEN_B = "fAkEtOkEn_bbbbbbbbbbbbbbbbbbbbbbbbbbb:APA91b-BBBBBBBBBBBBBBBBBBBB"
 
 
+def _push_headers():
+    """Get headers with CSRF token for push endpoints."""
+    client.get("/admin/dashboard")  # sets the cookie
+    csrf_token = client.cookies.get("csrf_token", "")
+    return {"X-CSRF-Token": csrf_token}
+
+
 @pytest.fixture
 def admins(monkeypatch):
     monkeypatch.setattr(config, "integrations", replace(
@@ -30,7 +37,7 @@ def stored(db) -> dict:
 
 # ---- saving a token ----
 def test_a_token_is_saved_for_the_signed_in_admin(fake_db):
-    response = client.post("/admin/push/register", json={"token": TOKEN_A})
+    response = client.post("/admin/push/register", json={"token": TOKEN_A}, headers=_push_headers())
     assert response.status_code == 200
     (row,) = stored(fake_db).values()
     assert row["token"] == TOKEN_A and row["admin_email"] == "admin@example.com"
@@ -38,18 +45,18 @@ def test_a_token_is_saved_for_the_signed_in_admin(fake_db):
 
 def test_registering_the_same_token_twice_keeps_one_row(fake_db):
     for _ in range(2):
-        assert client.post("/admin/push/register", json={"token": TOKEN_A}).status_code == 200
+        assert client.post("/admin/push/register", json={"token": TOKEN_A}, headers=_push_headers()).status_code == 200
     assert len(stored(fake_db)) == 1
 
 
 @pytest.mark.parametrize("token", ["", "short", "x" * 5000, "has spaces in it aaaaaaaaaaaaaaaa", "<script>alert(1)</script>aaaa"])
 def test_a_bad_token_is_refused(fake_db, token):
-    assert client.post("/admin/push/register", json={"token": token}).status_code == 422
+    assert client.post("/admin/push/register", json={"token": token}, headers=_push_headers()).status_code == 422
     assert stored(fake_db) == {}
 
 
 def test_saving_a_token_needs_a_database():
-    assert client.post("/admin/push/register", json={"token": TOKEN_A}).status_code == 503
+    assert client.post("/admin/push/register", json={"token": TOKEN_A}, headers=_push_headers()).status_code == 503
 
 
 def test_saving_a_token_needs_an_admin_sign_in(fake_db, real_auth):

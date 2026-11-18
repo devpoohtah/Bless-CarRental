@@ -4,14 +4,32 @@ import re
 from datetime import date, time
 from typing import Literal
 
+import bleach
 from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
 
 from app.schemas.booking import DriverOption, PaymentStatus
 from app.schemas.catalog import Availability
 
 
+# Bleach config: strip all HTML tags, keep only plain text
+# No tags, no attributes, no protocols - pure text only
+SANITIZER = bleach.Cleaner(tags=[], attributes={}, protocols=[], strip=True, strip_comments=True)
+
+
+def sanitize_html(value: str) -> str:
+    """Strip all HTML tags and return plain text. Safe for all text inputs."""
+    if not isinstance(value, str):
+        return value
+    return SANITIZER.clean(value).strip()
+
+
 def _blank_to_none(raw: dict) -> dict:
     return {k: (v.strip() or None) if isinstance(v, str) else v for k, v in raw.items()}
+
+
+def _sanitize_strings(raw: dict) -> dict:
+    """Apply HTML sanitization to all string values in the raw form data."""
+    return {k: sanitize_html(v) if isinstance(v, str) else v for k, v in raw.items()}
 
 
 class CarInput(BaseModel):
@@ -179,8 +197,10 @@ def _message(error: dict) -> str:
 
 def validate(model: type[BaseModel], raw: dict) -> tuple[BaseModel | None, list[str]]:
     """Returns (values, []) on success or (None, messages) on failure."""
+    # Sanitize HTML from all string inputs first, then strip blanks
+    cleaned = _blank_to_none(_sanitize_strings(raw))
     try:
-        return model(**_blank_to_none(raw)), []
+        return model(**cleaned), []
     except ValidationError as exc:
         messages = []
         for error in exc.errors():

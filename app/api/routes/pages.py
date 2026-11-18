@@ -1,6 +1,6 @@
 from datetime import date
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse, Response
 
 from app.core.clock import today_ph
@@ -28,6 +28,14 @@ def _catalog_page(request: Request, template: str, **context) -> HTMLResponse:
 @router.get("/cars", response_class=HTMLResponse, include_in_schema=False)
 def cars(request: Request) -> HTMLResponse:
     return _catalog_page(request, "cars.html", vehicles=content.list_vehicles())
+
+
+@router.get("/cars/{car_id}", response_class=HTMLResponse, include_in_schema=False)
+def car_detail(request: Request, car_id: str) -> HTMLResponse:
+    vehicle = next((v for v in content.list_vehicles() if v.id == car_id), None)
+    if vehicle is None:
+        raise HTTPException(status_code=404, detail="Vehicle not found")
+    return _catalog_page(request, "car_detail.html", vehicle=vehicle)
 
 
 @router.get("/tours", response_class=HTMLResponse, include_in_schema=False)
@@ -65,6 +73,8 @@ def robots(request: Request) -> PlainTextResponse:
 @router.get("/sitemap.xml", include_in_schema=False)
 def sitemap(request: Request) -> Response:
     paths = ["/", "/tours", "/cars", "/privacy", "/terms"]
-    urls = "".join(f"<url><loc>{absolute_url(request, path)}</loc></url>" for path in paths)
+    car_paths = [f"/cars/{v.id}" for v in content.list_vehicles()]
+    all_paths = paths + car_paths
+    urls = "".join(f"<url><loc>{absolute_url(request, path)}</loc></url>" for path in all_paths)
     xml = f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{urls}</urlset>'
     return Response(xml, media_type="application/xml")

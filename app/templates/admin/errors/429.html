@@ -1,0 +1,17 @@
+{% extends 'admin/base.html' %}
+{% block title %}Too Many Requests | {{ site.short_name }} Admin{% endblock %}
+
+{% block content %}
+<div class="admin-error">
+  <<div class="admin-error__card">
+    <div class="admin-error__icon">{{ icon('clock', 'icon icon--xl') }}</div>
+    <h1 class="admin-error__code">429</h1>
+    <h2 class="admin-error__title">Too many requests</h2>
+    <p class="admin-error__message">You've made too many requests. Please wait a moment and try again.</p>
+    <div class="admin-error__actions">
+      <a class="btn btn--primary" href="/admin/dashboard">Back to dashboard</a>
+      <a class="btn btn--outline" href="javascript:history.back()">Go back</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

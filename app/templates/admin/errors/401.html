@@ -1,0 +1,16 @@
+{% extends 'admin/base.html' %}
+{% block title %}Sign In Required | {{ site.short_name }} Admin{% endblock %}
+
+{% block content %}
+<div class="admin-error">
+  <div class="admin-error__card">
+    <div class="admin-error__icon">{{ icon('lock', 'icon icon--xl') }}</div>
+    <h1 class="admin-error__code">401</h1>
+    <h2 class="admin-error__title">Sign in required</h2>
+    <p class="admin-error__message">Your session has expired. Please sign in again.</p>
+    <div class="admin-error__actions">
+      <a class="btn btn--primary" href="/admin/login">Sign in</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -33,11 +33,19 @@ def firebase_auth(monkeypatch, real_auth):
     return state
 
 
+def _post_with_csrf(url: str):
+    """Helper to POST with CSRF token from the cookie."""
+    client.get(url.replace("/edit", "").replace("/delete", "").replace("/new", ""))
+    csrf_token = client.cookies.get("csrf_token", "")
+    headers = {"X-CSRF-Token": csrf_token}
+    return client.post(url, data={}, headers=headers, follow_redirects=False)
+
+
 def test_admin_pages_redirect_to_login_without_a_session(firebase_auth):
     for url in ("/admin/dashboard", "/admin/bookings", "/admin/services/cars", "/admin/calendar", "/admin"):
         response = client.get(url, follow_redirects=False)
         assert response.status_code == 303 and response.headers["location"] == "/admin/login", url
-    assert client.post("/admin/services/cars/new", follow_redirects=False).status_code == 303
+    assert _post_with_csrf("/admin/services/cars/new").status_code == 303
 
 
 def test_login_page_is_public_and_carries_only_the_public_web_config(firebase_auth, monkeypatch):

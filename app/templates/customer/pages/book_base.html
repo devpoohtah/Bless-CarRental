@@ -43,6 +43,7 @@
           <p class="book__lead">Send your request and BLESS will contact you to confirm. Nothing is booked until BLESS confirms.</p>
 
           <form id="booking-form" class="booking-form" method="post" action="/book/{{ kind }}" data-kind="{{ kind }}" data-today="{{ today_iso }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
             <div id="booking-errors" class="form-errors" role="alert" tabindex="-1" hidden>
               <p><strong>Please fix the following:</strong></p>
               <ul></ul>
@@ -75,6 +76,7 @@
           <p class="book__lead">We sent a 6-digit code to <strong data-code-email></strong>. It expires in 10 minutes. Check your spam folder if it does not arrive.</p>
           <p class="booking-code__test" data-code-test hidden>Test mode: no email was sent. Use <strong data-code-test-value></strong>.</p>
           <form id="code-form" class="booking-form" novalidate>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
             <div id="code-errors" class="form-errors" role="alert" tabindex="-1" hidden><p data-code-error></p></div>
             <div class="field">
               <label for="bk-code">Verification code</label>
