@@ -6,7 +6,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.api.routes import admin, admin_bookings, admin_push, admin_services, auth, bookings, pages
 from app.core.auth import LoginRequired
-from app.core.config import STATIC_DIR, settings
+from app.core.config import STATIC_DIR, integrations, settings
 from app.db import firebase
 
 log = logging.getLogger(__name__)
@@ -39,6 +39,13 @@ def create_app() -> FastAPI:
         firebase.init_app()  # fail at start-up, not on the first request, if the key file is wrong
     else:
         log.warning("GOOGLE_APPLICATION_CREDENTIALS is not set: serving sample data, admin sign-in disabled.")
+    mode = integrations.otp_mode
+    if mode == "simulated":
+        log.warning("OTP_DELIVERY=simulated: booking codes are NOT emailed and 123456 is accepted. Never use this in production.")
+    elif not mode:
+        log.warning("No way to send booking codes (set OTP_DELIVERY and its credentials): online booking is turned off.")
+    if not integrations.turnstile_ready:
+        log.warning("TURNSTILE_SITE_KEY / TURNSTILE_SECRET_KEY are not set: the booking form has no bot challenge.")
     return app
 
 

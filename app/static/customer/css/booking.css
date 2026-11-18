@@ -50,3 +50,14 @@
 .book .flatpickr-current-month .numInputWrapper { width: 5ch; }
 .book span.flatpickr-weekday { color: var(--ink); }
 .book .flatpickr-months .flatpickr-prev-month, .book .flatpickr-months .flatpickr-next-month { padding: 0.75rem; }
+
+/* Code entry view */
+.booking-code__test { margin-top: 0.75rem; padding: 0.625rem 0.875rem; border: 1px dashed var(--muted); border-radius: var(--radius-md); font-size: 0.9375rem; }
+.booking-code__input { max-width: 12rem; font-size: 1.5rem; letter-spacing: 0.4em; text-align: center; font-variant-numeric: tabular-nums; }
+.book .link--button { padding: 0; border: 0; background: none; font: inherit; color: inherit; text-decoration: underline; cursor: pointer; }
+.book .link--button:disabled { color: var(--muted); text-decoration: none; cursor: default; }
+
+/* Phone field: fixed +63 prefix attached to the number input */
+.phone-input { display: flex; }
+.book .phone-input__prefix { display: flex; align-items: center; padding: 0 0.875rem; border: 1px solid var(--muted); border-right: 0; border-radius: var(--radius-md) 0 0 var(--radius-md); background: var(--line); font-weight: 600; }
+.book .phone-input input { border-radius: 0 var(--radius-md) var(--radius-md) 0; }

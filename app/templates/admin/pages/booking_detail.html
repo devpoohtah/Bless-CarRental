@@ -26,7 +26,7 @@
         <dl class="facts">
           {{ fact('Name', booking.customer_name) }}
           {{ fact('Phone', booking.customer_phone) }}
-          {{ fact('Email', booking.customer_email or 'Not provided', wide=True) }}
+          {{ fact('Email', (booking.customer_email ~ (' (verified)' if booking.email_verified else '')) if booking.customer_email else 'Not provided', wide=True) }}
         </dl>
       </section>
 

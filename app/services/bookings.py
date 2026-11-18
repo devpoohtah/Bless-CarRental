@@ -180,49 +180,63 @@ def _find(items, item_id: str, what: str):
     return chosen
 
 
-def create_car_booking(data: PublicCarBookingInput) -> Booking:
-    """Saves a website car rental request as a Pending booking. Status and payment are decided here, never by the customer."""
+def build_car_booking(data: PublicCarBookingInput, email_verified: bool = False) -> Booking:
+    """Runs every check for a website car rental request and returns the Pending booking without saving it.
+    Status and payment are decided here, never by the customer."""
     car = _find(content.list_vehicles(), data.car, "car")
     today = _check_start_date(data.start_date)
     if car.seats and data.passengers > car.seats:
         raise FormError(f"The {car.name} seats up to {car.seats} passengers.")
     _check_dates_free("car", car.name, data.start_date, data.end_date)
-    booking = Booking(
+    return Booking(
         id="", booking_type="car", customer_name=data.customer_name, customer_phone=data.customer_phone,
-        customer_email=data.customer_email or "", item_name=car.name,
+        customer_email=data.customer_email, item_name=car.name,
         start_date=data.start_date, end_date=data.end_date, start_time=data.start_time, end_time=data.end_time,
         details=data.details or "", passengers=data.passengers, pickup_location=data.pickup_location,
         dropoff_location=data.dropoff_location, destination=data.destination, driver_option=data.driver_option,
         requested_on=today, status="pending", payment_status="unpaid",
-        history=[StatusChange(status="pending", changed_on=today)], is_sample=False,
+        history=[StatusChange(status="pending", changed_on=today)], email_verified=email_verified, is_sample=False,
     )
+
+
+def create_car_booking(data: PublicCarBookingInput, email_verified: bool = False) -> Booking:
+    """Saves a website car rental request as a Pending booking."""
+    booking = build_car_booking(data, email_verified)
     return booking.model_copy(update={"id": repo.save(repo.BOOKINGS, booking)})
 
 
-def create_tour_booking(data: PublicTourBookingInput) -> Booking:
-    """Saves a website tour request as a Pending booking."""
+def build_tour_booking(data: PublicTourBookingInput, email_verified: bool = False) -> Booking:
+    """Runs every check for a website tour request and returns the Pending booking without saving it."""
     tour = _find(content.list_tours(), data.tour, "tour package")
     today = _check_start_date(data.start_date)
     if tour.vehicle_seats and data.guests > tour.vehicle_seats:
         raise FormError(f"The vehicle for {tour.name} seats up to {tour.vehicle_seats} guests. "
                         "For a bigger group, message us on Messenger.")
     _check_dates_free("tour", tour.name, data.start_date, data.end_date)
-    booking = Booking(
+    return Booking(
         id="", booking_type="tour", customer_name=data.customer_name, customer_phone=data.customer_phone,
-        customer_email=data.customer_email or "", item_name=tour.name,
+        customer_email=data.customer_email, item_name=tour.name,
         start_date=data.start_date, end_date=data.end_date, details=data.details or "",
         passengers=data.guests, pickup_location=data.pickup_location or "",
         requested_on=today, status="pending", payment_status="unpaid",
-        history=[StatusChange(status="pending", changed_on=today)], is_sample=False,
+        history=[StatusChange(status="pending", changed_on=today)], email_verified=email_verified, is_sample=False,
     )
+
+
+def create_tour_booking(data: PublicTourBookingInput, email_verified: bool = False) -> Booking:
+    """Saves a website tour request as a Pending booking."""
+    booking = build_tour_booking(data, email_verified)
     return booking.model_copy(update={"id": repo.save(repo.BOOKINGS, booking)})
 
 
-def change_status(booking: Booking, new_status: str) -> None:
+def change_status(booking: Booking, new_status: str) -> Booking:
+    """Moves the booking to new_status, saves it and returns the updated booking."""
     if new_status not in NEXT_STATUSES[booking.status]:
         raise FormError("That status change is not allowed for this booking.")
     history = [*booking.history, StatusChange(status=new_status, changed_on=date.today())]
-    repo.save(repo.BOOKINGS, booking.model_copy(update={"status": new_status, "history": history}), booking.id)
+    updated = booking.model_copy(update={"status": new_status, "history": history})
+    repo.save(repo.BOOKINGS, updated, booking.id)
+    return updated
 
 
 def change_payment(booking: Booking, new_status: str) -> None:

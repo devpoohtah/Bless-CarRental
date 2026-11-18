@@ -76,6 +76,20 @@ class Integrations:
     # Public address of this site, for the link in an alert (for example https://example.com).
     # Unset means alerts carry no link.
     admin_base_url: str = field(default_factory=lambda: _env("ADMIN_BASE_URL").rstrip("/"))
+    # How the booking verification code is delivered: "gmail", "resend" or "simulated" (fixed test
+    # code 123456, no email sent). Unset picks "gmail" when its credentials exist, else nothing.
+    otp_delivery: str = field(default_factory=lambda: _env("OTP_DELIVERY").lower())
+    # Backend only. Gmail SMTP for the verification code. Use a Google app password, never the login password.
+    gmail_user: str = field(default_factory=lambda: _env("GMAIL_USER"))
+    gmail_app_password: str = field(default_factory=lambda: _env("GMAIL_APP_PASSWORD").replace(" ", ""))
+    # Backend only. Resend sends the customer emails (booking approved). Until a domain is verified in
+    # Resend, only the account owner's address receives mail, so use onboarding@resend.dev for tests.
+    resend_api_key: str = field(default_factory=lambda: _env("RESEND_API_KEY"))
+    resend_from_email: str = field(default_factory=lambda: _env("RESEND_FROM_EMAIL") or "onboarding@resend.dev")
+    # Cloudflare Turnstile. The site key is public; the secret key stays on the server.
+    # Unset means the booking form has no challenge.
+    turnstile_site_key: str = field(default_factory=lambda: _env("TURNSTILE_SITE_KEY"))
+    turnstile_secret_key: str = field(default_factory=lambda: _env("TURNSTILE_SECRET_KEY"))
 
     @property
     def firebase_web_config(self) -> dict[str, str] | None:
@@ -101,6 +115,31 @@ class Integrations:
     @property
     def telegram_ready(self) -> bool:
         return bool(self.telegram_bot_token and self.telegram_chat_id)
+
+    @property
+    def gmail_ready(self) -> bool:
+        return bool(self.gmail_user and self.gmail_app_password)
+
+    @property
+    def resend_ready(self) -> bool:
+        return bool(self.resend_api_key)
+
+    @property
+    def turnstile_ready(self) -> bool:
+        return bool(self.turnstile_site_key and self.turnstile_secret_key)
+
+    @property
+    def otp_mode(self) -> str:
+        """"simulated", "gmail", "resend", or "" when no code can be delivered. An unknown value or
+        missing credentials give "", never the fixed test code, so production cannot fall into it by accident."""
+        mode = self.otp_delivery or ("gmail" if self.gmail_ready else "")
+        if mode == "simulated":
+            return mode
+        if mode == "gmail" and self.gmail_ready:
+            return mode
+        if mode == "resend" and self.resend_ready:
+            return mode
+        return ""
 
     @property
     def cloudinary_ready(self) -> bool:

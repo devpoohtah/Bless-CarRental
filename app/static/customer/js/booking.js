@@ -1,5 +1,6 @@
 // BLESS booking pages (/book/car and /book/tour). The page shows the chosen car or tour, a calendar that
 // crosses out dates BLESS has already approved, and posts the request without leaving the page.
+// After the form is checked, the customer confirms their email with a 6-digit code before anything is saved.
 // The date inputs hold the real values. The calendar only fills them, so typing a date also works,
 // and the form still works if the calendar script cannot load.
 (() => {
@@ -9,6 +10,7 @@
   if (!form) return;
 
   const formView = document.getElementById("booking-view-form");
+  const codeView = document.getElementById("booking-view-code");
   const doneView = document.getElementById("booking-view-done");
   const errorBox = document.getElementById("booking-errors");
   const item = document.getElementById("bk-item");
@@ -104,27 +106,150 @@
     }, true);
   }
 
+  // ---- phone: fixed +63 prefix, digits grouped as 917 123 4567 ----
+  const phone = document.getElementById("bk-phone");
+  function formatPhone(raw) {
+    let digits = raw.replace(/\D/g, "");
+    // A pasted or autofilled "0917..." or "+63917..." keeps only the 10 digits after 0 / 63.
+    if (digits.startsWith("63") && digits.length > 10) digits = digits.slice(2);
+    else if (digits.startsWith("0")) digits = digits.slice(1);
+    digits = digits.slice(0, 10);
+    return [digits.slice(0, 3), digits.slice(3, 6), digits.slice(6)].filter(Boolean).join(" ");
+  }
+  phone.addEventListener("input", () => {
+    const formatted = formatPhone(phone.value);
+    if (formatted !== phone.value) phone.value = formatted;
+  });
+
   // ---- submit ----
-  function setBusy(busy) {
+  function setBusy(button, busy) {
     if (busy) {
-      submit.dataset.label = submit.textContent;
-      submit.textContent = submit.dataset.busyLabel;
-      submit.setAttribute("aria-busy", "true");
+      button.dataset.label = button.textContent;
+      button.textContent = button.dataset.busyLabel;
+      button.setAttribute("aria-busy", "true");
     } else {
-      submit.textContent = submit.dataset.label || submit.textContent;
-      submit.removeAttribute("aria-busy");
+      button.textContent = button.dataset.label || button.textContent;
+      button.removeAttribute("aria-busy");
     }
   }
 
+  const resetChallenge = () => window.turnstile?.reset(); // a Turnstile token works once
+
   function showDone(data, reference) {
+    stopCountdown();
     doneView.querySelector("[data-done-name]").textContent = data.get("customer_name");
-    doneView.querySelector("[data-done-phone]").textContent = data.get("customer_phone");
+    doneView.querySelector("[data-done-phone]").textContent = "+63 " + data.get("customer_phone");
     doneView.querySelector("[data-done-ref]").textContent = reference;
     doneView.querySelector("[data-done-ref-row]").hidden = !reference;
-    formView.hidden = true;
+    formView.hidden = codeView.hidden = true;
     doneView.hidden = false;
     doneView.focus();
   }
+
+  // ---- code view ----
+  const codeForm = document.getElementById("code-form");
+  const codeInput = document.getElementById("bk-code");
+  const codeError = document.getElementById("code-errors");
+  const codeSubmit = codeForm.querySelector('[type="submit"]');
+  const resendButton = codeView.querySelector("[data-code-resend]");
+  const OFFLINE = "Could not reach the server. Check your connection and try again.";
+  let challenge = "";
+  let countdown = null;
+  let sentData = null;
+
+  const showCodeError = (text) => { codeError.querySelector("p").textContent = text; codeError.hidden = false; };
+  const hideCodeError = () => { codeError.hidden = true; };
+
+  function stopCountdown() { clearInterval(countdown); countdown = null; }
+
+  function startCountdown(seconds) {
+    stopCountdown();
+    let left = seconds;
+    const paint = () => {
+      resendButton.disabled = left > 0;
+      resendButton.textContent = left > 0 ? `Send a new code (${left}s)` : "Send a new code";
+    };
+    paint();
+    if (left <= 0) return;
+    countdown = setInterval(() => { left -= 1; paint(); if (left <= 0) stopCountdown(); }, 1000);
+  }
+
+  function showTestCode(code) {
+    const note = codeView.querySelector("[data-code-test]");
+    note.hidden = !code;
+    codeView.querySelector("[data-code-test-value]").textContent = code || "";
+  }
+
+  function showCodeView(body) {
+    challenge = body.challenge;
+    codeView.querySelector("[data-code-email]").textContent = body.email;
+    showTestCode(body.test_code);
+    codeInput.value = "";
+    hideCodeError();
+    startCountdown(body.resend_in ?? 60);
+    formView.hidden = true;
+    codeView.hidden = false;
+    codeInput.focus();
+  }
+
+  // Back to the form with everything the customer typed kept. messages (if any) explain why.
+  function backToForm(messages) {
+    stopCountdown();
+    challenge = "";
+    codeView.hidden = true;
+    formView.hidden = false;
+    resetChallenge();
+    if (messages) showErrors(messages); else hideErrors();
+  }
+
+  codeInput.addEventListener("input", () => { codeInput.value = codeInput.value.replace(/\D/g, "").slice(0, 6); });
+  codeView.querySelector("[data-code-back]").addEventListener("click", () => backToForm());
+
+  let verifying = false;
+  codeForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (verifying) return;
+    if (!/^\d{6}$/.test(codeInput.value)) { showCodeError("Enter the 6-digit code from your email."); codeInput.focus(); return; }
+    verifying = true;
+    hideCodeError();
+    setBusy(codeSubmit, true);
+    try {
+      const response = await fetch("/book/verify", { method: "POST", headers: { Accept: "application/json" },
+        body: new URLSearchParams({ challenge, code: codeInput.value }) });
+      const body = await response.json().catch(() => ({}));
+      const message = (Array.isArray(body.errors) && body.errors[0]) || FALLBACK;
+      if (response.ok) showDone(sentData, body.reference || "");
+      else if (body.code === "wrong_code") { showCodeError(message); codeInput.select(); }
+      else backToForm([message]); // expired, locked, or the dates were taken meanwhile: start again
+    } catch (error) {
+      showCodeError(OFFLINE); // the code is still valid: the customer can press the button again
+    } finally {
+      verifying = false;
+      setBusy(codeSubmit, false);
+    }
+  });
+
+  let resending = false;
+  resendButton.addEventListener("click", async () => {
+    if (resending || resendButton.disabled) return;
+    resending = true;
+    hideCodeError();
+    resendButton.disabled = true;
+    try {
+      const response = await fetch("/book/resend", { method: "POST", headers: { Accept: "application/json" },
+        body: new URLSearchParams({ challenge }) });
+      const body = await response.json().catch(() => ({}));
+      if (response.ok) { showTestCode(body.test_code); codeInput.value = ""; startCountdown(body.resend_in ?? 60); codeInput.focus(); }
+      else if (body.code === "cooldown") { showCodeError(body.errors?.[0] || FALLBACK); startCountdown(body.retry_after ?? 60); }
+      else if (body.code === "expired") backToForm([body.errors?.[0] || FALLBACK]);
+      else { showCodeError(body.errors?.[0] || FALLBACK); startCountdown(0); }
+    } catch (error) {
+      showCodeError(OFFLINE);
+      startCountdown(0);
+    } finally {
+      resending = false;
+    }
+  });
 
   item.addEventListener("change", () => {
     showItem();
@@ -140,18 +265,20 @@
     if (sending || !form.reportValidity()) return;
     sending = true;
     hideErrors();
-    setBusy(true);
+    setBusy(submit, true);
     const data = new FormData(form);
     try {
       const response = await fetch(form.action, { method: "POST", body: data, headers: { Accept: "application/json" } });
       const body = await response.json().catch(() => ({}));
-      if (response.ok) showDone(data, body.reference || "");
-      else showErrors(Array.isArray(body.errors) && body.errors.length ? body.errors : [FALLBACK]);
+      if (response.status === 202 && body.challenge) { sentData = data; showCodeView(body); }
+      else if (response.ok) showDone(data, body.reference || ""); // the hidden trap field was filled: a bot sees "success"
+      else { showErrors(Array.isArray(body.errors) && body.errors.length ? body.errors : [FALLBACK]); resetChallenge(); }
     } catch (error) {
       showErrors([FALLBACK]); // offline or the server could not be reached
+      resetChallenge();
     } finally {
       sending = false;
-      setBusy(false);
+      setBusy(submit, false);
     }
   });
 

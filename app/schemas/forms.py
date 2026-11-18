@@ -65,8 +65,15 @@ class BookingInput(_ItemInput):
         return self
 
 
-_PHONE_CHARACTERS = re.compile(r"^[0-9+()\-.\s]+$")
 _EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+_PH_MOBILE = re.compile(r"^(?:\+?63|0)?(9\d{9})$")
+
+
+def normalize_ph_mobile(value: str) -> str | None:
+    """Philippine mobile number as +639XXXXXXXXX, or None. Accepts 0917 123 4567, 917-123-4567, +63 917 123 4567."""
+    compact = re.sub(r"[\s().-]", "", value)
+    match = _PH_MOBILE.match(compact)
+    return f"+63{match.group(1)}" if match else None
 
 
 class _PublicContact(BaseModel):
@@ -74,23 +81,23 @@ class _PublicContact(BaseModel):
 
     customer_name: str = Field(min_length=1, max_length=120)
     customer_phone: str = Field(min_length=1, max_length=40)
-    customer_email: str | None = Field(default=None, max_length=120)
+    customer_email: str = Field(min_length=1, max_length=120)
     details: str | None = Field(default=None, max_length=2000)
 
     @field_validator("customer_phone")
     @classmethod
     def _phone(cls, value: str) -> str:
-        digits = sum(ch.isdigit() for ch in value)
-        if not _PHONE_CHARACTERS.match(value) or not 7 <= digits <= 15:
-            raise ValueError("must be a valid phone number")
-        return value
+        normal = normalize_ph_mobile(value)
+        if normal is None:
+            raise ValueError("must be a Philippine mobile number, for example 0917 123 4567 or +63 917 123 4567")
+        return normal
 
     @field_validator("customer_email")
     @classmethod
-    def _email_shape(cls, value: str | None) -> str | None:
-        if value is not None and not _EMAIL.match(value):
+    def _email_shape(cls, value: str) -> str:
+        if not _EMAIL.match(value):
             raise ValueError("must be a valid email address")
-        return value
+        return value.lower()
 
 
 class PublicCarBookingInput(_PublicContact):

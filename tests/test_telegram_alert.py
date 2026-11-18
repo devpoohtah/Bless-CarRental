@@ -19,9 +19,10 @@ from app.main import app
 from app.schemas.booking import Booking, StatusChange
 from app.schemas.catalog import Photo, TourPackage, Vehicle
 from app.services import notify
-from tests.test_public_booking import car_request, tour_request, when
+from tests.test_public_booking import book, car_request, tour_request, when
 
 client = TestClient(app)
+pytestmark = pytest.mark.usefixtures("simulated_otp")
 TOKEN = "123456:SECRET-TOKEN-VALUE"
 CHAT = "-5579257273"
 PHOTO = Photo(src="customer/img/vehicles/vehicle-compact-sedan-placeholder.svg", alt="A car")
@@ -139,14 +140,14 @@ def test_a_network_failure_is_logged_without_the_token_and_does_not_raise(telegr
 
 # ---- when alerts go out ----
 def test_a_car_request_sends_one_alert_with_its_reference(catalog, alerts):
-    response = client.post("/book/car", data=car_request())
+    response = book("/book/car", car_request())
     assert response.status_code == 201
     (text,) = alerts
     assert response.json()["reference"] in text and "Ana Reyes" in text and "Family SUV" in text
 
 
 def test_a_tour_request_sends_one_alert(catalog, alerts):
-    assert client.post("/book/tour", data=tour_request()).status_code == 201
+    assert book("/book/tour", tour_request()).status_code == 201
     (text,) = alerts
     assert "New tour request" in text and "Ben Cruz" in text
 
@@ -154,26 +155,26 @@ def test_a_tour_request_sends_one_alert(catalog, alerts):
 def test_the_alert_links_to_the_booking_when_the_site_address_is_set(catalog, telegram_on, monkeypatch):
     sent = []
     monkeypatch.setattr(notify.urllib.request, "urlopen", lambda request, timeout: sent.append(json.loads(request.data)) or FakeResponse())
-    client.post("/book/car", data=car_request())
+    book("/book/car", car_request())
     booking_id = next(iter(catalog.data["bookings"]))
     assert f"Open: https://bless.example/admin/bookings/{booking_id}" in sent[0]["text"]
 
 
 def test_no_alert_for_requests_that_were_not_saved(catalog, alerts):
-    client.post("/book/car", data=car_request(customer_name=""))                  # invalid
-    client.post("/book/car", data=car_request(website="http://spam.example"))      # bot
-    client.post("/book/car", data=car_request(car="nope"))                         # unknown car
+    book("/book/car", car_request(customer_name=""))                  # invalid
+    book("/book/car", car_request(website="http://spam.example"))      # bot
+    book("/book/car", car_request(car="nope"))                         # unknown car
     assert alerts == []
 
 
 def test_no_alert_when_the_request_is_rejected_by_the_business_rules(catalog, alerts):
-    assert client.post("/book/car", data=car_request(passengers="9")).status_code == 422   # Family SUV seats 7
-    assert client.post("/book/car", data=car_request(start_date=when(-2), end_date=when(1))).status_code == 422
+    assert book("/book/car", car_request(passengers="9")).status_code == 422   # Family SUV seats 7
+    assert book("/book/car", car_request(start_date=when(-2), end_date=when(1))).status_code == 422
     assert alerts == []
 
 
 def test_no_alert_without_a_database(alerts):
-    assert client.post("/book/car", data=car_request()).status_code == 503
+    assert book("/book/car", car_request()).status_code == 503
     assert alerts == []
 
 
@@ -181,7 +182,7 @@ def test_the_booking_is_saved_and_the_customer_told_even_if_the_alert_blows_up(c
     def explode(text):
         raise RuntimeError("telegram is down")
     monkeypatch.setattr(notify, "send_telegram", explode)
-    response = client.post("/book/car", data=car_request())
+    response = book("/book/car", car_request())
     assert response.status_code == 201 and response.json()["reference"].startswith("BLESS-")
     assert len(catalog.data["bookings"]) == 1
 

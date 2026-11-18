@@ -17,6 +17,7 @@ from app.schemas.catalog import Photo, TourPackage, Vehicle
 from app.services import bookings as service
 
 client = TestClient(app)
+pytestmark = pytest.mark.usefixtures("simulated_otp")
 PHOTO = Photo(src="customer/img/vehicles/vehicle-compact-sedan-placeholder.svg", alt="A car")
 VAN_PHOTO = Photo(src="customer/img/vehicles/vehicle-passenger-van-placeholder.svg", alt="A van")
 
@@ -43,6 +44,14 @@ def catalog(fake_db):
     return fake_db
 
 
+def book(url: str, data: dict):
+    """A customer's whole journey: send the form, then enter the code. Returns the last response."""
+    response = client.post(url, data=data)
+    if response.status_code != 202:
+        return response  # refused, or a bot: there is no code step
+    return client.post("/book/verify", data={"challenge": response.json()["challenge"], "code": "123456"})
+
+
 def when(days: int) -> str:
     return (today_ph() + timedelta(days=days)).isoformat()
 
@@ -57,7 +66,7 @@ def car_request(**changes) -> dict:
 
 def tour_request(**changes) -> dict:
     data = dict(tour="island-day-tour", start_date=when(10), end_date="", guests="6",
-                customer_name="Ben Cruz", customer_phone="+63 917 765 4321")
+                customer_name="Ben Cruz", customer_phone="+63 917 765 4321", customer_email="Ben@Example.com")
     return data | changes
 
 
@@ -76,11 +85,12 @@ def add_booking(status="approved", start=5, end=7, kind="car", item="Family SUV"
 
 # ---- car rental: success ----
 def test_a_car_request_is_saved_as_a_pending_unpaid_booking(catalog):
-    response = client.post("/book/car", data=car_request())
+    response = book("/book/car", car_request())
     assert response.status_code == 201
     assert re.fullmatch(r"BLESS-[A-Z0-9]{4,6}", response.json()["reference"])
     (saved,) = saved_bookings(catalog)
     assert saved["status"] == "pending" and saved["payment_status"] == "unpaid" and saved["is_sample"] is False
+    assert saved["email_verified"] is True and saved["customer_phone"] == "+639171234567"
     assert saved["booking_type"] == "car" and saved["item_name"] == "Family SUV"
     assert saved["passengers"] == 4 and saved["driver_option"] == "with_driver" and saved["details"] == "Child seat please."
     assert saved["pickup_location"] == "Hotel in Iloilo City" and saved["dropoff_location"] == "Iloilo Airport"
@@ -91,38 +101,39 @@ def test_a_car_request_is_saved_as_a_pending_unpaid_booking(catalog):
 
 
 def test_times_and_driver_are_optional_for_a_car(catalog):
-    data = car_request(start_time="", end_time="", driver_option="", customer_email="", details="")
-    assert client.post("/book/car", data=data).status_code == 201
+    data = car_request(start_time="", end_time="", driver_option="", details="")
+    assert book("/book/car", data).status_code == 201
     (saved,) = saved_bookings(catalog)
     assert saved["start_time"] is None and saved["end_time"] is None and saved["driver_option"] is None
 
 
 def test_a_one_day_rental_can_return_later_the_same_day(catalog):
     data = car_request(start_date=when(5), end_date=when(5), start_time="08:00", end_time="18:00")
-    assert client.post("/book/car", data=data).status_code == 201
+    assert book("/book/car", data).status_code == 201
 
 
 # ---- tours: success ----
 def test_a_one_day_tour_needs_no_end_date_and_no_pickup(catalog):
-    response = client.post("/book/tour", data=tour_request())
+    response = book("/book/tour", tour_request())
     assert response.status_code == 201
     (saved,) = saved_bookings(catalog)
     assert saved["booking_type"] == "tour" and saved["item_name"] == "Island Day Tour"
     assert saved["end_date"] == saved["start_date"] == when(10)
     assert saved["passengers"] == 6 and saved["pickup_location"] == ""
-    assert saved["driver_option"] is None and saved["customer_email"] == "" and saved["status"] == "pending"
+    assert saved["driver_option"] is None and saved["customer_email"] == "ben@example.com" and saved["status"] == "pending"
+    assert saved["customer_phone"] == "+639177654321" and saved["email_verified"] is True
 
 
 def test_a_multi_day_tour_keeps_its_end_date_and_meeting_point(catalog):
     data = tour_request(end_date=when(12), pickup_location="Hotel in Iloilo City")
-    assert client.post("/book/tour", data=data).status_code == 201
+    assert book("/book/tour", data).status_code == 201
     (saved,) = saved_bookings(catalog)
     assert saved["end_date"] == when(12) and saved["pickup_location"] == "Hotel in Iloilo City"
 
 
 # ---- what the admin sees ----
 def test_a_car_request_shows_up_for_the_admin_with_every_detail(catalog):
-    client.post("/book/car", data=car_request())
+    book("/book/car", car_request())
     assert "Ana Reyes" in client.get("/admin/bookings").text
     booking_id = next(iter(catalog.data["bookings"]))
     detail = client.get(f"/admin/bookings/{booking_id}").text
@@ -133,15 +144,15 @@ def test_a_car_request_shows_up_for_the_admin_with_every_detail(catalog):
 
 
 def test_a_tour_request_shows_guests_to_the_admin(catalog):
-    client.post("/book/tour", data=tour_request())
+    book("/book/tour", tour_request())
     detail = client.get(f"/admin/bookings/{next(iter(catalog.data['bookings']))}").text
     assert "Island Day Tour" in detail and "Guests" in detail and "Drop-off" not in detail and "Pick-up time" not in detail
 
 
 def test_customers_cannot_choose_status_or_payment(catalog):
     extra = {"status": "approved", "payment_status": "paid", "is_sample": "true"}
-    client.post("/book/car", data=car_request() | extra)
-    client.post("/book/tour", data=tour_request() | extra)
+    book("/book/car", car_request() | extra)
+    book("/book/tour", tour_request() | extra)
     for saved in saved_bookings(catalog):
         assert saved["status"] == "pending" and saved["payment_status"] == "unpaid" and saved["is_sample"] is False
 
@@ -149,8 +160,11 @@ def test_customers_cannot_choose_status_or_payment(catalog):
 # ---- validation: nothing is saved ----
 @pytest.mark.parametrize("changes, message", [
     ({"customer_name": ""}, "Customer name is required"),
-    ({"customer_phone": "call me"}, "valid phone number"),
-    ({"customer_phone": "12345"}, "valid phone number"),
+    ({"customer_phone": "call me"}, "Philippine mobile number"),
+    ({"customer_phone": "12345"}, "Philippine mobile number"),
+    ({"customer_phone": "(02) 8123 4567"}, "Philippine mobile number"),
+    ({"customer_phone": "+1 415 555 0100"}, "Philippine mobile number"),
+    ({"customer_email": ""}, "Customer email is required"),
     ({"customer_email": "not-an-email"}, "valid email address"),
     ({"start_date": ""}, "Start date is required"),
     ({"start_date": "soon"}, "must be a valid date"),
@@ -173,7 +187,7 @@ def test_customers_cannot_choose_status_or_payment(catalog):
     ({"car": "old-car", "passengers": "2"}, "currently unavailable"),
 ])
 def test_invalid_car_requests_are_refused_with_a_message_and_nothing_is_saved(catalog, changes, message):
-    response = client.post("/book/car", data=car_request(**changes))
+    response = book("/book/car", car_request(**changes))
     assert response.status_code == 422, response.text
     assert any(message in text for text in response.json()["errors"]), response.json()
     assert saved_bookings(catalog) == []
@@ -181,7 +195,8 @@ def test_invalid_car_requests_are_refused_with_a_message_and_nothing_is_saved(ca
 
 @pytest.mark.parametrize("changes, message", [
     ({"customer_name": ""}, "Customer name is required"),
-    ({"customer_phone": "call me"}, "valid phone number"),
+    ({"customer_phone": "call me"}, "Philippine mobile number"),
+    ({"customer_email": ""}, "Customer email is required"),
     ({"start_date": ""}, "Start date is required"),
     ({"start_date": when(-1)}, "cannot be in the past"),
     ({"end_date": when(2)}, "end date cannot be before the start date"),
@@ -193,19 +208,19 @@ def test_invalid_car_requests_are_refused_with_a_message_and_nothing_is_saved(ca
     ({"tour": "closed-tour", "guests": "2"}, "currently unavailable"),
 ])
 def test_invalid_tour_requests_are_refused_with_a_message_and_nothing_is_saved(catalog, changes, message):
-    response = client.post("/book/tour", data=tour_request(**changes))
+    response = book("/book/tour", tour_request(**changes))
     assert response.status_code == 422, response.text
     assert any(message in text for text in response.json()["errors"]), response.json()
     assert saved_bookings(catalog) == []
 
 
 def test_a_tour_without_vehicle_details_has_no_guest_limit(catalog):
-    assert client.post("/book/tour", data=tour_request(tour="plain-tour", guests="30")).status_code == 201
+    assert book("/book/tour", tour_request(tour="plain-tour", guests="30")).status_code == 201
 
 
 def test_a_form_cannot_book_the_other_kind_of_item(catalog):
-    assert client.post("/book/car", data=car_request(car="island-day-tour")).status_code == 422
-    assert client.post("/book/tour", data=tour_request(tour="family-suv")).status_code == 422
+    assert book("/book/car", car_request(car="island-day-tour")).status_code == 422
+    assert book("/book/tour", tour_request(tour="family-suv")).status_code == 422
     assert saved_bookings(catalog) == []
 
 
@@ -213,7 +228,7 @@ def test_a_form_cannot_book_the_other_kind_of_item(catalog):
 def test_an_approved_booking_blocks_overlapping_dates_for_that_car(catalog):
     add_booking("approved", 5, 7)
     for start, end in ((4, 5), (6, 6), (7, 9), (3, 10)):
-        response = client.post("/book/car", data=car_request(start_date=when(start), end_date=when(end)))
+        response = book("/book/car", car_request(start_date=when(start), end_date=when(end)))
         assert response.status_code == 422, (start, end)
         assert "already booked" in response.json()["errors"][0]
     assert len(saved_bookings(catalog)) == 1  # only the one added directly
@@ -221,35 +236,35 @@ def test_an_approved_booking_blocks_overlapping_dates_for_that_car(catalog):
 
 def test_the_days_just_before_and_after_an_approved_booking_are_free(catalog):
     add_booking("approved", 5, 7)
-    assert client.post("/book/car", data=car_request(start_date=when(2), end_date=when(4), start_time="", end_time="")).status_code == 201
-    assert client.post("/book/car", data=car_request(start_date=when(8), end_date=when(9), start_time="", end_time="")).status_code == 201
+    assert book("/book/car", car_request(start_date=when(2), end_date=when(4), start_time="", end_time="")).status_code == 201
+    assert book("/book/car", car_request(start_date=when(8), end_date=when(9), start_time="", end_time="")).status_code == 201
 
 
 def test_an_ongoing_booking_still_blocks_its_dates(catalog):
     add_booking("ongoing", 5, 7)
-    assert client.post("/book/car", data=car_request()).status_code == 422
+    assert book("/book/car", car_request()).status_code == 422
 
 
 @pytest.mark.parametrize("status", ["pending", "rejected", "cancelled", "completed"])
 def test_only_approved_and_ongoing_bookings_block_dates(catalog, status):
     add_booking(status, 5, 7)
-    assert client.post("/book/car", data=car_request()).status_code == 201
+    assert book("/book/car", car_request()).status_code == 201
 
 
 def test_a_booking_for_another_car_does_not_block(catalog):
     add_booking("approved", 5, 7, item="City Car")
-    assert client.post("/book/car", data=car_request()).status_code == 201
+    assert book("/book/car", car_request()).status_code == 201
 
 
 def test_a_car_booking_does_not_block_a_tour_with_the_same_name(catalog):
     add_booking("approved", 10, 10, kind="car", item="Island Day Tour")
-    assert client.post("/book/tour", data=tour_request()).status_code == 201
+    assert book("/book/tour", tour_request()).status_code == 201
 
 
 def test_an_approved_tour_blocks_that_tour_only(catalog):
     add_booking("approved", 10, 10, kind="tour", item="Island Day Tour")
-    assert client.post("/book/tour", data=tour_request()).status_code == 422
-    assert client.post("/book/tour", data=tour_request(tour="plain-tour")).status_code == 201
+    assert book("/book/tour", tour_request()).status_code == 422
+    assert book("/book/tour", tour_request(tour="plain-tour")).status_code == 201
 
 
 def test_blocked_dates_are_on_the_page_without_any_customer_details(catalog):
@@ -275,7 +290,7 @@ def test_the_hidden_field_makes_a_bot_look_successful_but_saves_nothing(catalog)
 
 def test_too_many_requests_from_one_address_are_refused(catalog, monkeypatch):
     monkeypatch.setattr(bookings_route, "limiter", RateLimiter(max_hits=2, window_seconds=600))
-    codes = [client.post("/book/car", data=car_request(start_date=when(20 + 3 * i), end_date=when(21 + 3 * i))).status_code
+    codes = [book("/book/car", car_request(start_date=when(20 + 3 * i), end_date=when(21 + 3 * i))).status_code
              for i in range(3)]
     assert codes == [201, 201, 429]
     assert len(saved_bookings(catalog)) == 2
@@ -288,10 +303,10 @@ def test_without_a_database_the_request_is_refused_politely():
 
 
 def test_a_storage_failure_gives_a_generic_message_and_no_internals(catalog, monkeypatch):
-    def broken(data):
+    def broken(data, email_verified=False):
         raise RuntimeError("secret firestore detail")
     monkeypatch.setattr(service, "create_car_booking", broken)
-    response = client.post("/book/car", data=car_request())
+    response = book("/book/car", car_request())
     assert response.status_code == 503
     assert "secret" not in response.text and "try again" in response.json()["errors"][0]
 
@@ -317,6 +332,7 @@ def test_the_car_page_has_every_field_the_server_expects():
                                  "dropoff_location", "destination", "passengers", "driver_option", "details",
                                  "customer_name", "customer_phone", "customer_email", "website"}
     assert 'action="/book/car"' in html and 'method="post"' in html and f'min="{today_ph().isoformat()}"' in html
+    assert re.search(r'<input id="bk-email"[^>]* required', html) and 'id="booking-view-code"' in html
     ids = re.findall(r'<(?:input|select|textarea) id="(bk-[a-z-]+)"', html)
     assert ids and all(re.search(rf'<label[^>]*for="{i}"', html) for i in ids)
 

@@ -3,7 +3,7 @@
 import logging
 from datetime import date
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 from app.core.auth import require_admin
@@ -11,6 +11,7 @@ from app.core.templating import notice_for, templates
 from app.db.firebase import require_configured
 from app.schemas.forms import BookingInput, validate
 from app.services import bookings as service
+from app.services import mailer
 from app.services.errors import FormError
 
 log = logging.getLogger(__name__)
@@ -92,13 +93,15 @@ def booking_detail(request: Request, booking_id: str) -> HTMLResponse:
 
 
 @router.post("/bookings/{booking_id}/status")
-def booking_status(request: Request, booking_id: str, status: str = Form("")):
+def booking_status(request: Request, background: BackgroundTasks, booking_id: str, status: str = Form("")):
     require_configured()
     booking = _booking_or_404(booking_id)
     try:
-        service.change_status(booking, status)
+        updated = service.change_status(booking, status)
     except FormError as exc:
         return _detail(request, booking, 422, [str(exc)])
+    if updated.status == "approved":
+        background.add_task(mailer.notify_booking_approved, updated)  # after the response; a failed email never blocks this
     return RedirectResponse(f"/admin/bookings/{booking_id}?notice=status", status_code=303)
 
 

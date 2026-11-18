@@ -54,6 +54,10 @@
               <label>Website<input type="text" name="website" tabindex="-1" autocomplete="off"></label>
             </div>
 
+            {% if turnstile_site_key %}
+            <div class="cf-turnstile" data-sitekey="{{ turnstile_site_key }}" data-theme="light"></div>
+            {% endif %}
+
             <div class="booking-form__actions">
               <button type="submit" class="btn btn--primary btn--lg btn--block" data-busy-label="Sending…">Send booking request</button>
               <p class="booking-form__alt">Prefer to chat? <a class="link" href="{{ site.messenger_url }}" target="_blank" rel="noopener noreferrer">Message us on Messenger<span class="sr-only"> (opens in a new tab)</span></a></p>
@@ -61,9 +65,30 @@
           </form>
         </div>
 
+        <div id="booking-view-code" tabindex="-1" hidden>
+          <h1 class="book__title" id="booking-code-title">Enter your code</h1>
+          <p class="book__lead">We sent a 6-digit code to <strong data-code-email></strong>. It expires in 10 minutes. Check your spam folder if it does not arrive.</p>
+          <p class="booking-code__test" data-code-test hidden>Test mode: no email was sent. Use <strong data-code-test-value></strong>.</p>
+          <form id="code-form" class="booking-form" novalidate>
+            <div id="code-errors" class="form-errors" role="alert" tabindex="-1" hidden><p data-code-error></p></div>
+            <div class="field">
+              <label for="bk-code">Verification code</label>
+              <input id="bk-code" name="code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required class="booking-code__input">
+            </div>
+            <div class="booking-form__actions">
+              <button type="submit" class="btn btn--primary btn--lg btn--block" data-busy-label="Checking…">Confirm and send request</button>
+              <p class="booking-form__alt">
+                <button type="button" class="link link--button" data-code-resend>Send a new code</button>
+                <span aria-hidden="true"> · </span>
+                <button type="button" class="link link--button" data-code-back>Change my details</button>
+              </p>
+            </div>
+          </form>
+        </div>
+
         <div id="booking-view-done" tabindex="-1" hidden>
           <h1 class="book__title" id="booking-done-title">Request received</h1>
-          <p class="book__lead">Thank you, <span data-done-name></span>. BLESS will contact you at <span data-done-phone></span> to confirm availability and the rate.</p>
+          <p class="book__lead">Thank you, <span data-done-name></span>. Your email is confirmed. BLESS will contact you at <span data-done-phone></span> to confirm availability and the rate.</p>
           <p class="booking-done__ref" data-done-ref-row hidden>Your reference: <strong data-done-ref></strong></p>
           <p class="book__lead">This is a request, not a confirmed booking. Keep your reference in case you message us about it.</p>
           <div class="book__done-actions">
@@ -89,6 +114,7 @@
 {% endblock %}
 
 {% block scripts %}
+{% if turnstile_site_key %}<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>{% endif %}
 <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js" integrity="sha384-5JqMv4L/Xa0hfvtF06qboNdhvuYXUku9ZrhZh3bSk8VXF0A/RuSLHpLsSV9Zqhl6" crossorigin="anonymous" defer></script>
 <script src="{{ static_url('customer/js/booking.js') }}" defer></script>
 {% endblock %}

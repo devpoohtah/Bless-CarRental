@@ -39,6 +39,7 @@ class Booking(BaseModel):
     status: BookingStatus
     payment_status: PaymentStatus
     history: list[StatusChange]  # oldest first
+    email_verified: bool = False  # the customer entered the code we emailed (website requests only)
     is_sample: bool = True  # placeholder row, not a real booking; saved bookings set this to False
 
     @property
