@@ -9,8 +9,11 @@ import json
 import logging
 import urllib.error
 import urllib.request
+from datetime import datetime
 
 from app.core import config
+from app.core.clock import PHILIPPINES, now_ph
+from app.core.templating import date_time
 from app.schemas.booking import Booking
 from app.services import push
 
@@ -23,15 +26,19 @@ def _when(day) -> str:
     return f"{day:%b} {day.day}, {day.year}"
 
 
-def booking_alert_text(booking: Booking, admin_base_url: str = "") -> str:
-    """The message for a new website request: who, what, when, and where to open it."""
+def booking_alert_text(booking: Booking, admin_base_url: str = "", sent_at: datetime | None = None) -> str:
+    """The message for a new website request: when it came in, who, what, when, and where to open it.
+    sent_at is always shown in Philippine time, whatever time zone the server runs in."""
     is_car = booking.booking_type == "car"
-    lines = [f"New {'car rental' if is_car else 'tour'} request {booking.reference}", "",
+    sent = (sent_at or now_ph()).astimezone(PHILIPPINES)
+    lines = [f"New {'car rental' if is_car else 'tour'} request {booking.reference}",
+             f"Sent: {date_time(sent.date(), sent.time())}", "",
              f"Customer: {booking.customer_name}", f"Phone: {booking.customer_phone}",
              f"{'Car' if is_car else 'Tour package'}: {booking.item_name}"]
     if is_car:
-        lines.append(f"Pick-up: {_when(booking.start_date)}")
-        lines.append(f"Return: {_when(booking.end_date)}")
+        # The times are shown when the customer gave them, so nobody has to open the booking to see them.
+        lines.append(f"Pick-up: {date_time(booking.start_date, booking.start_time)}")
+        lines.append(f"Return: {date_time(booking.end_date, booking.end_time)}")
         extras = [f"{booking.passengers} passengers"] if booking.passengers else []
         if booking.driver_option:
             extras.append("with a driver" if booking.driver_option == "with_driver" else "self-drive")

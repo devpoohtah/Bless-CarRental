@@ -1,7 +1,7 @@
 import logging
 
 from fastapi import FastAPI, Request, HTTPException
-from fastapi.responses import RedirectResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.api.routes import admin, admin_bookings, admin_push, admin_services, auth, bookings, pages
@@ -29,6 +29,13 @@ def create_app() -> FastAPI:
     app.include_router(admin_services.router)
     app.include_router(admin_bookings.router)
     app.include_router(admin_push.router)
+
+    @app.get("/service-worker.js", include_in_schema=False)
+    def service_worker() -> FileResponse:
+        # Served from the site root, not /static/, so it can be registered for the whole /admin/ area.
+        # no-cache: the browser re-checks it on every visit, so a fixed worker is picked up at once.
+        return FileResponse(STATIC_DIR / "admin" / "js" / "service-worker.js", media_type="text/javascript",
+                            headers={"Cache-Control": "no-cache"})
 
     # Middleware order matters: first added = outermost = runs first on request, last on response
     app.add_middleware(SecurityHeadersMiddleware)

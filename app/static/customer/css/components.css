@@ -83,7 +83,7 @@ a.tile:focus-visible { outline-color: var(--night); }
 .notice .icon { color: var(--ink); }
 
 /* Detail dialog */
-.detail-dialog { width: min(92vw, 44rem); max-height: 90svh; margin: auto; padding: 0; overflow-y: auto; border: 0; border-radius: var(--radius-lg); background: #fff; color: var(--ink); --focus: var(--night); }
+.detail-dialog { width: min(92vw, 44rem); max-height: 90svh; margin: auto; padding: 0; overflow-y: auto; border: 0; border-radius: var(--radius-lg); background: #fff; color: var(--ink); --focus: var(--cyan); }
 .detail-dialog::backdrop { background: rgb(0 1 65 / 0.7); }
 .detail-dialog__media { position: relative; }
 .detail-dialog__media img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }

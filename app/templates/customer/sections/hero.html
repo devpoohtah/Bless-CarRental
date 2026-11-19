@@ -32,9 +32,9 @@
       <div class="hero-bar__controls" role="group" aria-label="Slideshow controls">
         <div class="hero-dots">
           {% for src, slide in hero_slides %}
-          <button class="hero-dot" type="button" data-hero-dot aria-label="Show photo {{ loop.index }}"{% if loop.first %} aria-current="true"{% endif %}></button>
+          <button class="hero-dot" type="button" data-hero-dot aria-label="Show photo {{ loop.index }} of {{ hero_slides|length }}"{% if loop.first %} aria-current="true"{% endif %}></button>
           {% endfor %}
-        </div>  
+        </div>
       </div>
     </div>
   </div>

@@ -12,7 +12,7 @@
 .card__media,
 .detail-dialog__media { background: linear-gradient(90deg, var(--line) 25%, rgb(0 1 65 / 0.05) 50%, var(--line) 75%) 0 0 / 200% 100%; animation: skel-shimmer 1.4s ease-in-out infinite; }
 /* Photos cover their placeholder once loaded, so stop animating it after a while. */
-.card__media, .detail-dialog__media { animation-iteration-count: 8; }
+.card__media, .detail-dialog__media { animation-iteration-count: infinite; }
 @keyframes skel-shimmer { to { background-position: -200% 0; } }
 
 @media (prefers-reduced-motion: reduce) {

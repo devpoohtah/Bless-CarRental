@@ -291,7 +291,8 @@ def test_without_a_database_nothing_is_blocked():
 # ---- abuse and failure ----
 def test_the_hidden_field_makes_a_bot_look_successful_but_saves_nothing(catalog):
     for url, data in (("/book/car", car_request()), ("/book/tour", tour_request())):
-        response = client.post(url, data=data | {"website": "http://spam.example"})
+        csrf_token = _get_csrf_token()
+        response = client.post(url, data=data | {"website": "http://spam.example"}, headers={"X-CSRF-Token": csrf_token})
         assert response.status_code == 201 and response.json()["reference"] == ""
     assert saved_bookings(catalog) == []
 
@@ -306,7 +307,8 @@ def test_too_many_requests_from_one_address_are_refused(catalog, monkeypatch):
 
 def test_without_a_database_the_request_is_refused_politely():
     for url, data in (("/book/car", car_request()), ("/book/tour", tour_request())):
-        response = client.post(url, data=data)
+        csrf_token = _get_csrf_token()
+        response = client.post(url, data=data, headers={"X-CSRF-Token": csrf_token})
         assert response.status_code == 503 and "Messenger" in response.json()["errors"][0]
 
 
@@ -437,6 +439,31 @@ def test_the_form_has_a_required_agree_checkbox_for_the_terms_and_privacy_policy
 def test_a_request_without_the_agree_box_is_refused_and_sends_no_code(fake_db):
     for path, data in (("/book/car", car_request()), ("/book/tour", tour_request())):
         for missing in ({"agree": ""}, {"agree": "no"}):
-            response = client.post(path, data=data | missing)
+            csrf_token = _get_csrf_token()
+            response = client.post(path, data=data | missing, headers={"X-CSRF-Token": csrf_token})
             assert response.status_code == 422 and "Terms and Conditions" in response.json()["errors"][0]
     assert saved_bookings(fake_db) == []
+
+
+# ---- privacy policy, form alerts, CSRF from script ----
+def test_the_privacy_policy_is_general_and_says_nothing_about_the_admin_side():
+    html = client.get("/privacy").text.lower()
+    for internal in ("admin", "sign in", "sign-in", "signed-in", "firebase", "gmail", "resend", "turnstile",
+                     "payment status", "reference number", "6-digit", "approved"):
+        assert internal not in html, internal
+    assert "data privacy act" in html and "your rights" in html  # the notice itself is still complete
+
+
+def test_the_booking_form_shows_problems_in_sweetalert_with_inline_boxes_as_the_fallback():
+    html = client.get("/book/car").text
+    assert "sweetalert2@11.26.25" in html and 'integrity="sha384-' in html  # pinned and integrity-checked
+    assert html.index("sweetalert2") < html.index("booking.js")  # loaded first
+    assert 'id="booking-errors"' in html and 'id="code-errors"' in html  # used only if the CDN fails
+    js = client.get("/static/customer/js/booking.js").text
+    assert "Swal.fire" in js and "window.Swal" in js and "textContent" in js  # customer text is never set as HTML
+    assert "html: list" in js and ".innerHTML" not in js
+
+
+def test_booking_js_sends_the_csrf_token_with_the_code_and_resend_requests():
+    js = client.get("/static/customer/js/booking.js").text
+    assert js.count("...csrfHeaders") == 2 and '"X-CSRF-Token"' in js

@@ -83,14 +83,6 @@
       stop();
       const run = !userPaused && !hovering && visible && !document.hidden;
       if (run) timer = setInterval(() => goTo(index + 1), AUTOPLAY_MS);
-      // While playing, do not announce each change; once paused, announce it politely.
-    };
-    const setPaused = (paused) => {
-      userPaused = paused;
-      toggleBtn.setAttribute("aria-label", paused ? "Play slideshow" : "Pause slideshow");
-      toggleBtn.querySelector('[data-icon="pause"]').hidden = paused;
-      toggleBtn.querySelector('[data-icon="play"]').hidden = !paused;
-      sync();
     };
     // Any manual move restarts the timer so the next auto-advance is a full interval away.
     const move = (i) => { goTo(i); sync(); };
@@ -98,7 +90,7 @@
 
     dots.forEach((dot, n) => dot.addEventListener("click", () => move(n)));
 
-    // Hovering or focusing the controls pauses the slideshow; leaving resumes it (unless paused with the button).
+    // Hovering or focusing the controls pauses the slideshow; leaving resumes it.
     bar.addEventListener("pointerenter", () => { hovering = true; sync(); });
     bar.addEventListener("pointerleave", () => { hovering = false; sync(); });
     bar.addEventListener("focusin", () => { hovering = true; sync(); });
@@ -150,6 +142,13 @@
     const goTo = (i) => track.scrollTo({ left: ((i + slides.length) % slides.length) * track.clientWidth, behavior: reduced.matches ? "auto" : "smooth" });
     controls.querySelector("[data-vcar-prev]").addEventListener("click", () => goTo(index - 1));
     controls.querySelector("[data-vcar-next]").addEventListener("click", () => goTo(index + 1));
+
+    // Keyboard navigation: ArrowLeft/ArrowRight on the track
+    track.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowLeft") { goTo(index - 1); e.preventDefault(); }
+      if (e.key === "ArrowRight") { goTo(index + 1); e.preventDefault(); }
+    });
+
     let frame = 0;
     track.addEventListener("scroll", () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(update); }, { passive: true });
     window.addEventListener("resize", () => track.scrollTo({ left: index * track.clientWidth, behavior: "auto" }));
@@ -166,4 +165,15 @@
     // The booking form keeps its own dialog open on a stray click, so typed answers are not lost.
     dialog.addEventListener("click", (e) => { if (e.target === dialog && !dialog.hasAttribute("data-no-backdrop-close")) dialog.close(); })
   );
+
+  // Stop skeleton shimmer when images load
+  document.querySelectorAll(".card__media img, .detail-dialog__media img").forEach((img) => {
+    if (img.complete) {
+      img.closest(".card__media, .detail-dialog__media")?.classList.remove("skel");
+    } else {
+      img.addEventListener("load", () => {
+        img.closest(".card__media, .detail-dialog__media")?.classList.remove("skel");
+      }, { once: true });
+    }
+  });
 })();

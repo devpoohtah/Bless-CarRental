@@ -47,6 +47,7 @@ templates.env.globals.update(
     icon=icon, static_url=static_url, absolute_url=absolute_url, site=settings, firebase_config=config.integrations.firebase_web_config,
     database_ready=lambda: firebase.is_configured(), push_config=lambda: config.integrations.push_web_config,
     csrf_token=csrf_token,
+    turnstile_site_key=config.integrations.turnstile_site_key if config.integrations.turnstile_ready else "",
 )
 
 # Short confirmations shown after a redirect (?notice=key). Only these keys are ever shown.

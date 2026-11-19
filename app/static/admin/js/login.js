@@ -8,8 +8,24 @@ import {
 const auth = getAuth(initializeApp(JSON.parse(document.getElementById("firebase-config").textContent)));
 const errorBox = document.getElementById("login-error");
 const status = document.getElementById("login-status");
+const passwordForm = document.getElementById("password-form");
+const turnstileWidget = document.querySelector(".cf-turnstile");
+
 // Everything that can start a sign-in or change what is being signed in with.
 const controls = document.querySelectorAll("#google-signin, #password-form button, #password-form input");
+
+// Turnstile callbacks - must be global for implicit rendering
+window.onTurnstileSuccess = () => {
+  // token will be read at submit time via turnstile.getResponse()
+};
+window.onTurnstileError = (code) => {
+  console.error("[login.js] Turnstile error:", code);
+  showError("Verification failed. Please complete the challenge, or disable extensions / try another browser.");
+  return true; // allow retry
+};
+window.onTurnstileExpired = () => {
+  // token cleared automatically by widget
+};
 
 const MESSAGES = {
   "auth/invalid-credential": "The email or password is incorrect.",
@@ -18,6 +34,8 @@ const MESSAGES = {
   "auth/invalid-email": "Enter a valid email address.",
   "auth/too-many-requests": "Too many attempts. Wait a few minutes and try again.",
   "auth/network-request-failed": "Network problem. Check your connection and try again.",
+  "rate_limited": "Too many sign-in attempts. Please wait a few minutes.",
+  "turnstile": "We could not confirm you are human. Please try again.",
 };
 
 function showError(message) {
@@ -45,16 +63,23 @@ function busy(state, button) {
 
 async function finish(user) {
   const idToken = await user.getIdToken();
+  const formData = new FormData(passwordForm);
+  formData.append("id_token", idToken);
+
   const response = await fetch("/admin/session", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     credentials: "same-origin",
-    body: JSON.stringify({ id_token: idToken }),
+    body: formData,
   });
-  await signOut(auth); // the server cookie is the session; do not keep a second one in the browser
+  await signOut(auth);
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
-    throw new Error(body.detail || "Sign-in failed. Try again.");
+    const detail = body.detail;
+    const msg = (typeof detail === "object" && detail.message) ? detail.message : (detail || "Sign-in failed. Try again.");
+    const code = (typeof detail === "object" && detail.code) ? detail.code : "";
+    const err = new Error(msg);
+    err.code = code;
+    throw err;
   }
   window.location.assign("/admin/dashboard");
 }
@@ -64,13 +89,18 @@ async function run(signIn, button) {
   showError("");
   busy(true, button);
   try {
-    await finish((await signIn()).user);
+    const user = (await signIn()).user;
+    await finish(user);
   } catch (error) {
     if (error.code === "auth/popup-closed-by-user" || error.code === "auth/cancelled-popup-request") {
       busy(false, button);
       return;
     }
-    showError(MESSAGES[error.code] || (error.code ? "Sign-in failed. Try again." : error.message));
+    // reset Turnstile after any failed sign-in (tokens are single-use)
+    if (window.turnstile && turnstileWidget) {
+      try { window.turnstile.reset(turnstileWidget); } catch (e) {}
+    }
+    showError(MESSAGES[error.code] || (error.code ? "Sign-in failed: " + error.code : error.message));
     busy(false, button);
   }
 }
@@ -80,9 +110,16 @@ googleButton.addEventListener("click", () => {
   run(() => signInWithPopup(auth, new GoogleAuthProvider()), googleButton);
 });
 
-document.getElementById("password-form").addEventListener("submit", (event) => {
+passwordForm.addEventListener("submit", (event) => {
   event.preventDefault();
+  // Read token at submit time from the widget (not hidden input - callback may not fire)
+  const token = (window.turnstile && turnstileWidget) ? window.turnstile.getResponse(turnstileWidget) : "";
+  if (!token) {
+    showError("Please complete the verification, or disable extensions / try another browser.");
+    return;
+  }
   const form = new FormData(event.currentTarget);
+  form.set("cf-turnstile-response", token); // exact field name auth.py expects
   run(() => signInWithEmailAndPassword(auth, form.get("email"), form.get("password")),
     event.currentTarget.querySelector('[type="submit"]'));
 });

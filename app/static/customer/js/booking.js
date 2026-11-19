@@ -7,6 +7,9 @@
   "use strict";
 
   const form = document.getElementById("booking-form");
+  // /book/verify and /book/resend are sent from script, so they carry the CSRF token in a header
+  // (the forms themselves carry it as a hidden field).
+  const csrfHeaders = { "X-CSRF-Token": form.elements.csrf_token?.value || "" };
   if (!form) return;
 
   const formView = document.getElementById("booking-view-form");
@@ -43,11 +46,20 @@
     people.max = data.max || "60";
   }
 
+  // Problems open as a SweetAlert2 dialog. If it did not load, the inline boxes in the page show them instead,
+  // so a problem is never silent. Customer-typed text is only ever set as text, never as HTML.
+  const dialogButtons = { buttonsStyling: false, customClass: { confirmButton: "btn btn--primary" }, confirmButtonText: "OK" };
+
   const hideErrors = () => { errorBox.hidden = true; };
   function showErrors(messages) {
-    errorBox.querySelector("ul").replaceChildren(
-      ...messages.map((text) => Object.assign(document.createElement("li"), { textContent: text }))
-    );
+    const items = messages.map((text) => Object.assign(document.createElement("li"), { textContent: text }));
+    if (window.Swal) {
+      const list = Object.assign(document.createElement("ul"), { className: "swal-list" });
+      list.append(...items);
+      Swal.fire({ icon: "error", title: "Please fix the following", html: list, ...dialogButtons });
+      return;
+    }
+    errorBox.querySelector("ul").replaceChildren(...items);
     errorBox.hidden = false;
     errorBox.focus();
   }
@@ -157,7 +169,15 @@
   let countdown = null;
   let sentData = null;
 
-  const showCodeError = (text) => { codeError.querySelector("p").textContent = text; codeError.hidden = false; };
+  function showCodeError(text) {
+    if (window.Swal) {
+      // Back to the code box once the dialog is closed, so the customer can type again right away.
+      Swal.fire({ icon: "error", title: "Could not confirm", text, ...dialogButtons, didClose: () => codeInput.focus() });
+      return;
+    }
+    codeError.querySelector("p").textContent = text;
+    codeError.hidden = false;
+  }
   const hideCodeError = () => { codeError.hidden = true; };
 
   function stopCountdown() { clearInterval(countdown); countdown = null; }
@@ -214,7 +234,7 @@
     hideCodeError();
     setBusy(codeSubmit, true);
     try {
-      const response = await fetch("/book/verify", { method: "POST", headers: { Accept: "application/json" },
+      const response = await fetch("/book/verify", { method: "POST", headers: { Accept: "application/json", ...csrfHeaders },
         body: new URLSearchParams({ challenge, code: codeInput.value }) });
       const body = await response.json().catch(() => ({}));
       const message = (Array.isArray(body.errors) && body.errors[0]) || FALLBACK;
@@ -236,7 +256,7 @@
     hideCodeError();
     resendButton.disabled = true;
     try {
-      const response = await fetch("/book/resend", { method: "POST", headers: { Accept: "application/json" },
+      const response = await fetch("/book/resend", { method: "POST", headers: { Accept: "application/json", ...csrfHeaders },
         body: new URLSearchParams({ challenge }) });
       const body = await response.json().catch(() => ({}));
       if (response.ok) { showTestCode(body.test_code); codeInput.value = ""; startCountdown(body.resend_in ?? 60); codeInput.focus(); }

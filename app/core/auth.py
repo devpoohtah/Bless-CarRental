@@ -30,9 +30,13 @@ class LoginRequired(Exception):
 
 
 def is_allowed(claims: dict) -> bool:
-    """On the admin list AND a verified email, so an unverified account cannot claim an address."""
+    """On the admin list AND a verified email AND has admin custom claim."""
     email = str(claims.get("email") or "").lower()
-    return bool(claims.get("email_verified")) and email in config.integrations.admin_emails
+    return (
+        bool(claims.get("email_verified"))
+        and email in config.integrations.admin_emails
+        and claims.get("admin") is True
+    )
 
 
 def require_admin(request: Request) -> AdminUser:

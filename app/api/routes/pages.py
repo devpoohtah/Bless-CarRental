@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse, Response
@@ -11,17 +11,27 @@ from app.services.content import get_home_context
 
 router = APIRouter()
 
+MAX_BOOKING_DAYS = 730  # 2 years, matches Flatpickr maxDate
+
+
+def _base_context() -> dict:
+    today = today_ph()
+    return {
+        "current_year": date.today().year,
+        "today_iso": today.isoformat(),
+        "max_date_iso": (today + timedelta(days=MAX_BOOKING_DAYS)).isoformat(),
+    }
+
 
 @router.get("/", response_class=HTMLResponse, include_in_schema=False)
 def home(request: Request) -> HTMLResponse:
-    context = get_home_context() | {"current_year": date.today().year, "today_iso": today_ph().isoformat()}
+    context = get_home_context() | _base_context()
     return templates.TemplateResponse(request, "customer/pages/home.html", context)
 
 
 def _catalog_page(request: Request, template: str, **context) -> HTMLResponse:
     """The full car and tour lists. Same navbar as the landing page, whose links point back to its sections."""
-    context |= {"nav_links": content.NAV_LINKS, "nav_base": "/", "current_year": date.today().year,
-                "today_iso": today_ph().isoformat()}
+    context |= {"nav_links": content.NAV_LINKS, "nav_base": "/"} | _base_context()
     return templates.TemplateResponse(request, f"customer/pages/{template}", context)
 
 

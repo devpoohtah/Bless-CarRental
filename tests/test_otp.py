@@ -20,16 +20,34 @@ client = TestClient(app)
 pytestmark = pytest.mark.usefixtures("simulated_otp")  # tests below switch the mode themselves where they need to
 
 
+def _get_csrf_token():
+    """Get a fresh CSRF token from the cookie."""
+    client.get("/")  # sets the cookie
+    return client.cookies.get("csrf_token", "")
+
+
+def _headers():
+    return {"X-CSRF-Token": _get_csrf_token()}
+
+
+def _admin_post(url: str, data: dict, **kwargs):
+    """POST to an admin endpoint with CSRF token."""
+    client.get("/admin/dashboard")  # sets the cookie
+    csrf_token = client.cookies.get("csrf_token", "")
+    headers = {"X-CSRF-Token": csrf_token, **kwargs.get("headers", {})}
+    return client.post(url, data=data, headers=headers, **{k: v for k, v in kwargs.items() if k != "headers"})
+
+
 def set_integrations(monkeypatch, **changes):
     monkeypatch.setattr(config, "integrations", replace(config.integrations, **changes))
 
 
 def start(data=None, url="/book/car"):
-    return client.post(url, data=data or car_request())
+    return client.post(url, data=data or car_request(), headers=_headers())
 
 
 def verify(challenge, code="123456"):
-    return client.post("/book/verify", data={"challenge": challenge, "code": code})
+    return client.post("/book/verify", data={"challenge": challenge, "code": code}, headers=_headers())
 
 
 # ---- the store, on its own ----
@@ -238,15 +256,15 @@ def test_resend_gives_a_new_challenge_state_after_the_cooldown(catalog, monkeypa
     clock = Clock()
     monkeypatch.setattr(otp, "store", otp.OtpStore(clock=clock))
     challenge = start().json()["challenge"]
-    early = client.post("/book/resend", data={"challenge": challenge})
+    early = client.post("/book/resend", data={"challenge": challenge}, headers=_headers())
     assert early.status_code == 429 and early.json()["code"] == "cooldown" and early.json()["retry_after"] > 0
     clock.now += 61
-    late = client.post("/book/resend", data={"challenge": challenge})
+    late = client.post("/book/resend", data={"challenge": challenge}, headers=_headers())
     assert late.status_code == 200 and late.json()["resend_in"] == 60 and late.json()["test_code"] == "123456"
 
 
 def test_resend_for_an_unknown_challenge_is_expired(catalog):
-    response = client.post("/book/resend", data={"challenge": "nope"})
+    response = client.post("/book/resend", data={"challenge": "nope"}, headers=_headers())
     assert response.status_code == 410 and response.json()["code"] == "expired"
 
 
@@ -289,7 +307,7 @@ def test_one_email_address_cannot_be_flooded_with_codes(catalog, monkeypatch):
 def test_the_ip_limit_also_covers_resend(catalog, monkeypatch):
     challenge = start().json()["challenge"]
     monkeypatch.setattr(bookings_route, "limiter", RateLimiter(max_hits=1, window_seconds=600))
-    assert client.post("/book/resend", data={"challenge": challenge}).status_code == 429
+    assert client.post("/book/resend", data={"challenge": challenge}, headers=_headers()).status_code == 429
 
 
 def test_the_fixed_code_never_appears_outside_simulated_mode(catalog, monkeypatch):
@@ -433,7 +451,7 @@ def pending_booking(catalog) -> str:
 
 def test_approving_a_booking_emails_the_customer(catalog, approvals):
     booking_id = pending_booking(catalog)
-    assert client.post(f"/admin/bookings/{booking_id}/status", data={"status": "approved"}, follow_redirects=False).status_code == 303
+    assert _admin_post(f"/admin/bookings/{booking_id}/status", {"status": "approved"}, follow_redirects=False).status_code == 303
     ((to, subject, body),) = approvals
     assert to == "ana@example.com" and "approved" in subject and "BLESS-" in subject
     assert "Ana Reyes" in body and "Family SUV" in body and "0966 053 4280" in body
@@ -441,14 +459,14 @@ def test_approving_a_booking_emails_the_customer(catalog, approvals):
 
 def test_other_status_changes_send_nothing(catalog, approvals):
     booking_id = pending_booking(catalog)
-    client.post(f"/admin/bookings/{booking_id}/status", data={"status": "rejected"})
+    _admin_post(f"/admin/bookings/{booking_id}/status", {"status": "rejected"})
     assert approvals == []
 
 
 def test_a_booking_without_an_email_is_approved_without_sending(catalog, approvals):
     add_booking("pending", 20, 21)
     booking_id = next(iter(catalog.data["bookings"]))
-    assert client.post(f"/admin/bookings/{booking_id}/status", data={"status": "approved"}, follow_redirects=False).status_code == 303
+    assert _admin_post(f"/admin/bookings/{booking_id}/status", {"status": "approved"}, follow_redirects=False).status_code == 303
     assert approvals == [] and catalog.data["bookings"][booking_id]["status"] == "approved"
 
 
@@ -457,14 +475,14 @@ def test_a_failing_email_never_blocks_the_approval(catalog, monkeypatch):
         raise RuntimeError("resend is down")
     monkeypatch.setattr(mailer, "send_resend", explode)
     booking_id = pending_booking(catalog)
-    response = client.post(f"/admin/bookings/{booking_id}/status", data={"status": "approved"}, follow_redirects=False)
+    response = _admin_post(f"/admin/bookings/{booking_id}/status", {"status": "approved"}, follow_redirects=False)
     assert response.status_code == 303 and catalog.data["bookings"][booking_id]["status"] == "approved"
 
 
 def test_the_approval_email_for_a_tour_shows_its_dates(catalog, approvals):
     verify(start(tour_request(end_date=when(12)), "/book/tour").json()["challenge"])
     booking_id = next(iter(catalog.data["bookings"]))
-    client.post(f"/admin/bookings/{booking_id}/status", data={"status": "approved"})
+    _admin_post(f"/admin/bookings/{booking_id}/status", {"status": "approved"})
     (_, subject, body), = approvals
     assert "Island Day Tour" in body and " to " in body
 

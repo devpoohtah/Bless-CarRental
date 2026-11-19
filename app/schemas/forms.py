@@ -8,7 +8,7 @@ import bleach
 from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
 
 from app.schemas.booking import DriverOption, PaymentStatus
-from app.schemas.catalog import Availability
+from app.schemas.catalog import TRANSMISSIONS, VEHICLE_TYPES, Availability, canonical_choice
 
 
 # Bleach config: strip all HTML tags, keep only plain text
@@ -39,6 +39,28 @@ class CarInput(BaseModel):
     transmission: str | None = Field(default=None, max_length=40)
     daily_rate_php: int | None = Field(default=None, ge=0, le=10_000_000)
     availability: Availability = "inquire"
+
+    # The form offers dropdowns, but a post can say anything: only the listed choices are saved,
+    # always spelled the same way ("suv" is saved as "SUV").
+    @field_validator("vehicle_type", mode="before")
+    @classmethod
+    def _vehicle_type_from_list(cls, value):
+        if not isinstance(value, str):
+            return value  # blank: reported as required
+        chosen = canonical_choice(value, VEHICLE_TYPES)
+        if chosen is None:
+            raise ValueError("must be one of: " + ", ".join(VEHICLE_TYPES))
+        return chosen
+
+    @field_validator("transmission", mode="before")
+    @classmethod
+    def _transmission_from_list(cls, value):
+        if not isinstance(value, str):
+            return value  # blank: the transmission is optional
+        chosen = canonical_choice(value, TRANSMISSIONS)
+        if chosen is None:
+            raise ValueError("must be one of: " + ", ".join(TRANSMISSIONS))
+        return chosen
 
 
 class TourInput(BaseModel):

@@ -11,7 +11,7 @@ from dataclasses import replace
 
 client = TestClient(app)
 
-ALLOWED = {"email": "owner@example.com", "email_verified": True, "uid": "u1"}
+ALLOWED = {"email": "owner@example.com", "email_verified": True, "uid": "u1", "admin": True}
 
 
 @pytest.fixture
@@ -88,9 +88,9 @@ def test_allowlist_ignores_case_and_blank_entries(monkeypatch):
     monkeypatch.setenv("ADMIN_EMAILS", " Owner@Example.com, ,second@example.com ,")
     assert config._admin_emails() == frozenset({"owner@example.com", "second@example.com"})
     monkeypatch.setattr(config, "integrations", replace(config.integrations, admin_emails=config._admin_emails()))
-    assert auth.is_allowed({"email": "OWNER@example.com", "email_verified": True})
+    assert auth.is_allowed({"email": "OWNER@example.com", "email_verified": True, "admin": True})
     assert not auth.is_allowed({"email": "owner@example.com"})  # no email_verified claim
-    assert not auth.is_allowed({})
+    assert not auth.is_allowed({})  # no admin claim
 
 
 def test_session_is_created_for_an_allowed_account_with_a_hardened_cookie(firebase_auth):
@@ -109,13 +109,14 @@ def test_session_is_refused_for_accounts_off_the_list_or_unverified(firebase_aut
     assert client.post("/admin/session", json={"id_token": "t"}).status_code == 403
 
 
-def test_session_rejects_a_bad_token_and_non_json_posts(firebase_auth, monkeypatch):
+def test_session_rejects_a_bad_token(firebase_auth, monkeypatch):
     def reject(token):
         raise ValueError("bad token")
     monkeypatch.setattr(auth.fb_auth, "verify_id_token", reject)
+    # JSON still works (for backward compat) but fails with bad token
     assert client.post("/admin/session", json={"id_token": "t"}).status_code == 401
-    # A cross-site HTML form cannot send JSON, so it cannot create a session.
-    assert client.post("/admin/session", data={"id_token": "t"}).status_code == 422
+    # Form with bad token also fails (now accepts form data with Turnstile + CSRF)
+    assert client.post("/admin/session", data={"id_token": "t"}).status_code == 401
 
 
 def test_empty_allowlist_lets_nobody_in(firebase_auth, monkeypatch):

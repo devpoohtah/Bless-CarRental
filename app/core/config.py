@@ -49,6 +49,15 @@ def _env(name: str) -> str:
     return os.environ.get(name, "").strip()
 
 
+def _ngrok_url() -> str:
+    """Read the ngrok URL written by dev.py, so it survives uvicorn --reload child restarts."""
+    path = PROJECT_ROOT / ".ngrok_url"
+    try:
+        return path.read_text().strip()
+    except OSError:
+        return ""
+
+
 def _admin_emails() -> frozenset[str]:
     return frozenset(e.strip().lower() for e in _env("ADMIN_EMAILS").split(",") if e.strip())
 
@@ -78,8 +87,8 @@ class Integrations:
     telegram_bot_token: str = field(default_factory=lambda: _env("TELEGRAM_BOT_TOKEN"))
     telegram_chat_id: str = field(default_factory=lambda: _env("TELEGRAM_CHAT_ID"))
     # Public address of this site, for the link in an alert (for example https://example.com).
-    # Unset means alerts carry no link.
-    admin_base_url: str = field(default_factory=lambda: _env("ADMIN_BASE_URL").rstrip("/"))
+    # Unset means alerts carry no link. Falls back to .ngrok_url file written by dev.py.
+    admin_base_url: str = field(default_factory=lambda: (_env("ADMIN_BASE_URL") or _ngrok_url()).rstrip("/"))
     # How the booking verification code is delivered: "gmail", "resend" or "simulated" (fixed test
     # code 123456, no email sent). Unset picks "gmail" when its credentials exist, else nothing.
     otp_delivery: str = field(default_factory=lambda: _env("OTP_DELIVERY").lower())

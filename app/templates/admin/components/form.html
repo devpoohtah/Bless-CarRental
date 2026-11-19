@@ -14,14 +14,16 @@
 </div>
 {% endmacro %}
 
-{% macro select(id, label, options, selected, disabled=False) %}
+{% macro select(id, label, options, selected, disabled=False, required=False, placeholder='', hint='') %}
 <div class="field">
-  <label for="{{ id }}">{{ label }}</label>
-  <select id="{{ id }}" name="{{ id }}"{% if disabled %} disabled{% endif %}>
+  <label for="{{ id }}">{{ label }}{% if required %} <span class="field__req" aria-hidden="true">*</span>{% endif %}</label>
+  <select id="{{ id }}" name="{{ id }}"{% if disabled %} disabled{% endif %}{% if required %} required{% endif %}{% if hint %} aria-describedby="{{ id }}-hint"{% endif %}>
+    {% if placeholder %}<option value=""{% if not selected %} selected{% endif %}>{{ placeholder }}</option>{% endif %}
     {% for value, text in options %}
     <option value="{{ value }}"{% if value == selected %} selected{% endif %}>{{ text }}</option>
     {% endfor %}
   </select>
+  {% if hint %}<p class="field__hint" id="{{ id }}-hint">{{ hint }}</p>{% endif %}
 </div>
 {% endmacro %}
 

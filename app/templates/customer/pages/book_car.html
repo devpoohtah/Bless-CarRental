@@ -62,7 +62,7 @@
     {{ calendar('Click the first day, then the last day. For a one-day rental, click the same day twice.') }}
     <div class="field">
       <label for="bk-start">Booking date</label>
-      <input id="bk-start" name="start_date" type="date" min="{{ today_iso }}" required>
+      <input id="bk-start" name="start_date" type="date" min="{{ today_iso }}" max="{{ max_date_iso }}" required>
     </div>
     <div class="field">
       <label for="bk-start-time">Booking time (optional)</label>
@@ -70,7 +70,7 @@
     </div>
     <div class="field">
       <label for="bk-end">Return date</label>
-      <input id="bk-end" name="end_date" type="date" min="{{ today_iso }}" required>
+      <input id="bk-end" name="end_date" type="date" min="{{ today_iso }}" max="{{ max_date_iso }}" required>
     </div>
     <div class="field">
       <label for="bk-end-time">Return time (optional)</label>

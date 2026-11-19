@@ -46,7 +46,7 @@
         <li class="legend__type">{{ icon('compass', 'icon icon--sm') }} Tour booking</li>
       </ul>
       <button type="button" class="legend-group__info" aria-label="About the legend" aria-describedby="legend-tip">{{ icon('info', 'icon') }}</button>
-      <p class="legend-group__tip" id="legend-tip" role="tooltip">The color shows the status: pending is dashed amber, approved is navy and ongoing is teal. The icon shows a car rental or a tour. Hover a booking for its full dates and times, or click it to open the booking.</p>
+      <p class="legend-group__tip" id="legend-tip" role="tooltip">The color shows the status: pending is dashed amber, approved is navy and ongoing is teal. The icon shows a car rental or a tour. Click a day to see all of its bookings, and open one from there. Hover a booking for its full dates and times.</p>
     </div>
   </div>
 
@@ -72,25 +72,28 @@
         {% for week in weeks %}
         <tr>
           {% for cell in week %}
-          <td class="calendar__day{{ ' is-outside' if not cell.in_month }}{{ ' is-today' if cell.is_today }}">
-            <div class="calendar__head">
-              <span class="calendar__date"><span class="sr-only">{{ cell.date | long_date }}{{ ' (today)' if cell.is_today }}{{ ', ' ~ cell.bookings | length ~ (' booking' if cell.bookings | length == 1 else ' bookings') if cell.bookings }}</span><span aria-hidden="true">{{ cell.date.day }}</span></span>
-              {% if cell.bookings %}<span class="calendar__count" aria-hidden="true">{{ cell.bookings | length }}</span>{% endif %}
-            </div>
-            {% if cell.bookings %}
-            <ul class="calendar__list">
+          {% set count = cell.bookings | length %}
+          <td class="calendar__day{{ ' is-outside' if not cell.in_month }}{{ ' is-today' if cell.is_today }}{{ ' has-bookings' if count }}"{% if count %} data-day-dialog="day-{{ cell.date.isoformat() }}"{% endif %}>
+            {# A day with bookings is one control: the button below is what keyboards and screen readers use, and
+               clicking anywhere in the cell does the same (admin.js). The chips only show; they do not navigate. #}
+            {% if count %}
+            <button type="button" class="calendar__head calendar__open" aria-haspopup="dialog" aria-controls="day-{{ cell.date.isoformat() }}">
+              <span class="calendar__date"><span class="sr-only">{{ cell.date | long_date }}{{ ' (today)' if cell.is_today }}, {{ count }}{{ ' booking' if count == 1 else ' bookings' }}. Open the day.</span><span aria-hidden="true">{{ cell.date.day }}</span></span>
+              <span class="calendar__count" aria-hidden="true">{{ count }}</span>
+            </button>
+            <ul class="calendar__list" aria-hidden="true">
               {% for b in cell.bookings[:2] %}
-              <li><a class="chip chip--{{ b.status }}{{ shape(b, cell.date) }}" href="/admin/bookings/{{ b.id }}" title="{{ tip(b) }}">
-                <span class="chip__when">{{ chip_icon(b) }}{{ stage(b, cell.date) }}</span>
-                <span class="chip__text">{{ b.customer_name }}</span>
-                <span class="chip__sub">{{ b.item_name }}</span>
-                <span class="sr-only">, {{ type_labels[b.booking_type] }}, {{ status_labels[b.status] }}</span>
-              </a></li>
+              <li><span class="chip chip--{{ b.status }}{{ shape(b, cell.date) }}" title="{{ tip(b) }}">
+                <span class="chip__when">{{ chip_icon(b) }}<span class="chip__stage">{{ stage(b, cell.date) }}</span></span>
+                <span class="chip__text"><strong>{{ b.customer_name }}</strong> <span class="chip__sub">{{ b.item_name }}</span></span>
+              </span></li>
               {% endfor %}
-              {% if cell.bookings | length > 2 %}
-              <li><button type="button" class="calendar__more" data-day-open="day-{{ cell.date.isoformat() }}">+{{ cell.bookings | length - 2 }} more<span class="sr-only"> on {{ cell.date | long_date }}</span></button></li>
-              {% endif %}
+              {% if count > 2 %}<li><span class="calendar__more">+{{ count - 2 }} more</span></li>{% endif %}
             </ul>
+            {% else %}
+            <div class="calendar__head">
+              <span class="calendar__date"><span class="sr-only">{{ cell.date | long_date }}{{ ' (today)' if cell.is_today }}</span><span aria-hidden="true">{{ cell.date.day }}</span></span>
+            </div>
             {% endif %}
           </td>
           {% endfor %}
@@ -100,16 +103,23 @@
     </table>
   </div>
 
-  {# One list per busy day, opened by its "+N more" button. Every item opens the booking. #}
-  {% for week in weeks %}{% for cell in week %}{% if cell.bookings | length > 2 %}
+  {# One dialog per day with bookings, opened by clicking that day. Every item opens its booking. #}
+  {% for week in weeks %}{% for cell in week %}{% if cell.bookings %}
+  {% set count = cell.bookings | length %}
   <dialog id="day-{{ cell.date.isoformat() }}" class="day-dialog" aria-labelledby="day-{{ cell.date.isoformat() }}-title">
     <div class="day-dialog__body">
       <h3 id="day-{{ cell.date.isoformat() }}-title">{{ cell.date | long_date }}</h3>
+      <p class="day-dialog__count">{{ count }} {{ 'booking' if count == 1 else 'bookings' }}</p>
       <ul class="agenda__list">
         {% for b in cell.bookings %}
         <li><a class="agenda__item" href="/admin/bookings/{{ b.id }}">
           {{ chip_icon(b) }}
-          <span class="agenda__main"><strong>{{ b.customer_name }}</strong><span class="cell-sub">{{ b.item_name }} &middot; {{ stage(b, cell.date) }}</span></span>
+          <span class="agenda__main">
+            <strong>{{ b.customer_name }}</strong>
+            <span class="cell-sub">{{ b.item_name }} &middot; {{ type_labels[b.booking_type] }} &middot; {{ stage(b, cell.date) }}</span>
+            <span class="cell-sub">{{ 'Pick-up' if b.booking_type == 'car' else 'Starts' }}: {{ b.start_date | date_time(b.start_time) }}</span>
+            <span class="cell-sub">{{ 'Return' if b.booking_type == 'car' else 'Ends' }}: {{ b.end_date | date_time(b.end_time) }}</span>
+          </span>
           <span class="chip chip--{{ b.status }}">{{ status_labels[b.status] }}</span>
         </a></li>
         {% endfor %}

@@ -12,13 +12,13 @@
   <div class="container">
     {% if vehicles %}
     {# Text on the left, photo on the right. Swiping the photos or using the buttons changes the details beside them. #}
-    <div class="vcar" data-vcar role="group" aria-roledescription="carousel" aria-label="Vehicles for rent">
+    <div class="vcar" data-vcar role="region" aria-roledescription="carousel" aria-label="Car rental options">
       {{ car_head() }}
       <div class="vcar__infos" aria-live="polite">
         {% for v in vehicles %}{{ vehicle_info(v, loop.first) }}{% endfor %}
       </div>
       <div class="vcar__media">
-        <div class="vcar__track" data-vcar-track>
+        <div class="vcar__track" data-vcar-track role="list">
           {% for v in vehicles %}{{ vehicle_stage(v, loop.index, loop.length) }}{% endfor %}
         </div>
         {% if vehicles | length > 1 %}

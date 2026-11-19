@@ -15,6 +15,9 @@
   <link rel="stylesheet" href="{{ static_url('shared/css/buttons.css') }}">
   <link rel="stylesheet" href="{{ static_url('shared/css/loading.css') }}">
   <link rel="stylesheet" href="{{ static_url('admin/css/admin.css') }}">
+  {% if turnstile_site_key %}
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+  {% endif %}
 </head>
 <body>
   <main id="main" class="login">
@@ -32,8 +35,9 @@
       <p id="login-status" class="sr-only" role="status"></p>
       <button type="button" class="btn btn--outline btn--block" id="google-signin" data-busy-label="Signing in…">Continue with Google</button>
       <p class="login__or">or sign in with email</p>
-      <form class="form" id="password-form">
+      <form class="form" id="password-form" action="/admin/session" method="post">
         <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <input type="hidden" name="cf-turnstile-response" id="cf-turnstile-response" autocomplete="off">
         <div class="field">
           <label for="email">Email</label>
           <input id="email" name="email" type="email" autocomplete="username" required>
@@ -42,6 +46,19 @@
           <label for="password">Password</label>
           <input id="password" name="password" type="password" autocomplete="current-password" required>
         </div>
+        {% if turnstile_site_key %}
+        <div class="field" style="margin-top: .5rem;">
+          <label for="cf-turnstile-response" class="sr-only">Security verification</label>
+          <div class="cf-turnstile"
+               data-sitekey="{{ turnstile_site_key }}"
+               data-theme="light"
+               data-callback="onTurnstileSuccess"
+               data-error-callback="onTurnstileError"
+               data-expired-callback="onTurnstileExpired"
+               data-retry="auto"
+               data-retry-interval="8000"></div>
+        </div>
+        {% endif %}
         <button type="submit" class="btn btn--primary btn--block" data-busy-label="Signing in…">Sign in</button>
       </form>
       {# Public Firebase web config (not secrets), read by login.js. tojson escapes it safely. #}

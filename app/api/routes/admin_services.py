@@ -6,6 +6,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from app.core.auth import require_admin
 from app.core.templating import notice_for, templates
 from app.db.firebase import require_configured
+from app.schemas.catalog import TRANSMISSIONS, VEHICLE_TYPES, canonical_choice
 from app.schemas.forms import CarInput, TourInput, validate
 from app.services import admin as service
 from app.services.errors import FormError
@@ -19,12 +20,22 @@ TOUR_FIELDS = ("name", "destination", "duration", "summary", "description", "pri
 
 def render(request: Request, template: str, active_nav: str, status_code: int = 200, **context) -> HTMLResponse:
     context |= {"active_nav": active_nav, "availability_labels": service.AVAILABILITY_LABELS,
-                "notice": notice_for(request), "errors": context.get("errors", [])}
+                "vehicle_options": [(v, v) for v in VEHICLE_TYPES],
+                "transmission_options": [(t, t) for t in TRANSMISSIONS], "notice": notice_for(request), "errors": context.get("errors", [])}
     return templates.TemplateResponse(request, f"admin/pages/{template}", context, status_code=status_code)
 
 
 def _values(item, fields) -> dict:
     return {name: getattr(item, name) for name in fields}
+
+
+def _car_values(car) -> dict:
+    """What the edit form starts with. Older records ("Suv", "Automatic") map to the dropdown's choices;
+    a value that matches none is left blank so the admin must choose one."""
+    values = _values(car, CAR_FIELDS)
+    values["vehicle_type"] = canonical_choice(car.vehicle_type, VEHICLE_TYPES) or ""
+    values["transmission"] = canonical_choice(car.transmission, TRANSMISSIONS) or ""
+    return values
 
 
 def _run(model, raw: dict, action) -> list[str]:
@@ -91,7 +102,7 @@ def car_create(
 @router.get("/cars/{car_id}/edit", response_class=HTMLResponse)
 def car_edit(request: Request, car_id: str) -> HTMLResponse:
     car = _car_or_404(car_id)
-    return render(request, "car_form.html", "cars", car=car, form=_values(car, CAR_FIELDS))
+    return render(request, "car_form.html", "cars", car=car, form=_car_values(car))
 
 
 @router.post("/cars/{car_id}/edit")

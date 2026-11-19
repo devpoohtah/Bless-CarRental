@@ -106,7 +106,9 @@ def test_calendar_shows_only_scheduled_statuses():
 def test_calendar_marks_pending_and_approved_differently():
     html = client.get("/admin/calendar").text
     assert "chip chip--pending" in html and "chip chip--approved" in html
-    assert ", Car rental, Approved" in html and ", Car rental, Pending" in html  # words for screen readers
+    # The grid is for looking; the words for screen readers (type and status) are in the day's list.
+    dialogs = " ".join(html.split("<dialog")[1:])
+    assert "Car rental" in dialogs and ">Approved</span>" in dialogs and ">Pending</span>" in dialogs
 
 
 def test_multi_day_booking_appears_on_every_day():
@@ -198,13 +200,29 @@ def test_calendar_legend_group_and_chip_details():
     assert "Pick-up: " in html or "Starts: " in html  # the hover text carries the full date and time
 
 
-def test_a_busy_day_shows_two_bookings_and_a_more_button_that_lists_them_all(monkeypatch):
+def test_a_busy_day_shows_two_bookings_and_opens_a_list_of_them_all(monkeypatch):
     from datetime import timedelta
     base = service.get_booking("sample-3")
     day = TODAY + timedelta(days=1)
     copies = [base.model_copy(update={"id": f"busy-{n}", "start_date": day, "end_date": day, "customer_name": f"Guest {n}"}) for n in range(4)]
     monkeypatch.setattr(service, "list_bookings", lambda: copies)
     html = client.get(f"/admin/calendar?month={day:%Y-%m}").text
-    assert "+2 more" in html and f'data-day-open="day-{day.isoformat()}"' in html
+    cell = html.split(f'data-day-dialog="day-{day.isoformat()}"')[1].split("</td>")[0]
+    assert cell.count('class="chip chip--') == 2 and "+2 more" in cell  # two chips, the rest collapse
+    assert 'aria-haspopup="dialog"' in cell and f'aria-controls="day-{day.isoformat()}"' in cell
+    assert "<a " not in cell  # clicking a day opens the list: the chips no longer go straight to a booking
     dialog = html.split(f'<dialog id="day-{day.isoformat()}"')[1].split("</dialog>")[0]
-    assert all(f"Guest {n}" in dialog for n in range(4))
+    assert all(f"Guest {n}" in dialog and f'href="/admin/bookings/busy-{n}"' in dialog for n in range(4))
+    assert "4 bookings" in dialog
+
+
+def test_every_day_with_bookings_opens_a_dialog_even_a_quiet_one(monkeypatch):
+    from datetime import timedelta
+    base = service.get_booking("sample-3")
+    day = TODAY + timedelta(days=1)
+    monkeypatch.setattr(service, "list_bookings", lambda: [base.model_copy(update={"id": "solo", "start_date": day, "end_date": day})])
+    html = client.get(f"/admin/calendar?month={day:%Y-%m}").text
+    cell = html.split(f'data-day-dialog="day-{day.isoformat()}"')[1].split("</td>")[0]
+    assert "more" not in cell  # one booking: no "+N more"
+    assert "1 booking<" in html.split(f'<dialog id="day-{day.isoformat()}"')[1]
+    assert html.count("data-day-dialog=") == 1 and html.count("<dialog") == 1  # empty days are plain cells

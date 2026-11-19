@@ -30,6 +30,7 @@
   const syncCollapse = () => {
     const collapsed = root.dataset.sidebar === "collapsed";
     collapseButton.setAttribute("aria-expanded", String(!collapsed));
+    collapseButton.setAttribute("aria-label", collapsed ? "Expand sidebar" : "Collapse sidebar");
     collapseButton.title = collapsed ? "Expand sidebar" : "Collapse sidebar";
     label.textContent = collapsed ? "Expand" : "Collapse";
   };
@@ -61,6 +62,7 @@ document.addEventListener("click", async (event) => {
       focusCancel: true,
       buttonsStyling: false,
       customClass: { confirmButton: "btn btn--primary", cancelButton: "btn btn--outline" },
+      didClose: () => button.focus(),
     });
     confirmed = result.isConfirmed;
   } else {
@@ -250,9 +252,14 @@ document.addEventListener("submit", (event) => {
   setInterval(tick, 15000);
 })();
 
-// "+N more" on a calendar day opens that day's full list of bookings. Clicking outside the list closes it.
+// Clicking a calendar day that has bookings opens that day's full list (a dialog; Esc closes it).
+// Clicking outside the list closes it too. The day's button gives keyboards the same thing: its click
+// bubbles up to the cell.
 document.addEventListener("click", (event) => {
-  const opener = event.target.closest("[data-day-open]");
-  if (opener) document.getElementById(opener.dataset.dayOpen)?.showModal();
-  else if (event.target.matches("dialog.day-dialog")) event.target.close();
+  const day = event.target.closest("[data-day-dialog]");
+  if (day) {
+    const dialog = document.getElementById(day.dataset.dayDialog);
+    dialog?.showModal();
+    dialog?.querySelector(".day-dialog__close")?.focus();
+  } else if (event.target.matches("dialog.day-dialog")) event.target.close();
 });

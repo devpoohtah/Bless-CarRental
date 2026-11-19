@@ -432,3 +432,48 @@ def test_the_remove_checkbox_only_appears_for_an_uploaded_image(fake_db, uploads
     _post_with_csrf(f"/admin/services/cars/{car_id}/edit", CAR, files={"image": ("a.jpg", b"x", "image/jpeg")})
     html = client.get(f"/admin/services/cars/{car_id}/edit").text
     assert 'name="remove_image" type="checkbox"' in html and "data-image-preview" in html
+
+
+# ---- car form dropdowns ----
+def _options(html: str, field: str) -> list[tuple[str, bool]]:
+    """(value, selected) for every option of one <select>."""
+    block = re.search(rf'<select id="{field}".*?</select>', html, re.S).group(0)
+    return [(m.group(1), "selected" in m.group(0)) for m in re.finditer(r'<option value="([^"]*)"[^>]*>', block)]
+
+
+def test_the_car_form_offers_dropdowns_for_type_and_transmission():
+    html = client.get("/admin/services/cars/new").text
+    assert _options(html, "vehicle_type") == [("", True), ("SUV", False), ("Van", False), ("Sedan", False)]
+    assert _options(html, "transmission") == [("", True), ("A/T", False), ("M/T", False)]
+    assert re.search(r'<select id="vehicle_type"[^>]* required', html)
+    assert not re.search(r'<select id="transmission"[^>]* required', html)  # optional
+    assert '<input id="vehicle_type"' not in html and '<input id="transmission"' not in html
+
+
+def test_editing_an_older_record_preselects_its_choices(fake_db):
+    # Saved before the dropdowns existed: "Suv" and "A/T" as typed, and "Automatic" spelled out.
+    fake_db.data["cars"] = {"old-1": {**CAR, "vehicle_type": "Suv", "transmission": "A/T", "seats": 5, "daily_rate_php": 1, "is_sample": False,
+                                      "photo": {"src": "customer/img/vehicles/vehicle-compact-sedan-placeholder.svg", "alt": "Car"}},
+                            "old-2": {**CAR, "vehicle_type": "Pickup", "transmission": "Automatic", "seats": 5, "daily_rate_php": 1, "is_sample": False,
+                                      "photo": {"src": "customer/img/vehicles/vehicle-compact-sedan-placeholder.svg", "alt": "Car"}}}
+    one = client.get("/admin/services/cars/old-1/edit").text
+    assert ("SUV", True) in _options(one, "vehicle_type") and ("A/T", True) in _options(one, "transmission")
+    two = client.get("/admin/services/cars/old-2/edit").text
+    assert ("", True) in _options(two, "vehicle_type")  # "Pickup" is not on the list: the admin must choose
+    assert ("A/T", True) in _options(two, "transmission")
+
+
+def test_only_listed_values_are_saved_and_spelling_is_normalised(fake_db, uploads):
+    _post_with_csrf("/admin/services/cars/new", CAR | {"vehicle_type": "suv", "transmission": "m/t"})
+    doc = fake_db.data["cars"][only_id(fake_db, "cars")]
+    assert doc["vehicle_type"] == "SUV" and doc["transmission"] == "M/T"
+
+    bad = _post_with_csrf("/admin/services/cars/new", CAR | {"vehicle_type": "Spaceship"})
+    assert bad.status_code == 422 and "Vehicle type must be one of: SUV, Van, Sedan." in bad.text
+    bad = _post_with_csrf("/admin/services/cars/new", CAR | {"transmission": "CVT"})
+    assert bad.status_code == 422 and "Transmission must be one of: A/T, M/T." in bad.text
+    assert _post_with_csrf("/admin/services/cars/new", CAR | {"vehicle_type": ""}).status_code == 422
+    assert len(fake_db.data["cars"]) == 1  # nothing else was saved
+
+    _post_with_csrf("/admin/services/cars/new", CAR | {"name": "No gearbox", "transmission": ""})
+    assert any(d["name"] == "No gearbox" and d["transmission"] is None for d in fake_db.data["cars"].values())

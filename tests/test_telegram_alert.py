@@ -5,7 +5,7 @@ import json
 import logging
 import urllib.error
 from dataclasses import replace
-from datetime import date
+from datetime import date, datetime, time, timezone
 
 import pytest
 from fastapi.testclient import TestClient
@@ -26,6 +26,14 @@ pytestmark = pytest.mark.usefixtures("simulated_otp")
 TOKEN = "123456:SECRET-TOKEN-VALUE"
 CHAT = "-5579257273"
 PHOTO = Photo(src="customer/img/vehicles/vehicle-compact-sedan-placeholder.svg", alt="A car")
+
+
+def _post_with_csrf(url: str, data: dict):
+    """Helper to POST with CSRF token from the cookie."""
+    client.get(url.replace("/edit", "").replace("/delete", "").replace("/new", ""))
+    csrf_token = client.cookies.get("csrf_token", "")
+    headers = {"X-CSRF-Token": csrf_token}
+    return client.post(url, data=data, headers=headers)
 
 
 def car_booking(**changes) -> Booking:
@@ -73,6 +81,21 @@ def test_a_car_alert_has_everything_the_caller_needs():
                      "Trip: 4 passengers, with a driver", "Meet-up: Hotel in Iloilo City", "Notes: Child seat please.",
                      "Open: https://bless.example/admin/bookings/abc123", 'Reply "Calling now"'):
         assert expected in text, expected
+
+
+def test_the_alert_says_when_it_was_sent_in_philippine_time_whatever_the_server_zone():
+    # 00:27 UTC is 8:27 AM in Iloilo.
+    text = notify.booking_alert_text(car_booking(), sent_at=datetime(2026, 11, 18, 0, 27, tzinfo=timezone.utc))
+    assert text.splitlines()[1] == "Sent: Nov 18, 2026 - 8:27 AM"
+    # 17:05 UTC is already the next morning there.
+    late = notify.booking_alert_text(car_booking(), sent_at=datetime(2026, 11, 18, 17, 5, tzinfo=timezone.utc))
+    assert "Sent: Nov 19, 2026 - 1:05 AM" in late
+    assert notify.booking_alert_text(car_booking()).splitlines()[1].startswith("Sent: ")  # defaults to now
+
+
+def test_a_car_alert_shows_pickup_and_return_times_when_given():
+    text = notify.booking_alert_text(car_booking(start_time=time(9, 0), end_time=time(17, 30)))
+    assert "Pick-up: Mar 4, 2027 - 9:00 AM" in text and "Return: Mar 6, 2027 - 5:30 PM" in text
 
 
 def test_a_tour_alert_shows_the_dates_and_guests():
@@ -188,6 +211,6 @@ def test_the_booking_is_saved_and_the_customer_told_even_if_the_alert_blows_up(c
 
 
 def test_admin_added_bookings_do_not_alert(catalog, alerts):
-    client.post("/admin/bookings/new", data={"item": "car:Family SUV", "customer_name": "Walk In", "customer_phone": "09171234567",
+    _post_with_csrf("/admin/bookings/new", {"item": "car:Family SUV", "customer_name": "Walk In", "customer_phone": "09171234567",
                                              "start_date": when(3), "end_date": when(4)})
     assert len(catalog.data["bookings"]) == 1 and alerts == []

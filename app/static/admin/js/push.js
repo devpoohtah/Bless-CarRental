@@ -4,7 +4,10 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
 import { getMessaging, getToken, isSupported } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-messaging.js";
 
-const SW_URL = "/static/admin/js/push-sw.js";
+// Served from the site root (see main.py) so its scope can be the whole admin area.
+const SW_URL = "/service-worker.js";
+const SW_SCOPE = "/admin/";
+const OLD_SW_SCOPE = "/static/admin/js/"; // where the worker lived before: its registration would double every alert
 const STORAGE_KEY = "admin-push";
 const RESEND_AFTER_MS = 24 * 60 * 60 * 1000;
 const button = document.querySelector("[data-push-toggle]");
@@ -18,8 +21,7 @@ function show(text, { enabled = false, hint = "" } = {}) {
   button.hidden = false;
 }
 
-// The worker lives under /static/, outside the admin pages' scope, so navigator.serviceWorker.ready
-// would never resolve for these pages. Wait for this registration itself.
+// Wait for this registration to be active before asking for a token.
 async function activated(registration) {
   const worker = registration.installing || registration.waiting || registration.active;
   if (!worker || worker.state === "activated") return;
@@ -31,7 +33,12 @@ function remembered() {
 }
 
 async function subscribe() {
-  const registration = await navigator.serviceWorker.register(SW_URL);
+  // Drop the old registration, if this browser has one. Its push subscription then ends, and the server
+  // removes that dead token the next time it sends.
+  for (const old of await navigator.serviceWorker.getRegistrations()) {
+    if (new URL(old.scope).pathname === OLD_SW_SCOPE) await old.unregister();
+  }
+  const registration = await navigator.serviceWorker.register(SW_URL, { scope: SW_SCOPE });
   await activated(registration);
   const messaging = getMessaging(initializeApp(config.firebase, "push"));
   const token = await getToken(messaging, { vapidKey: config.vapidKey, serviceWorkerRegistration: registration });
@@ -40,7 +47,9 @@ async function subscribe() {
   const saved = remembered();
   if (saved.token !== token || Date.now() - (saved.at || 0) > RESEND_AFTER_MS) {
     const response = await fetch("/admin/push/register", {
-      method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin",
+      method: "POST", credentials: "same-origin",
+      // The CSRF cookie is not readable from script, so the page carries the token (admin/base.html).
+      headers: { "Content-Type": "application/json", "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]')?.content || "" },
       body: JSON.stringify({ token }),
     });
     if (!response.ok) throw new Error(`register ${response.status}`);

@@ -17,4 +17,7 @@ secrets/
 #dev testing
 dev.py
 
+# scripts
+scripts/
+
 .claude

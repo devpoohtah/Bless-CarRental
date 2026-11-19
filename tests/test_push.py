@@ -2,6 +2,8 @@
 
 from dataclasses import replace
 
+import re
+
 import pytest
 from fastapi.testclient import TestClient
 from firebase_admin import exceptions, messaging
@@ -175,8 +177,21 @@ def test_no_alert_settings_without_the_vapid_key_or_the_database(monkeypatch, fa
     assert config.integrations.push_web_config is None
 
 
-def test_the_service_worker_is_served_and_only_opens_admin_pages():
-    response = client.get("/static/admin/js/push-sw.js")
+def test_the_service_worker_is_served_from_the_site_root_and_only_opens_admin_pages():
+    response = client.get("/service-worker.js")
     assert response.status_code == 200 and "javascript" in response.headers["content-type"]
+    assert response.headers["cache-control"] == "no-cache"
+    assert 'addEventListener("push"' in response.text and 'addEventListener("notificationclick"' in response.text
     assert 'startsWith("/admin/")' in response.text
     assert "importScripts" not in response.text and "gstatic" not in response.text  # no Firebase code inside the worker
+
+
+def test_push_js_registers_the_root_worker_for_the_admin_area_only():
+    js = client.get("/static/admin/js/push.js").text
+    assert 'SW_URL = "/service-worker.js"' in js and "scope: SW_SCOPE" in js and 'SW_SCOPE = "/admin/"' in js
+
+
+def test_the_admin_page_and_push_js_carry_the_csrf_token_to_register():
+    # The CSRF cookie is httponly, so script cannot read it: the page has to hand the token over.
+    assert re.search(r'<meta name="csrf-token" content="[^"]+">', client.get("/admin/dashboard").text)
+    assert '"X-CSRF-Token"' in client.get("/static/admin/js/push.js").text

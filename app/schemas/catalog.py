@@ -5,6 +5,7 @@ These are plain Pydantic models so they can later be read from, and written to, 
 `is_sample=True` marks placeholder content that the business has not confirmed.
 """
 
+import re
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -17,6 +18,24 @@ class Photo(BaseModel):
 
 
 Availability = Literal["inquire", "available", "unavailable"]
+
+# The choices the admin car form offers, and the only values it saves. To offer another vehicle type,
+# add it here: the dropdown and the validation both read this list.
+VEHICLE_TYPES = ("SUV", "Van", "Sedan")
+TRANSMISSIONS = ("A/T", "M/T")
+# Older records and sample content spell the transmission out.
+_ALIASES = {"automatic": "A/T", "manual": "M/T"}
+
+
+def canonical_choice(value: str | None, options: tuple[str, ...]) -> str | None:
+    """The option a typed or stored value stands for, ignoring case, spaces and slashes ("suv" -> "SUV",
+    "AT" -> "A/T", "Automatic" -> "A/T"), or None when it matches no option."""
+    key = re.sub(r"[\s/]", "", value or "").lower()
+    for option in options:
+        if key == re.sub(r"[\s/]", "", option).lower():
+            return option
+    alias = _ALIASES.get(key)
+    return alias if alias in options else None
 
 
 class TourPackage(BaseModel):

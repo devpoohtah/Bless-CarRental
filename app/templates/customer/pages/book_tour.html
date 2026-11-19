@@ -55,11 +55,11 @@
     {{ calendar('Click the tour date. For a tour of several days, click the last day too.') }}
     <div class="field">
       <label for="bk-start">Tour date</label>
-      <input id="bk-start" name="start_date" type="date" min="{{ today_iso }}" required>
+      <input id="bk-start" name="start_date" type="date" min="{{ today_iso }}" max="{{ max_date_iso }}" required>
     </div>
     <div class="field">
       <label for="bk-end">Last day of the tour (optional)</label>
-      <input id="bk-end" name="end_date" type="date" min="{{ today_iso }}">
+      <input id="bk-end" name="end_date" type="date" min="{{ today_iso }}" max="{{ max_date_iso }}">
     </div>
     <div class="field">
       <label for="bk-people">Number of guests</label>
