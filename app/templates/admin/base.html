@@ -19,7 +19,7 @@
   <link rel="stylesheet" href="{{ static_url('shared/css/buttons.css') }}">
   <link rel="stylesheet" href="{{ static_url('shared/css/loading.css') }}">
   <link rel="stylesheet" href="{{ static_url('admin/css/admin.css') }}">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" integrity="sha384-7xYZXj4b8VbqzJv7Lp7q7w7z7x7y7z7x7y7z7x7y7z7x7y7z7x7y7z7x7y7z7" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
   {% block head_extra %}{% endblock %}
 </head>
 <body>
@@ -35,7 +35,7 @@
   </main>
   {% include 'admin/components/skeletons.html' %}
   {# Pinned and integrity-checked. admin.js falls back to the browser dialog if this fails to load. #}
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.js" integrity="sha384-7xYZXj4b8VbqzJv7Lp7q7w7z7x7y7z7x7y7z7x7y7z7x7y7z7x7y7z7x7y7z7" crossorigin="anonymous" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.js" defer></script>
   <script src="{{ static_url('admin/js/admin.js') }}" defer></script>
   {# Firebase config for the pending-badge listener (same config used on login page). #}
   {% if firebase_config %}

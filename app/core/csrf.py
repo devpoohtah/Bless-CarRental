@@ -87,13 +87,11 @@ class CSRFMiddleware(BaseHTTPMiddleware):
             # Check header first (for JS submissions), then form field
             submitted = request.headers.get(CSRF_HEADER_NAME)
             if not submitted and method == "POST":
-                # Parse form without consuming: use cached _form if available, else parse and cache
-                if hasattr(request, "_form") and request._form is not None:
-                    form = request._form
-                else:
-                    form = await request.form()
-                    # Ensure it's cached for downstream handlers
-                    request._form = form
+                # Reading the form consumes the request body, and call_next hands the route a fresh
+                # request, so the route would see an empty form. Reading body() first caches the raw
+                # bytes, which Starlette replays to the route; form() then parses from that cache.
+                await request.body()
+                form = await request.form()
                 submitted = form.get(CSRF_FORM_FIELD)
 
             if not submitted or not secrets.compare_digest(submitted, token):
