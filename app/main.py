@@ -1,4 +1,5 @@
 import logging
+import os
 
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
@@ -15,12 +16,25 @@ from app.db import firebase
 log = logging.getLogger(__name__)
 
 
+def _is_dev() -> bool:
+    """True only when ENVIRONMENT is explicitly development/dev/local. Unset = production."""
+    env = os.environ.get("ENVIRONMENT", "").strip().lower()
+    return env in ("development", "dev", "local")
+
+
 def is_admin_request(request: Request) -> bool:
     return request.url.path.startswith("/admin")
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title=settings.business_name)
+    # API docs only in dev
+    dev = _is_dev()
+    app = FastAPI(
+        title=settings.business_name,
+        docs_url="/docs" if dev else None,
+        redoc_url="/redoc" if dev else None,
+        openapi_url="/openapi.json" if dev else None,
+    )
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
     app.include_router(pages.router)
     app.include_router(bookings.router)

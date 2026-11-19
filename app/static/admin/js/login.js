@@ -16,7 +16,7 @@ const controls = document.querySelectorAll("#google-signin, #password-form butto
 
 // Turnstile callbacks - must be global for implicit rendering
 window.onTurnstileSuccess = () => {
-  // token will be read at submit time via turnstile.getResponse()
+  // token is read when sign-in starts, via turnstile.getResponse()
 };
 window.onTurnstileError = (code) => {
   console.error("[login.js] Turnstile error:", code);
@@ -43,6 +43,12 @@ function showError(message) {
   errorBox.hidden = !message;
 }
 
+// The one place the Turnstile token is read. Empty string if the widget is absent or unsolved.
+function getTurnstileToken() {
+  if (!window.turnstile || !turnstileWidget) return "";
+  try { return window.turnstile.getResponse(turnstileWidget) || ""; } catch (e) { return ""; }
+}
+
 // While a sign-in is running the clicked button shows a spinner and "Signing in…" and everything
 // else is disabled. The clicked button is marked aria-busy instead of disabled so it keeps its look.
 let working = false;
@@ -61,17 +67,20 @@ function busy(state, button) {
   status.textContent = state ? button.dataset.busyLabel : "";
 }
 
-async function finish(user) {
+async function finish(user, turnstileToken) {
   const idToken = await user.getIdToken();
-  const formData = new FormData(passwordForm);
-  formData.append("id_token", idToken);
+
+  // Build the body explicitly: only what the server needs (never the email or password fields).
+  const formData = new FormData();
+  formData.set("id_token", idToken);
+  formData.set("csrf_token", passwordForm.querySelector('[name="csrf_token"]').value);
+  formData.set("cf-turnstile-response", turnstileToken); // exact field name auth.py expects
 
   const response = await fetch("/admin/session", {
     method: "POST",
     credentials: "same-origin",
     body: formData,
   });
-  await signOut(auth);
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
     const detail = body.detail;
@@ -87,10 +96,18 @@ async function finish(user) {
 async function run(signIn, button) {
   if (working) return;
   showError("");
+
+  // Read the token up front so both the Google and the email buttons send it.
+  const turnstileToken = getTurnstileToken();
+  if (turnstileWidget && !turnstileToken) {
+    showError("Please complete the verification, or disable extensions / try another browser.");
+    return;
+  }
+
   busy(true, button);
   try {
     const user = (await signIn()).user;
-    await finish(user);
+    await finish(user, turnstileToken);
   } catch (error) {
     if (error.code === "auth/popup-closed-by-user" || error.code === "auth/cancelled-popup-request") {
       busy(false, button);
@@ -112,14 +129,7 @@ googleButton.addEventListener("click", () => {
 
 passwordForm.addEventListener("submit", (event) => {
   event.preventDefault();
-  // Read token at submit time from the widget (not hidden input - callback may not fire)
-  const token = (window.turnstile && turnstileWidget) ? window.turnstile.getResponse(turnstileWidget) : "";
-  if (!token) {
-    showError("Please complete the verification, or disable extensions / try another browser.");
-    return;
-  }
   const form = new FormData(event.currentTarget);
-  form.set("cf-turnstile-response", token); // exact field name auth.py expects
   run(() => signInWithEmailAndPassword(auth, form.get("email"), form.get("password")),
     event.currentTarget.querySelector('[type="submit"]'));
 });

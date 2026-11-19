@@ -36,12 +36,12 @@
       <tbody>
         {% for b in bookings %}
         <tr>
-          <td data-label="Reference" class="cell-ref">{{ b.reference }}</td>
+          <td data-label="Ref" class="cell-ref">{{ b.reference }}</td>
           <th scope="row"><span class="cell-title">{{ b.customer_name }}</span><span class="cell-sub">{{ type_labels[b.booking_type] }}</span></th>
-          <td data-label="Car or tour">{{ b.item_name }}</td>
+          <td data-label="Item">{{ b.item_name }}</td>
           <td data-label="Dates">{{ b.start_date | date_range(b.end_date) }}</td>
           <td data-label="Status">{{ status_labels[b.status] }}</td>
-          <td data-label="Payment">{{ payment_labels[b.payment_status] }}</td>
+          <td data-label="Pay">{{ payment_labels[b.payment_status] }}</td>
           <td class="cell-actions"><a class="btn btn--outline btn--sm" href="/admin/bookings/{{ b.id }}">View<span class="sr-only"> booking of {{ b.customer_name }}</span></a></td>
         </tr>
         {% endfor %}

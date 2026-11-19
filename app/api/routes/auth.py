@@ -1,6 +1,8 @@
 """Admin login, session and logout. These routes are the only /admin routes without the
 require_admin dependency."""
 
+import sys
+
 from fastapi import APIRouter, Form, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import BaseModel

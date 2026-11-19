@@ -263,3 +263,22 @@ document.addEventListener("click", (event) => {
     dialog?.querySelector(".day-dialog__close")?.focus();
   } else if (event.target.matches("dialog.day-dialog")) event.target.close();
 });
+
+// Logout: call Firebase signOut before POSTing to /admin/logout so no Firebase session survives.
+(() => {
+  const logoutForm = document.querySelector('form[action="/admin/logout"]');
+  if (!logoutForm) return;
+  const configEl = document.getElementById("firebase-config");
+  if (!configEl) return;
+  import("https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js").then(({ initializeApp }) =>
+    import("https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js").then(({ getAuth, signOut }) => {
+      const app = initializeApp(JSON.parse(configEl.textContent));
+      const auth = getAuth(app);
+      logoutForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        try { await signOut(auth); } catch (e) { /* ignore */ }
+        logoutForm.submit();
+      });
+    })
+  );
+})();

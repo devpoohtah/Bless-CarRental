@@ -22,7 +22,7 @@ from app.schemas.catalog import (
 
 # Privacy Policy and Terms. While LEGAL_IS_DRAFT is True the two pages show a "draft, to be reviewed" note.
 # Set it to False once BLESS (and a lawyer) have approved the wording, and update LEGAL_UPDATED when it changes.
-LEGAL_IS_DRAFT = True
+LEGAL_IS_DRAFT = False
 LEGAL_UPDATED = "November 19, 2026"
 
 # Hero carousel. Replace the placeholder files slide-1.webp to slide-8.webp (about 1920x1080, under 250 KB each).

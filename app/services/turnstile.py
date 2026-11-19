@@ -2,6 +2,7 @@
 
 import json
 import logging
+import os
 import urllib.parse
 import urllib.request
 
@@ -18,19 +19,31 @@ TEST_SITE_KEY = "1x00000000000000000000AA"
 TEST_SECRET_KEY = "1x0000000000000000000000000000000AA"
 
 
+def _is_dev() -> bool:
+    """True only when ENVIRONMENT is explicitly development/dev/local. Unset = production."""
+    env = os.environ.get("ENVIRONMENT", "").strip().lower()
+    return env in ("development", "dev", "local")
+
+
 def passed(token: str, remote_ip: str = "") -> bool:
     """True when Cloudflare accepts the token. If Turnstile is not set up the check is skipped (True).
-    Once it is set up, a missing token, a rejected token or an unreachable Cloudflare all fail closed."""
+    Once it is set up, a missing token, a rejected token or an unreachable Cloudflare all fail closed.
+    Test keys are ONLY accepted when ENVIRONMENT=development|dev|local."""
     cfg = config.integrations
     if not cfg.turnstile_ready:
         return True
     if not token:
         return False
 
-    # Use test keys if both are explicitly set in env (dev only)
-    secret = cfg.turnstile_secret_key
+    # Test keys are ONLY allowed in dev. In production, reject them explicitly.
     if cfg.turnstile_site_key == TEST_SITE_KEY and cfg.turnstile_secret_key == TEST_SECRET_KEY:
-        secret = TEST_SECRET_KEY
+        if _is_dev():
+            secret = TEST_SECRET_KEY
+        else:
+            log.warning("Turnstile test keys used in non-dev environment; rejecting")
+            return False
+    else:
+        secret = cfg.turnstile_secret_key
 
     fields = {"secret": secret, "response": token}
     if remote_ip:

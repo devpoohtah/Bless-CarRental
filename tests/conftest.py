@@ -43,7 +43,9 @@ def real_auth():
 
 @pytest.fixture
 def simulated_otp(monkeypatch):
-    """Booking codes without email: OTP_DELIVERY=simulated (fixed code 123456), a fresh code store, roomy limits."""
+    """Booking codes without email: OTP_DELIVERY=simulated (fixed code 123456), a fresh code store, roomy limits.
+    Requires ENVIRONMENT=development so simulated mode is allowed."""
+    monkeypatch.setenv("ENVIRONMENT", "development")
     monkeypatch.setattr(config, "integrations", replace(config.integrations, otp_delivery="simulated"))
     monkeypatch.setattr(otp, "store", otp.OtpStore())
     monkeypatch.setattr(bookings_route, "email_limiter", RateLimiter(max_hits=500, window_seconds=3600))

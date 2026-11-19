@@ -298,6 +298,10 @@ a.chip:hover { filter: brightness(1.15); }
 .day-dialog__count { margin: 0 0 0.75rem; font-size: 0.875rem; color: var(--muted); }
 .day-dialog__close { margin-top: 1rem; }
 
+/* Login page: replace inline styles with classes for CSP compliance */
+.page-note--no-margin { margin: 0; }
+.field--mt-half { margin-top: .5rem; }
+
 /* Error pages (admin) */
 .admin-error { display: flex; align-items: center; justify-content: center; min-height: 60vh; padding: 3rem 1.5rem; }
 .admin-error__card { text-align: center; max-width: 28rem; }

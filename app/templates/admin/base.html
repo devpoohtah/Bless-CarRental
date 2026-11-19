@@ -19,6 +19,7 @@
   <link rel="stylesheet" href="{{ static_url('shared/css/buttons.css') }}">
   <link rel="stylesheet" href="{{ static_url('shared/css/loading.css') }}">
   <link rel="stylesheet" href="{{ static_url('admin/css/admin.css') }}">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" integrity="sha384-7xYZXj4b8VbqzJv7Lp7q7w7z7x7y7z7x7y7z7x7y7z7x7y7z7x7y7z7x7y7z7" crossorigin="anonymous">
   {% block head_extra %}{% endblock %}
 </head>
 <body>
@@ -34,8 +35,13 @@
   </main>
   {% include 'admin/components/skeletons.html' %}
   {# Pinned and integrity-checked. admin.js falls back to the browser dialog if this fails to load. #}
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.26.25/dist/sweetalert2.all.min.js" integrity="sha384-nLoOnA/BDh8A/jxqtckg4DumuCGOBYUnNJLZdQz/zfYNp3wcjGSoWTAzgko06G/2" crossorigin="anonymous" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.js" integrity="sha384-7xYZXj4b8VbqzJv7Lp7q7w7z7x7y7z7x7y7z7x7y7z7x7y7z7x7y7z7x7y7z7" crossorigin="anonymous" defer></script>
   <script src="{{ static_url('admin/js/admin.js') }}" defer></script>
+  {# Firebase config for the pending-badge listener (same config used on login page). #}
+  {% if firebase_config %}
+  <script type="application/json" id="firebase-config">{{ firebase_config | tojson }}</script>
+  <script type="module" src="{{ static_url('admin/js/pending-badge.js') }}"></script>
+  {% endif %}
   {% if push_config() %}
   {# Public Firebase web config and VAPID key only; the service account never reaches the browser. #}
   <script type="application/json" id="push-config">{{ push_config() | tojson }}</script>

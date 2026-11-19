@@ -11,6 +11,12 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+
+def _is_dev() -> bool:
+    """True only when ENVIRONMENT is explicitly development/dev/local. Unset = production."""
+    env = os.environ.get("ENVIRONMENT", "").strip().lower()
+    return env in ("development", "dev", "local")
+
 APP_DIR = Path(__file__).resolve().parent.parent
 PROJECT_ROOT = APP_DIR.parent
 load_dotenv(PROJECT_ROOT / ".env")
@@ -144,10 +150,16 @@ class Integrations:
     @property
     def otp_mode(self) -> str:
         """"simulated", "gmail", "resend", or "" when no code can be delivered. An unknown value or
-        missing credentials give "", never the fixed test code, so production cannot fall into it by accident."""
+        missing credentials give "", never the fixed test code, so production cannot fall into it by accident.
+        Simulated mode ONLY works when ENVIRONMENT=development|dev|local."""
         mode = self.otp_delivery or ("gmail" if self.gmail_ready else "")
         if mode == "simulated":
-            return mode
+            if _is_dev():
+                return mode
+            # Simulated OTP disabled in non-dev environments
+            import logging
+            logging.getLogger(__name__).error("OTP_DELIVERY=simulated is only allowed when ENVIRONMENT=development|dev|local")
+            return ""
         if mode == "gmail" and self.gmail_ready:
             return mode
         if mode == "resend" and self.resend_ready:
