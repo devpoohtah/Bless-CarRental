@@ -10,7 +10,7 @@
 {% endmacro %}
 
 {% macro tour_card(tour) %}
-<article class="card">
+<article class="card card--tour">
   <div class="card__media">
     <img src="{{ static_url(tour.photo.src) }}" alt="{{ tour.photo.alt }}" width="1200" height="900" loading="lazy" decoding="async">
     {% if tour.is_sample %}<span class="badge badge--float">Sample</span>{% endif %}

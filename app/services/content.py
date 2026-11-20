@@ -197,7 +197,7 @@ def _sample_vehicles() -> list[Vehicle]:
 
 def list_testimonials() -> list[Testimonial]:
     # Real customer messages from the BLESS Facebook page, shown in the customers' own words (spacing and
-    # one typo corrected; "..." marks a cut). Names are not known yet: replace "BLESS customer" once the
+    # one typo corrected; "..." marks a cut). Names are not known yet: replace "Customer" once the
     # customer agrees to be named, and get the business's approval before the site goes live.
     return [
         Testimonial(
@@ -207,17 +207,17 @@ def list_testimonials() -> list[Testimonial]:
                 "tourist spot napuntahan. ... Sobrang bait, accommodating all throughout the tour, "
                 "knowledgeable sa mga tourist spot, manageable sa time, always on time sila."
             ),
-            author="BLESS customer", service="Tour", source="Facebook message", is_placeholder=False,
+            author="Customer", service="Tour", source="Facebook", is_placeholder=False,
         ),
         Testimonial(
             id="fb-recommend",
             quote="Napakabait at naging maayos ang Bacolod, Iloilo, Gigantes at Guimaras tour namin. Recommendable ang Travel agency nyo.",
-            author="BLESS customer", service="Bacolod, Iloilo, Gigantes and Guimaras tour", source="Facebook message", is_placeholder=False,
+            author="Customer", service="Bacolod, Iloilo, Gigantes and Guimaras tour", source="Facebook", is_placeholder=False,
         ),
         Testimonial(
             id="fb-returning",
             quote="Magrerent po sana ulit kami ng service.",
-            author="BLESS customer", service="Car rental", source="Facebook message", tag="Returning customer", is_placeholder=False,
+            author="Customer", service="Car rental", source="Facebook", tag="Returning customer", is_placeholder=False,
         ),
     ]
 
@@ -230,12 +230,12 @@ def list_gallery() -> list[GalleryImage]:
         )
 
     return [
-        item("g1", "Travel destinations", "gallery-destination-placeholder.svg"),
-        item("g2", "Group tours", "gallery-group-tour-placeholder.svg"),
-        item("g3", "Customer travel experiences", "gallery-customer-experience-placeholder.svg"),
-        item("g4", "Vehicles", "gallery-vehicle-placeholder.svg"),
-        item("g5", "Business activities", "gallery-business-activity-placeholder.svg"),
-        item("g6", "Travel destinations", "gallery-sunset-placeholder.svg"),
+        item("g1", "Travel Memories & Highlights", "highlights.webp"),
+        item("g2", "Group tours", "grouptours.webp"),
+        item("g3", "Customer travel experiences", "customertravelexperience.webp"),
+        item("g4", "Group Adventures & Getaways", "group.webp"),
+        item("g5", "Business activities", "businessactivities.webp"),
+        item("g6", "Memorable Journeys & Experiences", "journey.webp"),
     ]
 
 

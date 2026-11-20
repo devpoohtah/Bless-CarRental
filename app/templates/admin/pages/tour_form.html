@@ -1,14 +1,14 @@
 {% extends 'admin/base.html' %}
-{% from 'admin/components/form.html' import field, textarea, select, image_field, form_actions, errors_box %}
+{% from 'admin/components/form.html' import field, textarea, select, image_field, form_actions_bar, errors_box %}
 {% set editing = tour is not none %}
 {% block title %}{{ 'Edit tour package' if editing else 'Add tour package' }} | {{ site.short_name }} Admin{% endblock %}
 
 {% block content %}
 <div class="page">
-  <a class="link back-link" href="/admin/services/tours">Back to Tour Package Management</a>
   <div class="page-head">
     <div>
-      <h1>{{ 'Edit tour package' if editing else 'Add tour package' }}</h1>
+      <a class="btn btn--outline-light" href="/admin/services/tours">{{ icon('chevron-left', 'icon icon--sm') }}Back to Tour Package Management</a>
+      <h1 style="margin-top: 1rem;">{{ 'Edit tour package' if editing else 'Add tour package' }}</h1>
       <p class="page-lead">{{ (tour.name ~ '.') if editing else 'Enter the package details, price and availability.' }} Fields marked * are required.</p>
     </div>
   </div>
@@ -30,10 +30,8 @@
         <h2 id="tour-price">Price and availability</h2>
         {{ field('price_php', 'Price (PHP)', form.price_php, type='number', inputmode='numeric', min=0) }}
         {{ select('availability', 'Availability', availability_labels.items(), form.availability or 'inquire') }}
-      </section>
 
-      <section class="form__group" aria-labelledby="tour-vehicle">
-        <h2 id="tour-vehicle">Vehicle for this tour</h2>
+        <h3 id="tour-vehicle">Vehicle for this tour</h3>
         {{ field('vehicle_name', 'Vehicle name', form.vehicle_name, hint='For example: Toyota Hiace van. Shown on the booking page for this tour only, never in car rental.') }}
         {{ field('vehicle_seats', 'Seats', form.vehicle_seats, type='number', inputmode='numeric', min=1, hint='Guests cannot book more than this.') }}
       </section>
@@ -41,15 +39,16 @@
 
     <div class="form__side">
       <section class="form__group" aria-labelledby="tour-image">
-        <h2 id="tour-image">Image</h2>
+        <h2 id="tour-image">Package image</h2>
         {{ image_field('Package image', tour.photo if editing) }}
       </section>
       <section class="form__group" aria-labelledby="tour-vehicle-image">
         <h2 id="tour-vehicle-image">Vehicle image</h2>
-        {{ image_field('Vehicle image', tour.vehicle_photo if editing, name='vehicle_image') }}
+        {{ image_field('Vehicle image', tour.vehicle_photo if editing, name='vehicle_image', show_license_warning=True) }}
       </section>
-      {{ form_actions('Save tour package', '/admin/services/tours', 'Delete tour package' if editing, '/admin/services/tours/' ~ tour.id ~ '/delete' if editing, 'Delete this tour package? This cannot be undone.') }}
     </div>
+
+    {{ form_actions_bar('Save tour package', '/admin/services/tours', 'Delete tour package' if editing, '/admin/services/tours/' ~ tour.id ~ '/delete' if editing, 'Delete this tour package? This cannot be undone.') }}
   </form>
 </div>
 {% endblock %}

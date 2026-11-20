@@ -1,9 +1,9 @@
 {# Shown in place of a list that has nothing in it yet. Say what is missing and, where there is
    one, offer the single action that fills it. #}
-{% macro empty_state(title, text, href=None, action=None, action_icon='plus') %}
+{% macro empty_state(title, text, href=None, action=None, action_icon='plus', variant='action') %}
 <div class="empty-state">
   <p class="empty-state__title">{{ title }}</p>
   <p class="empty-state__text">{{ text }}</p>
-  {% if href %}<a class="btn btn--primary" href="{{ href }}">{% if action_icon %}{{ icon(action_icon, 'icon') }}{% endif %}{{ action }}</a>{% endif %}
+  {% if href %}<a class="btn btn--{{ variant }}" href="{{ href }}">{% if action_icon %}{{ icon(action_icon, 'icon') }}{% endif %}{{ action }}</a>{% endif %}
 </div>
 {% endmacro %}

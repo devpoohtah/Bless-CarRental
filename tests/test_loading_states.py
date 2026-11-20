@@ -33,7 +33,7 @@ def test_admin_pages_carry_a_placeholder_for_each_kind_of_page():
 def test_every_submit_button_that_saves_has_a_busy_label():
     for url in ("/admin/services/cars/new", "/admin/services/tours/new", "/admin/bookings/new"):
         html = client.get(url).text
-        assert re.search(r'<button type="submit" class="btn btn--primary" data-busy-label="Saving…"', html), url
+        assert re.search(r'<button type="submit" class="btn btn--action" data-busy-label="Saving…"', html), url
 
 
 def test_booking_action_buttons_have_busy_labels(fake_db):

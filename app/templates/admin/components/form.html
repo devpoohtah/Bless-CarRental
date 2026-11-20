@@ -36,14 +36,14 @@
 {% endif %}
 {% endmacro %}
 
-{% macro image_field(label, current=None, name='image') %}
+{% macro image_field(label, current=None, name='image', show_license_warning=False) %}
 {# Preview and "Remove image" are progressive enhancement (admin.js); without JS the file input and checkbox still post. #}
 <div class="field field--wide" data-image-field>
   <img class="thumb" data-image-preview alt="{{ current.alt if current else 'New image preview' }}" width="320" height="240"{% if current %} src="{{ static_url(current.src) }}" data-original="{{ static_url(current.src) }}"{% else %} hidden{% endif %}>
   <p class="field__hint" data-image-note role="status" hidden></p>
   <label for="{{ name }}">{{ label }}{% if current %} (choose a file to replace it){% endif %}</label>
   <input id="{{ name }}" name="{{ name }}" type="file" accept="image/jpeg,image/png,image/webp" aria-describedby="{{ name }}-hint" data-image-input>
-  <p class="field__hint" id="{{ name }}-hint">JPEG, PNG or WebP, up to 5 MB. It is saved as WebP. Cover or crop out license plate numbers before uploading, because the image is public on the website.</p>
+  <p class="field__hint" id="{{ name }}-hint">JPEG, PNG or WebP, up to 5 MB. It is saved as WebP.{% if show_license_warning %} Cover or crop out license plate numbers before uploading, because the image is public on the website.{% endif %}</p>
   {% if current and current.public_id %}
   <div class="check">
     <input id="remove_{{ name }}" name="remove_{{ name }}" type="checkbox" value="1" data-image-remove>
@@ -58,7 +58,18 @@
 <p class="note">{{ icon('info', 'icon icon--sm') }}<span>The database is not connected, so saving and deleting are unavailable. Set GOOGLE_APPLICATION_CREDENTIALS in .env.</span></p>
 {% endif %}
 <div class="form__actions">
-  <button type="submit" class="btn btn--primary" data-busy-label="Saving…"{% if not database_ready() %} disabled{% endif %}>{{ save_label }}</button>
+  <button type="submit" class="btn btn--action" data-busy-label="Saving…"{% if not database_ready() %} disabled{% endif %}>{{ save_label }}</button>
+  <a class="btn btn--outline" href="{{ cancel_href }}">Cancel</a>
+  {% if delete_label %}<button type="submit" class="btn btn--outline form__delete" formaction="{{ delete_url }}" formnovalidate data-confirm="{{ delete_confirm }}" data-busy-label="Deleting…"{% if not database_ready() %} disabled{% endif %}>{{ delete_label }}</button>{% endif %}
+</div>
+{% endmacro %}
+
+{% macro form_actions_bar(save_label, cancel_href, delete_label=None, delete_url=None, delete_confirm='') %}
+{% if not database_ready() %}
+<p class="note">{{ icon('info', 'icon icon--sm') }}<span>The database is not connected, so saving and deleting are unavailable. Set GOOGLE_APPLICATION_CREDENTIALS in .env.</span></p>
+{% endif %}
+<div class="form__actions-bar">
+  <button type="submit" class="btn btn--action" data-busy-label="Saving…"{% if not database_ready() %} disabled{% endif %}>{{ save_label }}</button>
   <a class="btn btn--outline" href="{{ cancel_href }}">Cancel</a>
   {% if delete_label %}<button type="submit" class="btn btn--outline form__delete" formaction="{{ delete_url }}" formnovalidate data-confirm="{{ delete_confirm }}" data-busy-label="Deleting…"{% if not database_ready() %} disabled{% endif %}>{{ delete_label }}</button>{% endif %}
 </div>

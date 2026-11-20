@@ -66,7 +66,7 @@ def _post_with_csrf(url: str, data: dict):
 def test_without_a_database_saving_is_disabled_and_posts_are_refused():
     for url in ("/admin/services/cars/family-suv/edit", "/admin/services/tours/island-day-tour/edit"):
         html = client.get(url).text
-        assert re.search(r'<button type="submit" class="btn btn--primary"[^>]* disabled>', html), url
+        assert re.search(r'<button type="submit" class="btn btn--action"[^>]* disabled>', html), url
         assert "database is not connected" in html
     assert _post_with_csrf("/admin/services/cars/new", {"name": "X"}).status_code == 503
     assert _post_with_csrf("/admin/services/cars/family-suv/delete", {}).status_code == 503

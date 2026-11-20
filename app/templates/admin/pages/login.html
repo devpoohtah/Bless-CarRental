@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Sign in | {{ site.short_name }} Admin</title>
   <meta name="robots" content="noindex, nofollow">
-  <meta name="theme-color" content="#000141">
+  <meta name="theme-color" content="#162660">
   <link rel="icon" href="{{ static_url('shared/img/bless-logo.webp') }}" type="image/webp">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -58,7 +58,7 @@
                data-retry-interval="8000"></div>
         </div>
         {% endif %}
-        <button type="submit" class="btn btn--primary btn--block" data-busy-label="Signing in…">Sign in</button>
+        <button type="submit" class="btn btn--action btn--block" data-busy-label="Signing in…">Sign in</button>
       </form>
       {# Public Firebase web config (not secrets), read by login.js. tojson escapes it safely. #}
       <script type="application/json" id="firebase-config">{{ firebase_config | tojson }}</script>

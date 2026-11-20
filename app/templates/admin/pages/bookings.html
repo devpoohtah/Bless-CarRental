@@ -10,7 +10,7 @@
       <h1>Booking Management</h1>
       <p class="page-lead">View booking requests, customer details and booking status.</p>
     </div>
-    <a class="btn btn--primary" href="/admin/bookings/new">{{ icon('plus', 'icon') }}Add booking</a>
+    <a class="btn btn--action" href="/admin/bookings/new">{{ icon('plus', 'icon') }}Add booking</a>
   </div>
 
   <nav class="filter-tabs" aria-label="Filter bookings by type">
@@ -53,7 +53,7 @@
   {% endif %}
   {% else %}
   {% if active_type %}
-  {{ empty_state('No ' ~ ('car rentals' if active_type == 'car' else 'tour bookings') ~ ' yet', 'Nothing has been booked under this filter.', '/admin/bookings', 'Show all bookings', None) }}
+  {{ empty_state('No ' ~ ('car rentals' if active_type == 'car' else 'tour bookings') ~ ' yet', 'Nothing has been booked under this filter.', '/admin/bookings', 'Show all bookings', None, 'primary') }}
   {% else %}
   {{ empty_state('No bookings yet', 'Requests sent from the website booking form appear here. You can also add a booking yourself, for example one arranged on Messenger or by phone.', '/admin/bookings/new', 'Add booking') }}
   {% endif %}

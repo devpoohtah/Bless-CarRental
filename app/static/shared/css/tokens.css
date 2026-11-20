@@ -1,26 +1,55 @@
 /* Design tokens. The one place to change the palette, fonts, spacing and radii. */
 :root {
-  /* Surfaces */
-  --night: #000141;          /* the logo's own navy */
-  --night-raised: #0a0d46;
-  --night-line: rgb(255 255 255 / 0.14);
-  --surface: #f4f4f6;        /* light tint of the logo's silver ring */
-  --white: #ffffff;
+  /* ===== NEW PALETTE ===== */
+  /* Royal Blue  #162660  -> primary, 60% of surface area */
+  /* Powder Blue #D0E6FD  -> secondary, 30% */
+  /* Bone        #F1E4D1  -> accent, 10% (the "loud" color, used sparingly) */
 
-  /* Text */
-  --ink: #000141;
-  --muted: #4a4d6e;
-  --on-dark-muted: rgb(255 255 255 / 0.8);
-  --line: rgb(0 1 65 / 0.12);
+  --royal: #162660;
+  --powder: #D0E6FD;
+  --bone: #F1E4D1;
 
-  /* Action: one filled colour per surface */
-  --peach: #fbbc91;          /* filled buttons on dark, navy text */
-  --peach-hover: #ffd0ae;
-  --night-hover: #1a1d5e;    /* filled buttons on light, white text */
+  /* Semantic aliases */
+  --bg-page: var(--royal);           /* main page background (customer hero, admin) */
+  --bg-surface: var(--powder);       /* cards, panels, form surfaces */
+  --bg-surface-dark: var(--royal);   /* surfaces on dark backgrounds */
+  --text-on-dark: #FFFFFF;           /* text on royal blue */
+  --text-on-dark-muted: rgba(255, 255, 255, 0.8);
+  --text-on-light: var(--royal);     /* text on powder blue/bone */
+  --text-on-light-muted: #3a4a7a;    /* muted text on light surfaces (accessible on powder) */
+  --accent: var(--bone);             /* primary CTA on dark, highlights */
+  --accent-hover: #f5e8d6;           /* lighter bone for hover */
+  --accent-text: var(--royal);       /* text on bone buttons */
 
-  /* Decorative only: never text, never buttons */
-  --cyan: #5ce2ff;
-  --berry: #ad107b;
+  /* Borders & lines */
+  --border-light: var(--royal);      /* borders on powder/bone surfaces */
+  --border-light-muted: rgba(22, 38, 96, 0.2);
+  --border-dark: var(--powder);      /* borders on royal surfaces */
+  --border-dark-muted: rgba(208, 230, 253, 0.2);
+  --hairline: rgba(208, 230, 253, 0.15); /* faint separator (admin sidebar) */
+
+  /* Focus rings */
+  --focus-dark: var(--bone);         /* focus on royal blue backgrounds */
+  --focus-light: var(--royal);       /* focus on powder/bone backgrounds */
+
+  /* Status / feedback */
+  --danger: #b91c1c;                 /* muted red for errors/destructive only */
+  --danger-bg: #fef2f2;              /* light danger background */
+  --danger-text: #7f1d1d;            /* dark danger text */
+  --danger-on: #ffffff;              /* text on danger buttons */
+
+  /* Approved / Pending chips (admin) */
+  --status-approved-bg: var(--royal);
+  --status-approved-text: var(--powder);
+  --status-pending-border: var(--royal);
+  --status-pending-text: var(--royal);
+  --status-pending-bg: transparent;
+
+  /* Overlay for hero images */
+  --overlay-strong: rgba(22, 38, 96, 0.78);
+  --overlay-medium: rgba(22, 38, 96, 0.6);
+  --overlay-light: rgba(22, 38, 96, 0.18);
+  --overlay-minimal: rgba(22, 38, 96, 0.12);
 
   /* Type */
   --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
@@ -29,9 +58,9 @@
   /* Shape and layout */
   --radius-md: 0.75rem;
   --radius-lg: 1.25rem;
-  --shadow-card: 0 1px 2px rgb(0 1 65 / 0.06);
-  --island-top: 0.75rem;      /* gap between the viewport edge and the floating navbar */
+  --shadow-card: 0 1px 2px rgba(22, 38, 96, 0.06);
+  --island-top: 0.75rem;
   --island-h: 3.75rem;
-  --header-h: calc(var(--island-top) + var(--island-h));  /* space the navbar takes up: pages offset their content by this */
+  --header-h: calc(var(--island-top) + var(--island-h));
   --container: 80rem;
 }

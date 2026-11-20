@@ -1,14 +1,14 @@
 {% extends 'admin/base.html' %}
-{% from 'admin/components/form.html' import field, select, image_field, form_actions, errors_box %}
+{% from 'admin/components/form.html' import field, select, image_field, form_actions_bar, errors_box %}
 {% set editing = car is not none %}
 {% block title %}{{ 'Edit car' if editing else 'Add car' }} | {{ site.short_name }} Admin{% endblock %}
 
 {% block content %}
 <div class="page">
-  <a class="link back-link" href="/admin/services/cars">Back to Car Management</a>
   <div class="page-head">
     <div>
-      <h1>{{ 'Edit car' if editing else 'Add car' }}</h1>
+      <a class="btn btn--outline-light" href="/admin/services/cars">{{ icon('chevron-left', 'icon icon--sm') }}Back to Car Management</a>
+      <h1 style="margin-top: 1rem;">{{ 'Edit car' if editing else 'Add car' }}</h1>
       <p class="page-lead">{{ (car.name ~ '.') if editing else 'Enter the car details, rental rate and availability.' }} Fields marked * are required.</p>
     </div>
   </div>
@@ -35,10 +35,11 @@
     <div class="form__side">
       <section class="form__group" aria-labelledby="car-image">
         <h2 id="car-image">Image</h2>
-        {{ image_field('Car image', car.photo if editing) }}
+        {{ image_field('Car image', car.photo if editing, show_license_warning=True) }}
       </section>
-      {{ form_actions('Save car', '/admin/services/cars', 'Delete car' if editing, '/admin/services/cars/' ~ car.id ~ '/delete' if editing, 'Delete this car? This cannot be undone.') }}
     </div>
+
+    {{ form_actions_bar('Save car', '/admin/services/cars', 'Delete car' if editing, '/admin/services/cars/' ~ car.id ~ '/delete' if editing, 'Delete this car? This cannot be undone.') }}
   </form>
 </div>
 {% endblock %}
