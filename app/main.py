@@ -2,7 +2,7 @@ import logging
 import os
 
 from fastapi import FastAPI, Request, HTTPException
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.api.routes import admin, admin_bookings, admin_push, admin_services, auth, bookings, pages
@@ -62,6 +62,9 @@ def create_app() -> FastAPI:
     @app.exception_handler(HTTPException)
     async def http_exception_handler(request: Request, exc: HTTPException) -> HTMLResponse:
         status = exc.status_code
+        if isinstance(exc.detail, dict):
+            # Structured detail ({"message", "code"}) is for fetch() callers such as the login page.
+            return JSONResponse({"detail": exc.detail}, status_code=status)
         admin = is_admin_request(request)
         template_dir = "admin/errors" if admin else "customer/errors"
         template = f"{template_dir}/{status}.html"

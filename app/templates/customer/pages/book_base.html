@@ -2,10 +2,11 @@
    left, BLESS contact card and the form on the right. The pages fill in the summary and the fields.
    Needs: selected (None when nothing can be booked), blocked (dates already taken, per item name), today_iso. #}
 {% extends 'customer/base.html' %}
+{% from 'customer/components/booking_fields.html' import stepper %}
 
 {% block head_extra %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css" integrity="sha384-RkASv+6KfBMW9eknReJIJ6b3UnjKOKC5bOUaNgIY778NFbQ8MtWq9Lr/khUgqtTt" crossorigin="anonymous">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.26.25/dist/sweetalert2.min.css" integrity="sha384-dCW5imOdApH6OwpFau8cZNKjqVbJYnCA5q+8YsMYP3XwXKsV6Jfz1u6MZLnXaBsS" crossorigin="anonymous">
 <link rel="stylesheet" href="{{ static_url('customer/css/booking.css') }}">
 {% endblock %}
 
@@ -42,6 +43,7 @@
         <div id="booking-view-form">
           <h1 class="book__title">{{ form_title }}</h1>
           <p class="book__lead">Send your request and BLESS will contact you to confirm. Nothing is booked until BLESS confirms.</p>
+          {{ stepper() }}
 
           <form id="booking-form" class="booking-form" method="post" action="/book/{{ kind }}" data-kind="{{ kind }}" data-today="{{ today_iso }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
@@ -57,10 +59,10 @@
             </div>
 
             {% if turnstile_site_key %}
-            <div class="cf-turnstile" data-sitekey="{{ turnstile_site_key }}" data-theme="light"></div>
+            <div class="cf-turnstile" data-final-only data-sitekey="{{ turnstile_site_key }}" data-theme="light"></div>
             {% endif %}
 
-            <div class="booking-form__actions">
+            <div class="booking-form__actions" data-final-only>
               <p class="booking-form__legal">This is a request only. Nothing is booked until BLESS approves it and emails you.</p>
               <label class="booking-form__agree">
                 <input type="checkbox" name="agree" value="yes" required>
@@ -69,12 +71,19 @@
               <button type="submit" class="btn btn--primary btn--lg btn--block" data-busy-label="Sending…">Send booking request</button>
               <p class="booking-form__alt">Prefer to chat? <a class="link" href="{{ site.messenger_url }}" target="_blank" rel="noopener noreferrer">Message us on Messenger<span class="sr-only"> (opens in a new tab)</span></a></p>
             </div>
+
+            {# Shown by booking.js. Without it the whole form is one page. #}
+            <div class="booking-form__nav" data-step-nav hidden>
+              <button type="button" class="btn btn--outline" data-step-back>Back</button>
+              <button type="button" class="btn btn--primary" data-step-next>Next</button>
+            </div>
           </form>
         </div>
 
         <div id="booking-view-code" tabindex="-1" hidden>
           <h1 class="book__title" id="booking-code-title">Enter your code</h1>
           <p class="book__lead">We sent a 6-digit code to <strong data-code-email></strong>. It expires in 10 minutes. Check your spam folder if it does not arrive.</p>
+          {{ stepper() }}
           <p class="booking-code__test" data-code-test hidden>Test mode: no email was sent. Use <strong data-code-test-value></strong>.</p>
           <form id="code-form" class="booking-form" novalidate>
             <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
@@ -130,6 +139,6 @@
 {% if turnstile_site_key %}<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>{% endif %}
 <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js" integrity="sha384-5JqMv4L/Xa0hfvtF06qboNdhvuYXUku9ZrhZh3bSk8VXF0A/RuSLHpLsSV9Zqhl6" crossorigin="anonymous" defer></script>
 {# Same pinned, integrity-checked build as the admin. booking.js shows its errors in the inline boxes if this fails to load. #}
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.26.25/dist/sweetalert2.min.js" integrity="sha384-hW8ZCQHtRH+nVOAkHZ4amZvYsAtKn1ZOvMV6dNag1Rb1thWmLZMBKTRxFV0cOxiK" crossorigin="anonymous" defer></script>
 <script src="{{ static_url('customer/js/booking.js') }}" defer></script>
 {% endblock %}

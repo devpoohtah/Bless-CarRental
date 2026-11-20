@@ -46,6 +46,12 @@ def _errors(status_code: int, *messages: str, **extra) -> JSONResponse:
     return JSONResponse({"errors": list(messages)} | extra, status_code=status_code)
 
 
+def _reject(kind: str, *messages: str, **extra) -> JSONResponse:
+    """A 422 the customer can fix or retry. Logged, so the server log says why the request was turned away."""
+    log.info("Booking request rejected (%s): %s", kind, " | ".join(messages))
+    return _errors(422, *messages, **extra)
+
+
 def _client(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
@@ -100,17 +106,17 @@ def _submit(request: Request, kind: str, raw: dict, honeypot: str, token: str, a
     if not firebase.is_configured() or not config.integrations.otp_mode:
         return _errors(503, f"Online booking is not available right now. Please {MESSENGER_HINT}.")
     if agree != "yes":
-        return _errors(422, "Please tick the box to agree to the Terms and Conditions and the Privacy Policy.")
+        return _reject(kind, "Please tick the box to agree to the Terms and Conditions and the Privacy Policy.")
     model, build, _create = FORMS[kind]
     data, errors = validate(model, raw)
     if data is None:
-        return _errors(422, *errors)
+        return _reject(kind, *errors)
     if not turnstile.passed(token, client):
-        return _errors(422, "We could not confirm you are human. Please try again.", code="turnstile")
+        return _reject(kind, "We could not confirm you are human. Please try again.", code="turnstile")
     try:
         build(data)  # the same checks as the final save, so mistakes show up before an email is sent
     except FormError as exc:
-        return _errors(422, str(exc))
+        return _reject(kind, str(exc))
     except Exception:
         log.exception("Could not check a website booking request")
         return _errors(503, f"We could not check your request. Please try again in a moment, or {MESSENGER_HINT}.")

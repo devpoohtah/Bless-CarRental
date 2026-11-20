@@ -55,8 +55,8 @@ def tours(request: Request) -> HTMLResponse:
 
 @router.get("/favicon.ico", include_in_schema=False)
 async def favicon() -> FileResponse:
-    # Browsers request /favicon.ico on their own; serve the SVG favicon instead of a 404.
-    return FileResponse(STATIC_DIR / "shared" / "img" / "favicon.svg", media_type="image/svg+xml")
+    # Browsers request /favicon.ico on their own; serve the logo instead of a 404.
+    return FileResponse(STATIC_DIR / "shared" / "img" / "bless-logo.webp", media_type="image/webp")
 
 
 def _legal_page(request: Request, template: str) -> HTMLResponse:

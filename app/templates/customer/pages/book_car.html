@@ -33,8 +33,8 @@
 {% endblock %}
 
 {% block fields %}
-<fieldset>
-  <legend>Trip details</legend>
+<fieldset data-step>
+  <legend>Trip</legend>
   <div class="booking-form__grid">
     <div class="field field--wide">
       <label for="bk-item">Type of car</label>
@@ -59,6 +59,11 @@
       <label for="bk-destination">Destination</label>
       <input id="bk-destination" name="destination" type="text" maxlength="200" autocomplete="off" required>
     </div>
+  </div>
+</fieldset>
+<fieldset data-step>
+  <legend>Dates</legend>
+  <div class="booking-form__grid">
     {{ calendar('Click the first day, then the last day. For a one-day rental, click the same day twice.') }}
     <div class="field">
       <label for="bk-start">Booking date</label>
@@ -76,6 +81,11 @@
       <label for="bk-end-time">Return time (optional)</label>
       <input id="bk-end-time" name="end_time" type="time">
     </div>
+  </div>
+</fieldset>
+<fieldset data-step>
+  <legend>Passengers and extras</legend>
+  <div class="booking-form__grid">
     <div class="field">
       <label for="bk-people">Number of passengers</label>
       <input id="bk-people" name="passengers" type="number" inputmode="numeric" min="1" max="{{ selected.seats or 60 }}" required>

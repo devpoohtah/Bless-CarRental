@@ -1,6 +1,7 @@
 // BLESS booking pages (/book/car and /book/tour). The page shows the chosen car or tour, a calendar that
 // crosses out dates BLESS has already approved, and posts the request without leaving the page.
-// After the form is checked, the customer confirms their email with a 6-digit code before anything is saved.
+// The form is a row of steps (the fieldsets marked data-step), one on screen at a time, and the 6-digit email code
+// is the last one: nothing is saved until the customer confirms their email. Without this script every step shows at once.
 // The date inputs hold the real values. The calendar only fills them, so typing a date also works,
 // and the form still works if the calendar script cannot load.
 (() => {
@@ -118,6 +119,93 @@
     }, true);
   }
 
+  // ---- steps ----
+  const steps = [...form.querySelectorAll("fieldset[data-step]")];
+  const multi = steps.length > 1;
+  let finalOnly = form.querySelectorAll("[data-final-only]");
+  const nav = form.querySelector("[data-step-nav]");
+  const backButton = nav.querySelector("[data-step-back]");
+  const nextButton = nav.querySelector("[data-step-next]");
+  const steppers = document.querySelectorAll("[data-stepper]");
+  const CODE_TITLE = "Confirm your email";
+  let step = 0;
+
+  // Turnstile is drawn fresh when the last step opens. A widget drawn inside a hidden step may never make its
+  // token, and the server refuses a booking without one. The Send button stays off until the token arrives.
+  // The api script loads on its own schedule, so wait for it.
+  let challengeBox = form.querySelector(".cf-turnstile");
+  let challengeId = null;
+  let challengeWaiting = false;
+  function drawChallenge(tries = 0) {
+    if (!challengeBox || challengeId !== null) return;
+    if (window.turnstile) {
+      // Throw away whatever the api script drew while the box was hidden, and draw into a fresh one.
+      const fresh = challengeBox.cloneNode(false);
+      fresh.classList.remove("cf-turnstile"); // so the api script does not draw it a second time
+      challengeBox.replaceWith(fresh);
+      challengeBox = fresh;
+      finalOnly = form.querySelectorAll("[data-final-only]");
+      submit.disabled = true;
+      challengeId = window.turnstile.render(fresh, {
+        sitekey: fresh.dataset.sitekey, theme: fresh.dataset.theme,
+        callback: () => { submit.disabled = false; },
+        "expired-callback": () => { submit.disabled = true; },
+        "error-callback": () => { submit.disabled = false; }, // let the server say what is wrong
+      });
+      challengeWaiting = false;
+    } else if (tries < 50) {
+      challengeWaiting = true;
+      setTimeout(() => drawChallenge(tries + 1), 200);
+    }
+  }
+
+  function paintProgress(index, title) { // index counts from 0; the email code is the step after the last fieldset
+    steppers.forEach((el) => {
+      el.hidden = false;
+      el.querySelector(".stepper__count").textContent = `Step ${index + 1} of ${steps.length + 1}`;
+      el.querySelector(".stepper__title").textContent = title;
+      const bar = el.querySelector(".stepper__bar");
+      bar.max = steps.length + 1;
+      bar.value = index + 1;
+    });
+  }
+
+  function showStep(index, { focus = true } = {}) {
+    step = Math.max(0, Math.min(index, steps.length - 1));
+    const last = step === steps.length - 1;
+    steps.forEach((el, i) => { el.hidden = i !== step; });
+    finalOnly.forEach((el) => { el.hidden = !last; });
+    backButton.hidden = step === 0;
+    nextButton.hidden = last;
+    paintProgress(step, steps[step].querySelector("legend").textContent.trim());
+    picker?.redraw(); // the calendar was set up while its step was hidden
+    if (last && !challengeWaiting) drawChallenge();
+    if (focus) {
+      steppers[0].scrollIntoView({ block: "start" });
+      steps[step].focus({ preventScroll: true }); // a screen reader announces the step's legend
+    }
+  }
+
+  const fieldsOf = (el) => [...el.querySelectorAll("input, select, textarea")];
+  const firstProblem = (index) => fieldsOf(steps[index]).find((field) => !field.checkValidity()) || null;
+
+  function goNext() {
+    const bad = firstProblem(step);
+    if (bad) { bad.reportValidity(); return; }
+    hideErrors();
+    showStep(step + 1);
+  }
+
+  if (multi) {
+    // The browser would check every field, hidden steps included, and block Enter and the Send button with
+    // "An invalid form control is not focusable". Each step is checked above instead, and all of them again on send.
+    form.noValidate = true;
+    steps.forEach((el) => { el.tabIndex = -1; });
+    nav.hidden = false;
+    nextButton.addEventListener("click", goNext);
+    backButton.addEventListener("click", () => { hideErrors(); showStep(step - 1); });
+  }
+
   // ---- phone: fixed +63 prefix, digits grouped as 917 123 4567 ----
   const phone = document.getElementById("bk-phone");
   function formatPhone(raw) {
@@ -145,7 +233,8 @@
     }
   }
 
-  const resetChallenge = () => window.turnstile?.reset(); // a Turnstile token works once
+  // A Turnstile token works once: ask for a new one, and keep the button off until it arrives.
+  const resetChallenge = () => { if (challengeId !== null) { submit.disabled = true; window.turnstile?.reset(challengeId); } };
 
   function showDone(data, reference) {
     stopCountdown();
@@ -207,6 +296,7 @@
     codeInput.value = "";
     hideCodeError();
     startCountdown(body.resend_in ?? 60);
+    if (multi) paintProgress(steps.length, CODE_TITLE);
     formView.hidden = true;
     codeView.hidden = false;
     codeInput.focus();
@@ -219,6 +309,7 @@
     codeView.hidden = true;
     formView.hidden = false;
     resetChallenge();
+    if (multi) showStep(step, { focus: false }); // repaint the progress; the customer lands on the last step
     if (messages) showErrors(messages); else hideErrors();
   }
 
@@ -282,7 +373,15 @@
   let sending = false;
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
-    if (sending || !form.reportValidity()) return;
+    // Enter inside a field on an earlier step moves on instead of sending.
+    if (multi && step < steps.length - 1) { goNext(); return; }
+    if (sending) return;
+    if (multi) {
+      // Take the customer to the first step with a problem (they may have gone back and changed something).
+      const index = steps.findIndex((_, i) => firstProblem(i));
+      if (index !== -1) { showStep(index); firstProblem(index).reportValidity(); return; }
+    }
+    if (!form.reportValidity()) return; // the terms checkbox
     sending = true;
     hideErrors();
     setBusy(submit, true);
@@ -304,4 +403,5 @@
 
   showItem();
   setUpCalendar();
+  if (multi) showStep(0, { focus: false });
 })();

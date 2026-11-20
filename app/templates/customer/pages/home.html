@@ -17,7 +17,7 @@
 {% include 'customer/sections/hero.html' %}
 {% include 'customer/sections/services.html' %}
 {% include 'customer/sections/tours.html' %}
-{% include 'customer/sections/destinations.html' %}
+{# {% include 'customer/sections/destinations.html' %} #}
 {% include 'customer/sections/car_rental.html' %}
 {% include 'customer/sections/how_it_works.html' %}
 {% include 'customer/sections/why_us.html' %}
@@ -30,7 +30,7 @@
 
 {% block dialogs %}
 {{ tour_dialogs(tours) }}
-{% for dest in destinations %}
+{# {% for dest in destinations %}
 {{ detail_dialog('destination-' ~ dest.id, dest.name, dest.region, dest.photo, dest.description, [], dest.is_sample) }}
-{% endfor %}
+{% endfor %} #}
 {% endblock %}

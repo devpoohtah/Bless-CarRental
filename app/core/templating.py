@@ -12,7 +12,12 @@ from app.core.csrf import csrf_token
 from app.core.icons import icon
 from app.db import firebase
 
-templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+def _csp_nonce(request) -> dict:
+    """Makes {{ csp_nonce }} available in every template. The value is set per request in security.py."""
+    return {"csp_nonce": getattr(request.state, "csp_nonce", "")}
+
+
+templates = Jinja2Templates(directory=str(TEMPLATES_DIR), context_processors=[_csp_nonce])
 templates.env.trim_blocks = True
 templates.env.lstrip_blocks = True
 

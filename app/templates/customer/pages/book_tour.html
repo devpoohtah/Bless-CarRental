@@ -34,8 +34,8 @@
 {% endblock %}
 
 {% block fields %}
-<fieldset>
-  <legend>Tour details</legend>
+<fieldset data-step>
+  <legend>Tour and dates</legend>
   <div class="booking-form__grid">
     <div class="field field--wide">
       <label for="bk-item">Tour package</label>
@@ -61,6 +61,11 @@
       <label for="bk-end">Last day of the tour (optional)</label>
       <input id="bk-end" name="end_date" type="date" min="{{ today_iso }}" max="{{ max_date_iso }}">
     </div>
+  </div>
+</fieldset>
+<fieldset data-step>
+  <legend>Guests and pick-up</legend>
+  <div class="booking-form__grid">
     <div class="field">
       <label for="bk-people">Number of guests</label>
       <input id="bk-people" name="guests" type="number" inputmode="numeric" min="1" max="{{ selected.vehicle_seats or 60 }}" required>
