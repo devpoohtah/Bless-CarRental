@@ -11,6 +11,7 @@ from app.core.config import STATIC_DIR, TEMPLATES_DIR, settings
 from app.core.csrf import csrf_token
 from app.core.icons import icon
 from app.db import firebase
+from app.services import pricing
 
 def _csp_nonce(request) -> dict:
     """Makes {{ csp_nonce }} available in every template. The value is set per request in security.py."""
@@ -52,6 +53,7 @@ templates.env.globals.update(
     icon=icon, static_url=static_url, absolute_url=absolute_url, site=settings, firebase_config=config.integrations.firebase_web_config,
     database_ready=lambda: firebase.is_configured(), push_config=lambda: config.integrations.push_web_config,
     csrf_token=csrf_token,
+    car_pricing=lambda: pricing.load_rules(),  # the saved extra-hour rates, for pages that show them
     turnstile_site_key=config.integrations.turnstile_site_key if config.integrations.turnstile_ready else "",
 )
 
@@ -62,6 +64,7 @@ NOTICES = {
     "created": "Booking added.",
     "status": "Booking status updated.",
     "payment": "Payment status updated.",
+    "license": "License photo deleted.",
 }
 
 

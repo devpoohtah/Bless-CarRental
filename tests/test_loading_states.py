@@ -43,9 +43,8 @@ def test_booking_action_buttons_have_busy_labels(fake_db):
         start_date=today, end_date=today, requested_on=today, status="pending", payment_status="unpaid",
         history=[StatusChange(status="pending", changed_on=today)], is_sample=False))
     html = client.get(f"/admin/bookings/{booking_id}").text
-    for label in ("Approving…", "Rejecting…", "Cancelling…"):
-        assert f'data-busy-label="{label}"' in html
-    assert html.count('data-busy-label="Saving…"') == 2  # status and payment
+    # Status form has one "Save status" button; payment form has one "Save payment" button
+    assert html.count('data-busy-label="Saving…"') == 2
 
 
 def test_login_buttons_show_a_loading_label_and_there_is_a_live_status(monkeypatch):

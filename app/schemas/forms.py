@@ -7,8 +7,9 @@ from typing import Literal
 import bleach
 from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
 
-from app.schemas.booking import DriverOption, PaymentStatus
+from app.schemas.booking import DriverOption, PaymentStatus, PaymentType
 from app.schemas.catalog import TRANSMISSIONS, VEHICLE_TYPES, Availability, canonical_choice
+from app.schemas.pricing import CarPricing, SeatRates
 
 
 # Bleach config: strip all HTML tags, keep only plain text
@@ -97,6 +98,7 @@ class BookingInput(_ItemInput):
     end_date: date
     details: str | None = Field(default=None, max_length=2000)
     payment_status: PaymentStatus = "unpaid"
+    payment_type: PaymentType | None = None
 
     @model_validator(mode="after")
     def _dates_in_order(self):
@@ -145,9 +147,9 @@ class PublicCarBookingInput(_PublicContact):
 
     car: str = Field(min_length=1, max_length=200)  # the car's id
     start_date: date
-    start_time: time | None = None
+    start_time: time  # the price depends on the times, so both are required
     end_date: date
-    end_time: time | None = None
+    end_time: time
     pickup_location: str = Field(min_length=1, max_length=200)
     dropoff_location: str = Field(min_length=1, max_length=200)
     destination: str = Field(min_length=1, max_length=200)
@@ -189,11 +191,15 @@ LABELS = {
     "price_php": "Price", "item": "Car or tour", "customer_name": "Customer name",
     "customer_phone": "Customer phone", "customer_email": "Customer email",
     "start_date": "Start date", "end_date": "End date", "details": "Details",
-    "payment_status": "Payment status", "passengers": "Number of people",
+    "payment_status": "Payment status", "payment_type": "Payment type", "passengers": "Number of people",
     "pickup_location": "Pick-up location", "driver_option": "Driver option",
     "car": "Type of car", "tour": "Tour package", "guests": "Number of guests",
     "dropoff_location": "Drop-off location", "start_time": "Pick-up time", "end_time": "Return time",
     "vehicle_name": "Vehicle name", "vehicle_seats": "Vehicle seats",
+    "flat_until_hours": "Flat rate hours", "five_hourly_rate_php": "5-seater price per hour",
+    "five_hourly_hours": "5-seater hours charged per hour", "five_flat_php": "5-seater flat price",
+    "seven_hourly_rate_php": "7-seater price per hour", "seven_hourly_hours": "7-seater hours charged per hour",
+    "seven_flat_php": "7-seater flat price",
 }
 
 
@@ -215,6 +221,32 @@ def _message(error: dict) -> str:
     if kind == "value_error":
         return str(error["ctx"]["error"])
     return "is not valid"
+
+
+class PricingInput(BaseModel):
+    """The Pricing page: extra-hour rates for the two seat sizes, as a flat form."""
+
+    flat_until_hours: int = Field(ge=1, le=23)
+    five_hourly_rate_php: int = Field(ge=0, le=1_000_000)
+    five_hourly_hours: int = Field(ge=0, le=23)
+    five_flat_php: int = Field(ge=0, le=1_000_000)
+    seven_hourly_rate_php: int = Field(ge=0, le=1_000_000)
+    seven_hourly_hours: int = Field(ge=0, le=23)
+    seven_flat_php: int = Field(ge=0, le=1_000_000)
+
+    @model_validator(mode="after")
+    def _hourly_hours_come_first(self):
+        if max(self.five_hourly_hours, self.seven_hourly_hours) >= self.flat_until_hours:
+            raise ValueError("the hours charged per hour must be fewer than the hours of the flat rate")
+        return self
+
+    def to_rules(self) -> CarPricing:
+        return CarPricing(
+            flat_until_hours=self.flat_until_hours,
+            five_seater=SeatRates(hourly_rate_php=self.five_hourly_rate_php, hourly_hours=self.five_hourly_hours,
+                                  flat_php=self.five_flat_php),
+            seven_seater=SeatRates(hourly_rate_php=self.seven_hourly_rate_php, hourly_hours=self.seven_hourly_hours,
+                                   flat_php=self.seven_flat_php))
 
 
 def validate(model: type[BaseModel], raw: dict) -> tuple[BaseModel | None, list[str]]:

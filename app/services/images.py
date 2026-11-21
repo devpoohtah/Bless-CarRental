@@ -1,7 +1,7 @@
 """Image upload to Cloudinary. The API secret stays on the server; the browser only sends
 the file to this app, which validates it and uploads with a signed request.
 
-Every image is stored as WebP, resized to fit 1600 px, so uploads stay light.
+Every image is stored as WebP at full resolution, high quality.
 """
 
 import logging
@@ -18,7 +18,7 @@ from app.services.errors import FormError
 log = logging.getLogger(__name__)
 
 MAX_BYTES = 5 * 1024 * 1024
-MAX_SIDE = 1600
+DEFAULT_QUALITY = 90  # WebP quality 1-100 (higher = better quality)
 
 
 class ImageError(FormError):
@@ -47,6 +47,9 @@ def _configure() -> None:
 
 
 def upload(file: UploadFile, folder: str) -> UploadedImage:
+    """Upload an image to Cloudinary as WebP at full resolution, high quality.
+    Preserves transparency if the source has an alpha channel.
+    """
     if not config.integrations.cloudinary_ready:
         raise ImageError("Image upload is not set up yet. Add the Cloudinary values to .env.")
     data = file.file.read(MAX_BYTES + 1)
@@ -61,7 +64,7 @@ def upload(file: UploadFile, folder: str) -> UploadedImage:
             folder=f"bless/{folder}",
             resource_type="image",
             format="webp",
-            transformation=[{"width": MAX_SIDE, "height": MAX_SIDE, "crop": "limit", "quality": "auto"}],
+            quality=DEFAULT_QUALITY,
         )
     except cloudinary.exceptions.Error:
         log.exception("Cloudinary upload failed")

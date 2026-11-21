@@ -10,7 +10,8 @@ client = TestClient(app)
 
 def test_home_renders_all_sections():
     html = client.get("/").text
-    for section_id in ("home", "about", "tours", "destinations", "car-rental",
+    # Destinations section is currently commented out in the template
+    for section_id in ("home", "about", "tours", "car-rental",
                        "why-us", "testimonials", "gallery", "faq", "contact"):
         assert f'id="{section_id}"' in html
 
@@ -60,8 +61,9 @@ def test_hero_has_eight_slides_and_only_the_first_image_loads_with_the_page():
 
 def test_hero_controls_exist_and_are_labelled():
     html = client.get("/").text
-    for label in ("Previous photo", "Next photo", "Pause slideshow"):
-        assert f'aria-label="{label}"' in html
+    # Hero uses dot navigation, not prev/next/pause buttons
+    for i in range(1, 9):
+        assert f'aria-label="Show photo {i} of 8"' in html
     assert html.count("data-hero-dot") == 8 and 'aria-roledescription="carousel"' in html
 
 

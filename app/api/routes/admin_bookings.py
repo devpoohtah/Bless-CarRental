@@ -4,14 +4,14 @@ import logging
 from datetime import date
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 
 from app.core.auth import require_admin
 from app.core.templating import notice_for, templates
 from app.db.firebase import require_configured
 from app.schemas.forms import BookingInput, validate
 from app.services import bookings as service
-from app.services import mailer
+from app.services import licenses, mailer
 from app.services.errors import FormError
 
 log = logging.getLogger(__name__)
@@ -45,6 +45,7 @@ def _detail(request: Request, booking, status_code: int = 200, errors: list[str]
 
 @router.get("/bookings", response_class=HTMLResponse)
 def bookings(request: Request, type: str | None = None) -> HTMLResponse:
+    service.purge_expired_licenses_if_due()  # photos past their day are deleted here and when the app starts
     booking_type = type if type in ("car", "tour") else None
     return render(request, "bookings.html", "bookings",
                   bookings=service.list_bookings(booking_type), active_type=booking_type)
@@ -92,6 +93,30 @@ def booking_detail(request: Request, booking_id: str) -> HTMLResponse:
     return _detail(request, _booking_or_404(booking_id))
 
 
+@router.get("/bookings/{booking_id}/license")
+def booking_license(booking_id: str) -> Response:
+    """The customer's license photo, for signed-in admins only (the router requires it). Never cached."""
+    booking = _booking_or_404(booking_id)
+    image = licenses.load(booking_id) if booking.license_on_file else None
+    if image is None:
+        raise HTTPException(status_code=404, detail="No license photo for this booking")
+    return Response(image, media_type=licenses.CONTENT_TYPE, headers={
+        "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff",
+        "Content-Disposition": 'inline; filename="license.webp"'})
+
+
+@router.post("/bookings/{booking_id}/license/delete")
+def booking_license_delete(request: Request, booking_id: str):
+    """Deletes the photo now, for example when the customer asks for it."""
+    require_configured()
+    booking = _booking_or_404(booking_id)
+    try:
+        service.delete_license(booking)
+    except FormError as exc:
+        return _detail(request, booking, 422, [str(exc)])
+    return RedirectResponse(f"/admin/bookings/{booking_id}?notice=license", status_code=303)
+
+
 @router.post("/bookings/{booking_id}/status")
 def booking_status(request: Request, background: BackgroundTasks, booking_id: str, status: str = Form("")):
     require_configured()
@@ -106,11 +131,11 @@ def booking_status(request: Request, background: BackgroundTasks, booking_id: st
 
 
 @router.post("/bookings/{booking_id}/payment")
-def booking_payment(request: Request, booking_id: str, payment_status: str = Form("")):
+def booking_payment(request: Request, booking_id: str, payment_status: str = Form(""), payment_type: str = Form("")):
     require_configured()
     booking = _booking_or_404(booking_id)
     try:
-        service.change_payment(booking, payment_status)
+        service.change_payment(booking, payment_status, payment_type or None)
     except FormError as exc:
         return _detail(request, booking, 422, [str(exc)])
     return RedirectResponse(f"/admin/bookings/{booking_id}?notice=payment", status_code=303)

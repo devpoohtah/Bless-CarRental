@@ -59,8 +59,8 @@
 .vcar[data-ready] .vcar__track { overflow-x: auto; }
 .vcar__track::-webkit-scrollbar { display: none; }
 .vslide { flex: 0 0 100%; min-width: 0; scroll-snap-align: start; scroll-snap-stop: always; }
-.vslide__stage { position: relative; display: flex; align-items: center; justify-content: center; box-sizing: border-box; width: 100%; max-height: 26rem; aspect-ratio: 4 / 3; padding: 1rem; border-radius: var(--radius-lg); background: #fff; }
-.vslide__stage img { width: 100%; height: 100%; object-fit: contain; }
+.vslide__stage { position: relative; display: flex; align-items: center; justify-content: center; box-sizing: border-box; width: 100%; max-height: 26rem; aspect-ratio: 4 / 3; border-radius: 1.5rem; background: transparent; }
+.vslide__stage img { width: 100%; height: 100%; object-fit: cover; }
 .vslide__type { font-size: 0.875rem; font-weight: 600; color: var(--text-on-dark-muted); }
 .vslide__name { margin-top: 0.25rem; font-size: clamp(1.75rem, 3.5vw, 2.5rem); font-weight: 700; color: var(--text-on-dark); }
 .vslide__facts { display: flex; flex-wrap: wrap; gap: 1.25rem 2.5rem; margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--border-dark-muted); }
@@ -79,6 +79,9 @@
 
 /* "View all" link under a landing section's cards */
 .section__more { display: flex; justify-content: center; margin-top: 2.5rem; }
+
+/* Tours section: top border line like car rental requirements */
+#tours { border-top: 1px solid var(--border-light-muted); padding-top: 3rem; }
 
 /* /cars and /tours: the full list on a powder page under the navbar */
 .catalog { padding: calc(var(--header-h) + 1.5rem) 0 clamp(4rem, 9vw, 6rem); background: var(--bg-surface); color: var(--text-on-light); }
@@ -198,13 +201,72 @@
 
 /* Car rental requirements */
 .reqs { margin-top: 2.5rem; padding-top: 2rem; border-top: 1px solid var(--border-dark-muted); }
-.reqs h3 { font-size: 1.5rem; }
-.reqs__list { display: grid; gap: 1rem; margin-top: 1.5rem; }
-.reqs__list li { display: flex; gap: 0.75rem; color: var(--text-on-dark-muted); }
-.reqs__list .icon { flex: none; margin-top: 0.15rem; color: var(--accent); }
-.reqs__list strong { color: var(--text-on-dark); }
-.reqs__note { margin-top: 1.25rem; font-size: 0.875rem; color: var(--text-on-dark-muted); }
-@media (min-width: 48em) { .reqs__list { grid-template-columns: repeat(2, 1fr); gap: 1rem 2.5rem; } }
+.reqs h3 { font-size: 1.75rem; font-weight: 500; color: var(--text-on-dark); margin: 0 0 1.5rem; } /* 28px */
+
+/* Each group: heading + its own grid - SAME grid for all */
+.reqs__group { margin-top: 1.75rem; padding-top: 1.25rem; border-top: 1px solid var(--border-dark-muted); } /* 28px between groups */
+.reqs__group:first-child { margin-top: 0; padding-top: 0; border-top: none; }
+.reqs__group h4 { margin: 0 0 0.75rem; font-size: 1.125rem; font-weight: 500; color: var(--text-on-dark); } /* 18px */
+
+/* Unified 3-column grid for ALL groups */
+.reqs__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.625rem 1.5rem; /* 10px row gap, 24px column gap */
+  align-items: start;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Items: icon + text on ONE LINE */
+.reqs__grid li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem; /* 10px icon-text gap */
+  color: rgba(255,255,255,0.78); /* white @ 78% */
+  font-size: 1rem; /* 16px */
+  line-height: 1.45;
+}
+
+/* Check-circle icon: 18px, white, top-aligned, flex:none */
+.reqs__icon {
+  flex: none;
+  width: 1.125rem; /* 18px */
+  height: 1.125rem;
+  margin-top: 0.125rem; /* top-align with first line */
+  color: var(--text-on-dark);
+  display: flex;
+  align-items: flex-start;
+}
+
+/* Bold parts: white, weight 600 */
+.reqs__grid strong {
+  color: var(--text-on-dark);
+  font-weight: 600;
+}
+
+/* Excess time charges: empty icon placeholder for alignment */
+.reqs__icon[aria-hidden="true"] { visibility: hidden; }
+
+/* Note under Excess */
+.reqs__note {
+  margin-top: 0.75rem; /* 12px */
+  font-size: 0.875rem; /* 14px */
+  color: rgba(255,255,255,0.65); /* white @ 65% */
+  line-height: 1.4;
+}
+
+/* Responsive: under 768px (48em) -> 1 column, smaller text */
+@media (max-width: 47.99em) {
+  .reqs h3 { font-size: 1.5rem; } /* 24px */
+  .reqs__group h4 { font-size: 1.0625rem; } /* 17px */
+  .reqs__grid { grid-template-columns: 1fr; gap: 0.5rem 0; }
+  .reqs__group { margin-top: 1.5rem; }
+  .reqs__group:first-child { margin-top: 0; }
+  .reqs__grid li { font-size: 0.9375rem; } /* 15px */
+  .reqs__note { font-size: 0.8125rem; } /* 13px */
+}
 .why__actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.75rem; }
 
 /* Privacy Policy and Terms */

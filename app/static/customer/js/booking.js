@@ -76,6 +76,7 @@
       showErrors([TAKEN]);
     }
     picker?.setDate([start.value, end.value].filter(Boolean), false);
+    form.dispatchEvent(new Event("quote-input"));
   }
 
   function onPick(dates) {
@@ -92,6 +93,7 @@
     start.value = first;
     end.value = last; // blank until the second click: a one-day tour needs no end date
     end.min = first;
+    form.dispatchEvent(new Event("quote-input"));
   }
 
   function setUpCalendar() {
@@ -220,6 +222,96 @@
     const formatted = formatPhone(phone.value);
     if (formatted !== phone.value) phone.value = formatted;
   });
+
+  // ---- license photo: car page only, and only for a self-drive rental ----
+  const driver = document.getElementById("bk-driver");
+  const licenseBox = form.querySelector("[data-license]");
+  const licenseInput = document.getElementById("bk-license");
+  const LICENSE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+  const LICENSE_MAX_BYTES = 5 * 1024 * 1024;
+
+  // A hidden required field would block the step with "not focusable", so it is only required while it shows.
+  function syncLicense() {
+    const needed = driver.value === "self_drive";
+    licenseBox.hidden = !needed;
+    licenseInput.required = needed;
+    if (!needed) { licenseInput.value = ""; licenseInput.setCustomValidity(""); }
+  }
+
+  function checkLicense() {
+    const file = licenseInput.files[0];
+    let problem = "";
+    if (file && !LICENSE_TYPES.includes(file.type)) problem = "The license must be a JPEG, PNG or WebP photo.";
+    else if (file && file.size > LICENSE_MAX_BYTES) problem = "The photo is larger than 5 MB. Use a smaller file.";
+    licenseInput.setCustomValidity(problem);
+    if (problem) licenseInput.reportValidity();
+  }
+
+  if (driver && licenseBox && licenseInput) {
+    driver.addEventListener("change", syncLicense);
+    licenseInput.addEventListener("change", checkLicense);
+    syncLicense();
+  }
+
+  // ---- estimated total: car page only. The server does the sum; this only asks and shows the answer ----
+  const quotePanels = form.querySelectorAll("[data-quote]");
+  const startTime = document.getElementById("bk-start-time");
+  const endTime = document.getElementById("bk-end-time");
+  let quoteTimer = null;
+  let quoteRequest = null;
+
+  function showQuote(result) {
+    quotePanels.forEach((panel) => {
+      panel.replaceChildren();
+      if (!result || !result.ok) { panel.hidden = true; return; }
+      const total = document.createElement("p");
+      total.className = "quote__total";
+      const amount = document.createElement("strong");
+      amount.textContent = result.total;
+      total.append("Estimated total: ", amount);
+      const lines = document.createElement("ul");
+      lines.className = "quote__lines";
+      for (const line of result.lines) {
+        const row = document.createElement("li");
+        const label = document.createElement("span");
+        label.textContent = line.label;
+        const price = document.createElement("span");
+        price.textContent = line.amount;
+        row.append(label, price);
+        lines.append(row);
+      }
+      const note = document.createElement("p");
+      note.className = "quote__note";
+      note.textContent = "This is an estimate from your pick-up and return times. We confirm the final price when we approve your request. Returning late is charged extra per hour.";
+      panel.append(total, lines, note);
+      panel.hidden = false;
+    });
+  }
+
+  async function updateQuote() {
+    if (!item.value || !start.value || !end.value || !startTime.value || !endTime.value) { showQuote(null); return; }
+    quoteRequest?.abort();
+    quoteRequest = new AbortController();
+    const query = new URLSearchParams({ car: item.value, start_date: start.value, start_time: startTime.value,
+                                        end_date: end.value, end_time: endTime.value });
+    try {
+      const response = await fetch(`/book/car/quote?${query}`, { headers: { Accept: "application/json" }, signal: quoteRequest.signal });
+      showQuote(response.ok ? await response.json() : null);
+    } catch (error) {
+      if (error.name !== "AbortError") showQuote(null);
+    }
+  }
+
+  function scheduleQuote() { clearTimeout(quoteTimer); quoteTimer = setTimeout(updateQuote, 250); }
+
+  if (quotePanels.length && startTime && endTime) {
+    for (const field of [item, start, end, startTime, endTime]) {
+      field.addEventListener("change", scheduleQuote);
+      field.addEventListener("input", scheduleQuote);
+    }
+    form.addEventListener("quote-input", scheduleQuote); // the calendar sets the dates without a change event
+    scheduleQuote();
+  }
 
   // ---- submit ----
   function setBusy(button, busy) {

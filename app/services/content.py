@@ -36,7 +36,6 @@ TOURS_ON_HOME = 3
 
 NAV_LINKS = [
     NavLink(label="Tours", href="#tours", section_id="tours"),
-    NavLink(label="Destinations", href="#destinations", section_id="destinations"),
     NavLink(label="Car Rental", href="#car-rental", section_id="car-rental"),
     NavLink(label="How it works", href="#how-it-works", section_id="how-it-works"),
     NavLink(label="About", href="#about", section_id="about"),
@@ -230,7 +229,7 @@ def list_gallery() -> list[GalleryImage]:
         )
 
     return [
-        item("g1", "Travel Memories & Highlights", "highlights.webp"),
+        item("g1", "Travel Memories & Highlights", "bless1.webp"),
         item("g2", "Group tours", "grouptours.webp"),
         item("g3", "Customer travel experiences", "customertravelexperience.webp"),
         item("g4", "Group Adventures & Getaways", "group.webp"),

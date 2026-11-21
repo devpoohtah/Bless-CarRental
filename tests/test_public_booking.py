@@ -108,11 +108,17 @@ def test_a_car_request_is_saved_as_a_pending_unpaid_booking(catalog):
     assert [h["status"] for h in saved["history"]] == ["pending"]
 
 
-def test_times_and_driver_are_optional_for_a_car(catalog):
-    data = car_request(start_time="", end_time="", driver_option="", details="")
+def test_the_driver_is_optional_for_a_car(catalog):
+    data = car_request(driver_option="", details="")
     assert book("/book/car", data).status_code == 201
     (saved,) = saved_bookings(catalog)
-    assert saved["start_time"] is None and saved["end_time"] is None and saved["driver_option"] is None
+    assert saved["driver_option"] is None
+
+
+@pytest.mark.parametrize("missing", ["start_time", "end_time"])
+def test_a_car_request_needs_both_times(catalog, missing):
+    response = book("/book/car", car_request(**{missing: ""}))
+    assert response.status_code == 422 and saved_bookings(catalog) == []
 
 
 def test_a_one_day_rental_can_return_later_the_same_day(catalog):
@@ -244,8 +250,8 @@ def test_an_approved_booking_blocks_overlapping_dates_for_that_car(catalog):
 
 def test_the_days_just_before_and_after_an_approved_booking_are_free(catalog):
     add_booking("approved", 5, 7)
-    assert book("/book/car", car_request(start_date=when(2), end_date=when(4), start_time="", end_time="")).status_code == 201
-    assert book("/book/car", car_request(start_date=when(8), end_date=when(9), start_time="", end_time="")).status_code == 201
+    assert book("/book/car", car_request(start_date=when(2), end_date=when(4))).status_code == 201
+    assert book("/book/car", car_request(start_date=when(8), end_date=when(9))).status_code == 201
 
 
 def test_an_ongoing_booking_still_blocks_its_dates(catalog):
@@ -343,8 +349,9 @@ def test_the_car_page_has_every_field_the_server_expects():
                                  "customer_name", "customer_phone", "customer_email", "website"}
     assert 'action="/book/car"' in html and 'method="post"' in html and f'min="{today_ph().isoformat()}"' in html
     assert re.search(r'<input id="bk-email"[^>]* required', html) and 'id="booking-view-code"' in html
-    ids = re.findall(r'<(?:input|select|textarea) id="(bk-[a-z-]+)"', html)
-    assert ids and all(re.search(rf'<label[^>]*for="{i}"', html) for i in ids)
+    form_html = html.split('id="booking-form"')[1].split("</form>")[0]
+    ids = re.findall(r'<(?:input|select|textarea) id="(bk-[a-z-]+)"', form_html)
+    assert ids and all(re.search(rf'id="{i}"[^>]*>.*?<label[^>]*for="{i}"', form_html, re.DOTALL) for i in ids)
 
 
 def test_the_tour_page_has_every_field_the_server_expects():
@@ -353,8 +360,9 @@ def test_the_tour_page_has_every_field_the_server_expects():
                                  "customer_name", "customer_phone", "customer_email", "website"}
     assert field_names(html).isdisjoint({"dropoff_location", "destination", "driver_option", "start_time", "end_time"})
     assert 'action="/book/tour"' in html
-    ids = re.findall(r'<(?:input|select|textarea) id="(bk-[a-z-]+)"', html)
-    assert ids and all(re.search(rf'<label[^>]*for="{i}"', html) for i in ids)
+    form_html = html.split('id="booking-form"')[1].split("</form>")[0]
+    ids = re.findall(r'<(?:input|select|textarea) id="(bk-[a-z-]+)"', form_html)
+    assert ids and all(re.search(rf'id="{i}"[^>]*>.*?<label[^>]*for="{i}"', form_html, re.DOTALL) for i in ids)
 
 
 def test_each_page_loads_the_calendar_from_a_pinned_cdn_version_with_an_integrity_check():

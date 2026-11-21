@@ -7,9 +7,11 @@ alerts run after the response, so a slow alert never delays the customer.
 """
 
 import logging
-from datetime import date
+from dataclasses import dataclass
+from datetime import date, time
+from typing import Any
 
-from fastapi import APIRouter, BackgroundTasks, Form, Request
+from fastapi import APIRouter, BackgroundTasks, File, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from app.core import config
@@ -19,7 +21,7 @@ from app.core.templating import templates
 from app.db import firebase
 from app.schemas.forms import PublicCarBookingInput, PublicTourBookingInput, validate
 from app.services import bookings as service
-from app.services import content, notify, otp, turnstile
+from app.services import content, licenses, notify, otp, pricing, turnstile
 from app.services.errors import FormError
 
 log = logging.getLogger(__name__)
@@ -40,6 +42,25 @@ FORMS = {
 }
 
 MESSENGER_HINT = "message us on Messenger"
+
+
+@dataclass
+class _Pending:
+    """What waits in the code store until the customer confirms their email: the checked request and, for a
+    self-drive rental, the license photo (already a small WebP). Nothing is stored anywhere else before then."""
+
+    data: Any
+    license: bytes | None = None
+
+
+def _license_image(data, upload: UploadFile | None) -> bytes | None:
+    """The license photo for a car request, ready to keep. Required for a self-drive rental. With a driver
+    (or undecided) none is needed, so a file sent anyway is dropped unread."""
+    if data.driver_option != "self_drive":
+        return None
+    if upload is None or not upload.filename:
+        raise licenses.LicenseError("Upload a photo of your driver's license for a self-drive rental.")
+    return licenses.prepare(upload)
 
 
 def _errors(status_code: int, *messages: str, **extra) -> JSONResponse:
@@ -95,7 +116,8 @@ def tour_page(request: Request, tour: str = "") -> HTMLResponse:
                  blocked=service.all_blocked_ranges("tour", [t.name for t in tours]))
 
 
-def _submit(request: Request, kind: str, raw: dict, honeypot: str, token: str, agree: str = ""):
+def _submit(request: Request, kind: str, raw: dict, honeypot: str, token: str, agree: str = "",
+            license_file: UploadFile | None = None):
     """Checks a request and emails a code. Saves nothing: /book/verify does that once the code is right."""
     client = _client(request)
     if not limiter.allow(client):
@@ -120,25 +142,56 @@ def _submit(request: Request, kind: str, raw: dict, honeypot: str, token: str, a
     except Exception:
         log.exception("Could not check a website booking request")
         return _errors(503, f"We could not check your request. Please try again in a moment, or {MESSENGER_HINT}.")
+    license_image = None
+    if kind == "car":
+        try:
+            license_image = _license_image(data, license_file)  # checked before any email is sent, like build() above
+        except FormError as exc:
+            return _reject(kind, str(exc))
     if not email_limiter.allow(data.customer_email):
         return _errors(429, "Too many codes were sent to this email address. Please try again later.")
     try:
-        challenge, test_code = otp.store.start(kind, data, data.customer_email)
+        challenge, test_code = otp.store.start(kind, _Pending(data, license_image), data.customer_email)
     except otp.OtpError as exc:
         return _otp_failure(exc)
     return JSONResponse(_challenge_body(challenge, data.customer_email, test_code), status_code=202)
+
+
+quote_limiter = RateLimiter(max_hits=120, window_seconds=600)
+NO_STORE = {"Cache-Control": "no-store"}
+
+
+@router.get("/book/car/quote")
+def car_quote(request: Request, car: str = "", start_date: str = "", start_time: str = "", end_date: str = "",
+              end_time: str = ""):
+    """The estimate the form shows while the customer fills it in. It only reads: nothing is saved, and the real
+    total is worked out again on the server when the request is sent."""
+    if not quote_limiter.allow(_client(request)):
+        return JSONResponse({"ok": False}, status_code=429, headers=NO_STORE)
+    try:
+        vehicle = next((v for v in content.list_vehicles() if v.id == car), None)
+        price = vehicle and pricing.quote(vehicle, date.fromisoformat(start_date), time.fromisoformat(start_time),
+                                          date.fromisoformat(end_date), time.fromisoformat(end_time))
+    except ValueError:  # a date or time that is not one
+        price = None
+    if not price:
+        return JSONResponse({"ok": False}, headers=NO_STORE)
+    return JSONResponse({"ok": True, "total": pricing.php(price.total_php),
+                         "lines": [{"label": line.label, "amount": pricing.php(line.amount_php)} for line in price.lines]},
+                        headers=NO_STORE)
 
 
 @router.post("/book/verify")
 def verify_code(background: BackgroundTasks, challenge: str = Form(""), code: str = Form("")):
     """The customer's code. Right: save the booking. Wrong, expired or locked: say which."""
     try:
-        kind, data = otp.store.verify(challenge, code)
+        kind, pending = otp.store.verify(challenge, code)
     except otp.OtpError as exc:
         return _otp_failure(exc)
     # The code is used up now. Dates can have been taken since the form was sent, so the save checks them again.
+    extra = {"license_image": pending.license} if pending.license else {}
     try:
-        booking = FORMS[kind][2](data, email_verified=True)
+        booking = FORMS[kind][2](pending.data, email_verified=True, **extra)
     except FormError as exc:
         return _errors(422, str(exc), code="rejected")
     except Exception:
@@ -171,12 +224,13 @@ def submit_car(
     passengers: str = Form(""), driver_option: str = Form(""), details: str = Form(""),
     customer_name: str = Form(""), customer_phone: str = Form(""), customer_email: str = Form(""),
     website: str = Form(""), agree: str = Form(""), cf_turnstile_response: str = Form("", alias="cf-turnstile-response"),
+    license_file: UploadFile | None = File(None),
 ):
     raw = dict(car=car, start_date=start_date, start_time=start_time, end_date=end_date, end_time=end_time,
                pickup_location=pickup_location, dropoff_location=dropoff_location, destination=destination,
                passengers=passengers, driver_option=driver_option, details=details, customer_name=customer_name,
                customer_phone=customer_phone, customer_email=customer_email)
-    return _submit(request, "car", raw, website, cf_turnstile_response, agree)
+    return _submit(request, "car", raw, website, cf_turnstile_response, agree, license_file)
 
 
 @router.post("/book/tour")

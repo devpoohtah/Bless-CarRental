@@ -1,17 +1,21 @@
 import logging
 import os
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.concurrency import run_in_threadpool
 
-from app.api.routes import admin, admin_bookings, admin_push, admin_services, auth, bookings, pages
+from app.api.routes import admin, admin_bookings, admin_push, admin_pricing, admin_services, auth, bookings, pages
 from app.core.auth import LoginRequired
 from app.core.config import STATIC_DIR, integrations, settings
+from app.core.bodylimit import BodySizeLimitMiddleware
 from app.core.csrf import CSRFMiddleware, csrf_token
 from app.core.security import SecurityHeadersMiddleware
 from app.core.templating import templates
 from app.db import firebase
+from app.services import bookings as booking_service
 
 log = logging.getLogger(__name__)
 
@@ -26,10 +30,18 @@ def is_admin_request(request: Request) -> bool:
     return request.url.path.startswith("/admin")
 
 
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    # License photos past their deletion day are removed when the app starts (and when an admin opens the bookings).
+    await run_in_threadpool(booking_service.purge_expired_licenses_if_due)
+    yield
+
+
 def create_app() -> FastAPI:
     # API docs only in dev
     dev = _is_dev()
     app = FastAPI(
+        lifespan=lifespan,
         title=settings.business_name,
         docs_url="/docs" if dev else None,
         redoc_url="/redoc" if dev else None,
@@ -41,6 +53,7 @@ def create_app() -> FastAPI:
     app.include_router(auth.router)
     app.include_router(admin.router)
     app.include_router(admin_services.router)
+    app.include_router(admin_pricing.router)
     app.include_router(admin_bookings.router)
     app.include_router(admin_push.router)
 
@@ -54,6 +67,8 @@ def create_app() -> FastAPI:
     # Middleware order matters: first added = outermost = runs first on request, last on response
     app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(CSRFMiddleware)
+    # Added last so it wraps the others: an oversized booking body is refused before CSRF reads it into memory.
+    app.add_middleware(BodySizeLimitMiddleware, max_bytes=6 * 1024 * 1024, prefix="/book")
 
     @app.exception_handler(LoginRequired)
     async def send_to_login(request: Request, exc: LoginRequired) -> RedirectResponse:

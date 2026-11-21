@@ -36,9 +36,9 @@
 <fieldset data-step>
   <legend>Trip</legend>
   <div class="booking-form__grid">
-    <div class="field field--wide">
-      <label for="bk-item">Type of car</label>
+    <div class="field field--wide field--float">
       <select id="bk-item" name="car" required>
+        <option value="">Choose a car</option>
         {% for c in cars %}
         <option value="{{ c.id }}"{% if c.id == selected.id %} selected{% endif %}
           data-name="{{ c.name }}" data-type="{{ c.vehicle_type }}" data-seats="{{ c.seats if c.seats else 'To be confirmed' }}"
@@ -46,18 +46,19 @@
           data-rate="{{ c.daily_rate_php | php }}" data-photo="{{ static_url(c.photo.src) }}" data-photo-alt="{{ c.photo.alt }}">{{ c.name }}</option>
         {% endfor %}
       </select>
+      <label for="bk-item">Type of car</label>
     </div>
-    <div class="field">
+    <div class="field field--float">
+      <input id="bk-pickup" name="pickup_location" type="text" maxlength="200" autocomplete="off" required placeholder=" ">
       <label for="bk-pickup">Pick-up location</label>
-      <input id="bk-pickup" name="pickup_location" type="text" maxlength="200" autocomplete="off" required>
     </div>
-    <div class="field">
+    <div class="field field--float">
+      <input id="bk-dropoff" name="dropoff_location" type="text" maxlength="200" autocomplete="off" required placeholder=" ">
       <label for="bk-dropoff">Drop-off location</label>
-      <input id="bk-dropoff" name="dropoff_location" type="text" maxlength="200" autocomplete="off" required>
     </div>
-    <div class="field field--wide">
+    <div class="field field--wide field--float">
+      <input id="bk-destination" name="destination" type="text" maxlength="200" autocomplete="off" required placeholder=" ">
       <label for="bk-destination">Destination</label>
-      <input id="bk-destination" name="destination" type="text" maxlength="200" autocomplete="off" required>
     </div>
   </div>
 </fieldset>
@@ -65,44 +66,45 @@
   <legend>Dates</legend>
   <div class="booking-form__grid">
     {{ calendar('Click the first day, then the last day. For a one-day rental, click the same day twice.') }}
-    <div class="field">
+    <div class="field field--float">
+      <input id="bk-start" name="start_date" type="date" min="{{ today_iso }}" max="{{ max_date_iso }}" required placeholder=" ">
       <label for="bk-start">Booking date</label>
-      <input id="bk-start" name="start_date" type="date" min="{{ today_iso }}" max="{{ max_date_iso }}" required>
     </div>
-    <div class="field">
-      <label for="bk-start-time">Booking time (optional)</label>
-      <input id="bk-start-time" name="start_time" type="time">
+    <div class="field field--float">
+      <input id="bk-start-time" name="start_time" type="time" required placeholder=" ">
+      <label for="bk-start-time">Pick-up time</label>
     </div>
-    <div class="field">
+    <div class="field field--float">
+      <input id="bk-end" name="end_date" type="date" min="{{ today_iso }}" max="{{ max_date_iso }}" required placeholder=" ">
       <label for="bk-end">Return date</label>
-      <input id="bk-end" name="end_date" type="date" min="{{ today_iso }}" max="{{ max_date_iso }}" required>
     </div>
-    <div class="field">
-      <label for="bk-end-time">Return time (optional)</label>
-      <input id="bk-end-time" name="end_time" type="time">
+    <div class="field field--float">
+      <input id="bk-end-time" name="end_time" type="time" required placeholder=" ">
+      <label for="bk-end-time">Return time</label>
     </div>
   </div>
+  <div class="quote" data-quote aria-live="polite" hidden></div>
 </fieldset>
 <fieldset data-step>
   <legend>Passengers and extras</legend>
   <div class="booking-form__grid">
-    <div class="field">
+    <div class="field field--float">
+      <input id="bk-people" name="passengers" type="number" inputmode="numeric" min="1" max="{{ selected.seats or 60 }}" required placeholder=" ">
       <label for="bk-people">Number of passengers</label>
-      <input id="bk-people" name="passengers" type="number" inputmode="numeric" min="1" max="{{ selected.seats or 60 }}" required>
     </div>
-    <div class="field">
-      <label for="bk-driver">Driver (optional)</label>
+    <div class="field field--float">
       <select id="bk-driver" name="driver_option">
         <option value="">Not sure yet</option>
         <option value="with_driver">With a driver</option>
         <option value="self_drive">Self-drive</option>
       </select>
+      <label for="bk-driver">Driver (optional)</label>
     </div>
-    <div class="field field--wide">
+    <div class="field field--wide field--float">
+      <textarea id="bk-details" name="details" rows="3" maxlength="2000" placeholder=" "></textarea>
       <label for="bk-details">Anything else we should know? (optional)</label>
-      <textarea id="bk-details" name="details" rows="3" maxlength="2000"></textarea>
     </div>
   </div>
 </fieldset>
-{{ contact_fields() }}
+{{ contact_fields(license=True, quote=True) }}
 {% endblock %}

@@ -46,7 +46,17 @@ def simulated_otp(monkeypatch):
     """Booking codes without email: OTP_DELIVERY=simulated (fixed code 123456), a fresh code store, roomy limits.
     Requires ENVIRONMENT=development so simulated mode is allowed."""
     monkeypatch.setenv("ENVIRONMENT", "development")
+    monkeypatch.setenv("APPROVAL_EMAIL_MODE", "simulated")
     monkeypatch.setattr(config, "integrations", replace(config.integrations, otp_delivery="simulated"))
     monkeypatch.setattr(otp, "store", otp.OtpStore())
     monkeypatch.setattr(bookings_route, "email_limiter", RateLimiter(max_hits=500, window_seconds=3600))
     monkeypatch.setattr(bookings_route, "limiter", RateLimiter(max_hits=500, window_seconds=600))
+
+
+@pytest.fixture(autouse=True)
+def fresh_pricing_cache():
+    """The saved car rates are cached for a minute; every test starts without that cache."""
+    from app.services import pricing
+    pricing._cache = None
+    yield
+    pricing._cache = None

@@ -6,15 +6,19 @@ tests always have something to show.
 """
 
 import calendar
-from datetime import date, timedelta
+import logging
+import time
+from datetime import date, datetime, timedelta
 
 from app.db import firebase
 from app.db import repositories as repo
 from app.schemas.booking import Booking, BookingStatus, BookingType, StatusChange
-from app.core.clock import today_ph
+from app.core.clock import PHILIPPINES, today_ph
 from app.schemas.forms import BookingInput, PublicCarBookingInput, PublicTourBookingInput
-from app.services import content
+from app.services import content, licenses, pricing
 from app.services.errors import FormError
+
+log = logging.getLogger(__name__)
 
 STATUS_LABELS = {
     "pending": "Pending",
@@ -39,6 +43,13 @@ NEXT_STATUSES: dict[BookingStatus, list[BookingStatus]] = {
     "cancelled": [],
 }
 
+# License photo retention. A rejected or cancelled booking never went ahead, so its photo is deleted at once.
+# A completed booking keeps it for a short while in case damage is found afterwards, then it is deleted.
+# A booking nobody ever closes loses it this long after its end date, so no photo stays forever.
+LICENSE_DELETED_AT_ONCE_BY: tuple[BookingStatus, ...] = ("rejected", "cancelled")
+LICENSE_KEPT_DAYS_AFTER_COMPLETION = 15
+LICENSE_KEPT_DAYS_AFTER_END = 30
+
 # The calendar shows bookings that are still scheduled or under way.
 CALENDAR_STATUSES: tuple[BookingStatus, ...] = ("pending", "approved", "ongoing")
 
@@ -46,6 +57,9 @@ CALENDAR_STATUSES: tuple[BookingStatus, ...] = ("pending", "approved", "ongoing"
 def _sample_bookings(today: date) -> list[Booking]:
     def d(days: int) -> date:
         return today + timedelta(days=days)
+
+    def dt(days: int) -> datetime:
+        return datetime.combine(d(days), datetime.min.time()).replace(tzinfo=PHILIPPINES)
 
     def booking(n, kind, item, start, end, status, payment, requested, path):
         return Booking(
@@ -59,6 +73,7 @@ def _sample_bookings(today: date) -> list[Booking]:
             end_date=d(end),
             details="Placeholder booking details.",
             requested_on=d(requested),
+            requested_at=dt(requested),
             status=status,
             payment_status=payment,
             history=[StatusChange(status=s, changed_on=d(day)) for s, day in path],
@@ -86,7 +101,12 @@ def _sample_bookings(today: date) -> list[Booking]:
 
 def list_bookings(booking_type: BookingType | None = None) -> list[Booking]:
     rows = repo.list_all(repo.BOOKINGS, Booking) if firebase.is_configured() else _sample_bookings(date.today())
-    rows = sorted(rows, key=lambda b: (b.requested_on, b.start_date), reverse=True)
+    def sort_key(b: Booking):
+        if b.requested_at:
+            return b.requested_at
+        # Fallback for old data: use requested_on at end of day so it sorts after any with time on that date
+        return datetime.combine(b.requested_on, datetime.max.time()).replace(tzinfo=PHILIPPINES)
+    rows = sorted(rows, key=lambda b: (sort_key(b), b.start_date), reverse=True)
     return [b for b in rows if booking_type in (None, b.booking_type)]
 
 
@@ -116,7 +136,8 @@ def create_booking(data: BookingInput) -> str:
     if data.item not in choices:
         raise FormError("Choose a car or tour package from the list.")
     _check_dates_free(data.booking_type, data.item_name, data.start_date, data.end_date)
-    today = date.today()
+    now_ph = datetime.now(PHILIPPINES)
+    today = now_ph.date()
     booking = Booking(
         id="",
         booking_type=data.booking_type,
@@ -128,6 +149,7 @@ def create_booking(data: BookingInput) -> str:
         end_date=data.end_date,
         details=data.details or "",
         requested_on=today,
+        requested_at=now_ph,
         status="pending",
         payment_status=data.payment_status,
         history=[StatusChange(status="pending", changed_on=today)],
@@ -186,30 +208,53 @@ def build_car_booking(data: PublicCarBookingInput, email_verified: bool = False)
     Status and payment are decided here, never by the customer."""
     car = _find(content.list_vehicles(), data.car, "car")
     today = _check_start_date(data.start_date)
+    now_ph = datetime.now(PHILIPPINES)
     if car.seats and data.passengers > car.seats:
         raise FormError(f"The {car.name} seats up to {car.seats} passengers.")
     _check_dates_free("car", car.name, data.start_date, data.end_date)
+    # Priced here, on the server, with the rates as they are now; the booking keeps that figure and its lines.
+    price = pricing.quote(car, data.start_date, data.start_time, data.end_date, data.end_time)
     return Booking(
         id="", booking_type="car", customer_name=data.customer_name, customer_phone=data.customer_phone,
         customer_email=data.customer_email, item_name=car.name,
         start_date=data.start_date, end_date=data.end_date, start_time=data.start_time, end_time=data.end_time,
         details=data.details or "", passengers=data.passengers, pickup_location=data.pickup_location,
         dropoff_location=data.dropoff_location, destination=data.destination, driver_option=data.driver_option,
-        requested_on=today, status="pending", payment_status="unpaid",
+        requested_on=today, requested_at=now_ph, status="pending", payment_status="unpaid",
         history=[StatusChange(status="pending", changed_on=today)], email_verified=email_verified, is_sample=False,
+        total_php=price.total_php if price else None, price_lines=price.lines if price else [],
     )
 
 
-def create_car_booking(data: PublicCarBookingInput, email_verified: bool = False) -> Booking:
-    """Saves a website car rental request as a Pending booking."""
+def create_car_booking(data: PublicCarBookingInput, email_verified: bool = False,
+                       license_image: bytes | None = None) -> Booking:
+    """Saves a website car rental request as a Pending booking, with the license photo if there is one."""
     booking = build_car_booking(data, email_verified)
-    return booking.model_copy(update={"id": repo.save(repo.BOOKINGS, booking)})
+    if license_image is None:
+        return booking.model_copy(update={"id": repo.save(repo.BOOKINGS, booking)})
+    # The photo is keyed by the booking id, so pick the id first. The photo goes in first and is removed again
+    # if the booking cannot be saved, so a photo never stays behind without a booking.
+    booking_id = repo.new_id(repo.BOOKINGS)
+    licenses.save(booking_id, license_image)
+    booking = booking.model_copy(update={
+        "license_on_file": True,
+        "license_delete_on": booking.end_date + timedelta(days=LICENSE_KEPT_DAYS_AFTER_END)})
+    try:
+        repo.save(repo.BOOKINGS, booking, booking_id)
+    except Exception:
+        try:
+            licenses.delete(booking_id)
+        except Exception:
+            log.exception("Could not remove the license photo of booking %s after a failed save", booking_id)
+        raise
+    return booking.model_copy(update={"id": booking_id})
 
 
 def build_tour_booking(data: PublicTourBookingInput, email_verified: bool = False) -> Booking:
     """Runs every check for a website tour request and returns the Pending booking without saving it."""
     tour = _find(content.list_tours(), data.tour, "tour package")
     today = _check_start_date(data.start_date)
+    now_ph = datetime.now(PHILIPPINES)
     if tour.vehicle_seats and data.guests > tour.vehicle_seats:
         raise FormError(f"The vehicle for {tour.name} seats up to {tour.vehicle_seats} guests. "
                         "For a bigger group, message us on Messenger.")
@@ -219,7 +264,7 @@ def build_tour_booking(data: PublicTourBookingInput, email_verified: bool = Fals
         customer_email=data.customer_email, item_name=tour.name,
         start_date=data.start_date, end_date=data.end_date, details=data.details or "",
         passengers=data.guests, pickup_location=data.pickup_location or "",
-        requested_on=today, status="pending", payment_status="unpaid",
+        requested_on=today, requested_at=now_ph, status="pending", payment_status="unpaid",
         history=[StatusChange(status="pending", changed_on=today)], email_verified=email_verified, is_sample=False,
     )
 
@@ -237,15 +282,25 @@ def change_status(booking: Booking, new_status: str) -> Booking:
     if new_status in BLOCKING_STATUSES and booking.status not in BLOCKING_STATUSES:
         _check_dates_free(booking.booking_type, booking.item_name, booking.start_date, booking.end_date)
     history = [*booking.history, StatusChange(status=new_status, changed_on=date.today())]
-    updated = booking.model_copy(update={"status": new_status, "history": history})
+    changes: dict = {"status": new_status, "history": history}
+    if booking.license_on_file and new_status in LICENSE_DELETED_AT_ONCE_BY:
+        _remove_license_photo(booking.id)  # first: if this fails the status does not change, so nothing is left behind
+        changes |= {"license_on_file": False, "license_delete_on": None}
+    elif booking.license_on_file and new_status == "completed":
+        soon = today_ph() + timedelta(days=LICENSE_KEPT_DAYS_AFTER_COMPLETION)
+        changes["license_delete_on"] = min(soon, booking.license_delete_on or soon)
+    updated = booking.model_copy(update=changes)
     repo.save(repo.BOOKINGS, updated, booking.id)
     return updated
 
 
-def change_payment(booking: Booking, new_status: str) -> None:
+def change_payment(booking: Booking, new_status: str, payment_type: str | None = None) -> None:
     if new_status not in PAYMENT_LABELS:
         raise FormError("Choose a payment status from the list.")
-    repo.save(repo.BOOKINGS, booking.model_copy(update={"payment_status": new_status}), booking.id)
+    update = {"payment_status": new_status}
+    if payment_type:
+        update["payment_type"] = payment_type
+    repo.save(repo.BOOKINGS, booking.model_copy(update=update), booking.id)
 
 
 def recent_bookings(limit: int = 5) -> list[Booking]:
@@ -288,3 +343,57 @@ def month_view(first_day: date, today: date) -> dict:
         "is_current_month": first_day == today.replace(day=1),
         "weekdays": [calendar.day_abbr[i] for i in (6, 0, 1, 2, 3, 4, 5)],
     }
+
+
+def _remove_license_photo(booking_id: str) -> None:
+    try:
+        licenses.delete(booking_id)
+    except Exception:
+        log.exception("Could not delete the license photo of booking %s", booking_id)
+        raise FormError("The license photo could not be deleted. Nothing was changed. Try again.") from None
+
+
+def delete_license(booking: Booking) -> Booking:
+    """Deletes the photo now, for example because the customer asked for it."""
+    if not booking.license_on_file:
+        raise FormError("There is no license photo to delete.")
+    _remove_license_photo(booking.id)
+    updated = booking.model_copy(update={"license_on_file": False, "license_delete_on": None})
+    repo.save(repo.BOOKINGS, updated, booking.id)
+    return updated
+
+
+_PURGE_EVERY = timedelta(hours=1)
+_last_purge = None
+
+
+def purge_expired_licenses(today: date | None = None) -> int:
+    """Deletes every license photo whose day has come. Only bookings that hold a photo are read, so this is
+    cheap. Returns how many were deleted. A failure on one photo is logged and the rest carry on."""
+    today = today or today_ph()
+    deleted = 0
+    for booking in repo.list_where(repo.BOOKINGS, Booking, license_on_file=True):
+        due = booking.license_delete_on or booking.end_date + timedelta(days=LICENSE_KEPT_DAYS_AFTER_END)
+        if due > today:
+            continue
+        try:
+            delete_license(booking)
+            deleted += 1
+        except Exception:
+            log.exception("Could not purge the license photo of booking %s", booking.id)
+    return deleted
+
+
+def purge_expired_licenses_if_due() -> None:
+    """Runs the purge at most once an hour. Called when the app starts and when an admin opens the bookings,
+    so no scheduler is needed. Never raises: it must not break the page it runs on."""
+    global _last_purge
+    stamp = time.monotonic()
+    if _last_purge is not None and stamp - _last_purge < _PURGE_EVERY.total_seconds():
+        return
+    _last_purge = stamp
+    try:
+        if firebase.is_configured():
+            purge_expired_licenses()
+    except Exception:
+        log.exception("License photo purge failed")

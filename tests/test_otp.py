@@ -194,7 +194,7 @@ def test_simulated_mode_shows_the_test_code_and_sends_no_email(catalog, monkeypa
 def test_gmail_mode_sends_a_random_code_by_email_and_never_returns_it(catalog, monkeypatch):
     set_integrations(monkeypatch, otp_delivery="gmail", gmail_user="x@gmail.com", gmail_app_password="p")
     sent = []
-    monkeypatch.setattr(mailer, "send_gmail", lambda to, subject, body: sent.append((to, subject, body)) or True)
+    monkeypatch.setattr(mailer, "send_gmail", lambda to, subject, text_body, html_body=None: sent.append((to, subject, text_body)) or True)
     response = start()
     assert response.status_code == 202 and "test_code" not in response.json()
     ((to, subject, body),) = sent
@@ -207,7 +207,7 @@ def test_gmail_mode_sends_a_random_code_by_email_and_never_returns_it(catalog, m
 def test_resend_mode_uses_the_resend_sender(catalog, monkeypatch):
     set_integrations(monkeypatch, otp_delivery="resend", resend_api_key="re_key")
     sent = []
-    monkeypatch.setattr(mailer, "send_resend", lambda to, subject, body: sent.append(to) or True)
+    monkeypatch.setattr(mailer, "send_resend", lambda to, subject, text_body, html_body=None: sent.append(to) or True)
     assert start().status_code == 202 and sent == ["ana@example.com"]
 
 
@@ -369,7 +369,8 @@ def test_an_unreachable_cloudflare_fails_closed(catalog, turnstile_on, monkeypat
 
 def test_the_widget_is_on_the_page_only_when_configured(turnstile_on, monkeypatch):
     html = client.get("/book/car").text
-    assert 'class="cf-turnstile" data-sitekey="site"' in html and "challenges.cloudflare.com/turnstile/v0/api.js" in html
+    # Template has: class="cf-turnstile" data-final-only data-sitekey="site" data-theme="light"
+    assert 'class="cf-turnstile"' in html and 'data-sitekey="site"' in html and "challenges.cloudflare.com/turnstile/v0/api.js" in html
     assert "SECRET-KEY" not in html
     set_integrations(monkeypatch, turnstile_site_key="", turnstile_secret_key="")
     assert "cf-turnstile" not in client.get("/book/car").text
@@ -440,7 +441,7 @@ def test_a_gmail_failure_is_logged_without_the_password(monkeypatch, caplog):
 @pytest.fixture
 def approvals(monkeypatch):
     sent = []
-    monkeypatch.setattr(mailer, "send_resend", lambda to, subject, body: sent.append((to, subject, body)) or True)
+    monkeypatch.setattr(mailer, "send_resend", lambda to, subject, text_body, html_body=None: sent.append((to, subject, text_body)) or True)
     return sent
 
 

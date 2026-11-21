@@ -15,7 +15,7 @@ from app.core import config
 from app.core.clock import PHILIPPINES, now_ph
 from app.core.templating import date_time
 from app.schemas.booking import Booking
-from app.services import push
+from app.services import mailer, push
 
 log = logging.getLogger(__name__)
 TIMEOUT_SECONDS = 5
@@ -39,6 +39,8 @@ def booking_alert_text(booking: Booking, admin_base_url: str = "", sent_at: date
         # The times are shown when the customer gave them, so nobody has to open the booking to see them.
         lines.append(f"Pick-up: {date_time(booking.start_date, booking.start_time)}")
         lines.append(f"Return: {date_time(booking.end_date, booking.end_time)}")
+        if booking.total_php is not None:
+            lines.append(f"Estimated total: ₱{booking.total_php:,}")
         extras = [f"{booking.passengers} passengers"] if booking.passengers else []
         if booking.driver_option:
             extras.append("with a driver" if booking.driver_option == "with_driver" else "self-drive")
@@ -83,6 +85,47 @@ def send_telegram(text: str) -> bool:
     except Exception as exc:
         log.warning("Could not reach Telegram for a booking alert (%s)", type(exc).__name__)
     return False
+
+
+def _booking_confirmed_text(booking: Booking) -> tuple[str, str]:
+    """Subject and body of the booking confirmation email."""
+    is_car = booking.booking_type == "car"
+    lines = [f"Hello {booking.customer_name},", "",
+             f"Thank you for your {'car rental' if is_car else 'tour'} request {booking.reference}.", "",
+             f"We've received your request for {booking.item_name}.", ""]
+    if is_car:
+        lines += [f"Pick-up: {_when(booking.start_date)}", f"Return: {_when(booking.end_date)}"]
+    else:
+        when = _when(booking.start_date)
+        if booking.end_date != booking.start_date:
+            when += f" to {_when(booking.end_date)}"
+        lines.append(f"Date: {when}")
+    if booking.pickup_location:
+        lines.append(f"{'Pick-up location' if is_car else 'Meet-up'}: {booking.pickup_location}")
+    lines += ["", "We'll review your request and confirm by email shortly.", "",
+              f"Questions? Call {config.settings.phone_display} or message us on Messenger: {config.settings.messenger_url}", "",
+              config.settings.business_name]
+    return f"Your {config.settings.short_name} booking request {booking.reference} received", "\n".join(lines)
+
+
+def notify_booking_confirmed(booking: Booking) -> None:
+    """Emails the customer when their booking request is saved (after email verification). Never raises."""
+    if not booking.customer_email:
+        return
+    try:
+        subject, body = _booking_confirmed_text(booking)
+        mode = config.integrations.approval_email_mode
+        sent = False
+        if mode == "gmail":
+            sent = mailer.send_gmail(booking.customer_email, subject, body)
+        elif mode == "resend":
+            sent = mailer.send_resend(booking.customer_email, subject, body)
+        elif mode == "simulated":
+            sent = mailer.send_resend(booking.customer_email, subject, body)
+        if not sent:
+            log.warning("Confirmation email for %s was not sent (mode=%s)", booking.reference, mode)
+    except Exception:
+        log.exception("Confirmation email failed")
 
 
 def notify_new_booking(booking: Booking) -> None:

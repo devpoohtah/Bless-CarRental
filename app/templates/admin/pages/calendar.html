@@ -53,9 +53,9 @@
   <div class="calendar-bar">
     <h2 id="calendar-title">{{ month_label }}</h2>
     <nav class="calendar-bar__nav" aria-label="Change month">
-      <a class="btn btn--outline btn--sm" href="/admin/calendar?month={{ previous_month }}" aria-label="Previous month">{{ icon('chevron-left', 'icon') }}</a>
-      {% if not is_current_month %}<a class="btn btn--outline btn--sm" href="/admin/calendar">Today</a>{% endif %}
-      <a class="btn btn--outline btn--sm" href="/admin/calendar?month={{ next_month }}" aria-label="Next month">{{ icon('chevron-right', 'icon') }}</a>
+      <a class="btn btn--outline-light btn--sm" href="/admin/calendar?month={{ previous_month }}" aria-label="Previous month">{{ icon('chevron-left', 'icon') }}</a>
+      {% if not is_current_month %}<a class="btn btn--outline-light btn--sm" href="/admin/calendar">Today</a>{% endif %}
+      <a class="btn btn--outline-light btn--sm" href="/admin/calendar?month={{ next_month }}" aria-label="Next month">{{ icon('chevron-right', 'icon') }}</a>
     </nav>
   </div>
 

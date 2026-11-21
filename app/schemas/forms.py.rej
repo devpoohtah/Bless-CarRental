@@ -1,0 +1,9 @@
+diff a/app/schemas/forms.py b/app/schemas/forms.py	(rejected hunks)
+@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field, ValidationError, field_validator, model_v
+ 
+ from app.schemas.booking import DriverOption, PaymentStatus
+ from app.schemas.catalog import TRANSMISSIONS, VEHICLE_TYPES, Availability, canonical_choice
++from app.schemas.pricing import CarPricing, SeatRates
+ 
+ 
+ # Bleach config: strip all HTML tags, keep only plain text

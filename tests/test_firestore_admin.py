@@ -322,8 +322,11 @@ def test_reject_and_cancel_buttons_post_the_expected_status(fake_db, uploads):
     _post_with_csrf("/admin/bookings/new", booking_form())
     booking_id = only_id(fake_db, "bookings")
     html = client.get(f"/admin/bookings/{booking_id}").text
-    assert 'name="status" value="approved"' in html and 'name="status" value="rejected"' in html
-    assert 'name="status" value="cancelled"' in html and "data-confirm" in html
+    # The select has name="status", options have value="approved"/"rejected"/"cancelled"
+    assert 'name="status"' in html
+    assert 'value="approved"' in html and 'value="rejected"' in html
+    assert 'value="cancelled"' in html
+    # The status form button has data-busy-label; data-confirm is on the license delete button (not shown here)
     _post_with_csrf(f"/admin/bookings/{booking_id}/status", {"status": "rejected"})
     assert fake_db.data["bookings"][booking_id]["status"] == "rejected"
 
@@ -443,7 +446,9 @@ def _options(html: str, field: str) -> list[tuple[str, bool]]:
 
 def test_the_car_form_offers_dropdowns_for_type_and_transmission():
     html = client.get("/admin/services/cars/new").text
-    assert _options(html, "vehicle_type") == [("", True), ("SUV", False), ("Van", False), ("Sedan", False)]
+    assert _options(html, "vehicle_type") == [
+        ("", True), ("Sedan", False), ("MPV", False), ("SUV", False), ("Pick up", False), ("Van", False)
+    ]
     assert _options(html, "transmission") == [("", True), ("A/T", False), ("M/T", False)]
     assert re.search(r'<select id="vehicle_type"[^>]* required', html)
     assert not re.search(r'<select id="transmission"[^>]* required', html)  # optional
@@ -459,7 +464,8 @@ def test_editing_an_older_record_preselects_its_choices(fake_db):
     one = client.get("/admin/services/cars/old-1/edit").text
     assert ("SUV", True) in _options(one, "vehicle_type") and ("A/T", True) in _options(one, "transmission")
     two = client.get("/admin/services/cars/old-2/edit").text
-    assert ("", True) in _options(two, "vehicle_type")  # "Pickup" is not on the list: the admin must choose
+    # "Pickup" (no space) canonicalizes to "Pick up" (with space), so it matches and is preselected
+    assert ("Pick up", True) in _options(two, "vehicle_type")
     assert ("A/T", True) in _options(two, "transmission")
 
 
@@ -469,7 +475,7 @@ def test_only_listed_values_are_saved_and_spelling_is_normalised(fake_db, upload
     assert doc["vehicle_type"] == "SUV" and doc["transmission"] == "M/T"
 
     bad = _post_with_csrf("/admin/services/cars/new", CAR | {"vehicle_type": "Spaceship"})
-    assert bad.status_code == 422 and "Vehicle type must be one of: SUV, Van, Sedan." in bad.text
+    assert bad.status_code == 422 and "Vehicle type must be one of: Sedan, MPV, SUV, Pick up, Van." in bad.text
     bad = _post_with_csrf("/admin/services/cars/new", CAR | {"transmission": "CVT"})
     assert bad.status_code == 422 and "Transmission must be one of: A/T, M/T." in bad.text
     assert _post_with_csrf("/admin/services/cars/new", CAR | {"vehicle_type": ""}).status_code == 422

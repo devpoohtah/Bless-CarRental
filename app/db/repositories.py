@@ -20,6 +20,8 @@ CARS = "cars"
 TOURS = "tours"
 BOOKINGS = "bookings"
 PUSH_TOKENS = "push_tokens"
+SETTINGS = "settings"  # owner-editable settings such as car_pricing; read and written only by the backend
+LICENSES = "booking_licenses"  # private: driver's license photos, read only by the backend
 
 M = TypeVar("M", bound=BaseModel)
 
@@ -65,6 +67,11 @@ def save(collection: str, item: BaseModel, doc_id: str | None = None) -> str:
     ref = col.document(doc_id) if doc_id else col.document()
     ref.set(item.model_dump(mode="json", exclude={"id"}))
     return ref.id
+
+
+def new_id(collection: str) -> str:
+    """An unused document id (Firestore's random 20 characters), for when a related record must be written first."""
+    return firebase.get_db().collection(collection).document().id
 
 
 def delete(collection: str, doc_id: str) -> None:

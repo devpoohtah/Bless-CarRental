@@ -11,9 +11,9 @@
 <div class="page">
   {% include 'admin/components/notice.html' %}
   {{ errors_box(errors) }}
-  <a class="link back-link" href="/admin/bookings">Back to Booking Management</a>
   <div class="page-head">
     <div>
+      <a class="btn btn--outline-light" href="/admin/bookings">{{ icon('chevron-left', 'icon icon--sm') }}Back to Booking Management</a>
       <h1>{{ booking.customer_name }}</h1>
       <p class="page-lead">{{ type_labels[booking.booking_type] }} &middot; {{ booking.item_name }}</p>
     </div>
@@ -33,34 +33,54 @@
       <section class="card" aria-labelledby="booking-heading">
         <h2 id="booking-heading">Booking details</h2>
         <dl class="facts">
-          {{ fact('Type', type_labels[booking.booking_type]) }}
-          {{ fact('Selected car' if is_car else 'Selected tour package', booking.item_name) }}
-          {{ fact('Pick-up date' if is_car else 'Start date', booking.start_date | long_date) }}
-          {% if booking.start_time %}{{ fact('Pick-up time', booking.start_time | clock) }}{% endif %}
-          {{ fact('Return date' if is_car else 'End date', booking.end_date | long_date) }}
-          {% if booking.end_time %}{{ fact('Return time', booking.end_time | clock) }}{% endif %}
-          {{ fact('Reference', booking.reference) }}
-          {{ fact('Requested on', booking.requested_on | long_date) }}
-          {% if booking.passengers %}{{ fact('Passengers' if is_car else 'Guests', booking.passengers) }}{% endif %}
-          {% if is_car and booking.driver_option %}{{ fact('Driver', driver_labels[booking.driver_option]) }}{% endif %}
-          {% if booking.pickup_location %}{{ fact('Pick-up location', booking.pickup_location, wide=True) }}{% endif %}
-          {% if booking.dropoff_location %}{{ fact('Drop-off location', booking.dropoff_location, wide=True) }}{% endif %}
-          {% if booking.destination %}{{ fact('Destination', booking.destination, wide=True) }}{% endif %}
-          {{ fact('Details', booking.details or 'None', wide=True) }}
+          <div class="fact"><dt>Type:</dt><dd>{{ type_labels[booking.booking_type] }}</dd></div>
+          {{ fact('Selected car:' if is_car else 'Selected tour package:', booking.item_name) }}
+          {{ fact('Pick-up date:' if is_car else 'Start date:', booking.start_date | long_date) }}
+          {% if booking.start_time %}{{ fact('Pick-up time:', booking.start_time | clock) }}{% endif %}
+          {{ fact('Return date:' if is_car else 'End date:', booking.end_date | long_date) }}
+          {% if booking.end_time %}{{ fact('Return time:', booking.end_time | clock) }}{% endif %}
+          {{ fact('Reference:', booking.reference) }}
+          {{ fact('Requested on:', booking.requested_on | long_date) }}
+          {% if booking.passengers %}{{ fact('Passengers:' if is_car else 'Guests:', booking.passengers) }}{% endif %}
+          {% if is_car and booking.driver_option %}{{ fact('Driver:', driver_labels[booking.driver_option]) }}{% endif %}
+          {% if booking.pickup_location %}{{ fact('Pick-up location:', booking.pickup_location, wide=True) }}{% endif %}
+          {% if booking.dropoff_location %}{{ fact('Drop-off location:', booking.dropoff_location, wide=True) }}{% endif %}
+          {% if booking.destination %}{{ fact('Destination:', booking.destination, wide=True) }}{% endif %}
+          {{ fact('Details:', booking.details or 'None', wide=True) }}
         </dl>
       </section>
 
-      <section class="card" aria-labelledby="history-heading">
-        <h2 id="history-heading">Booking history</h2>
-        <ol class="timeline">
-          {% for change in history %}
-          <li>
-            <strong>{{ status_labels[change.status] }}</strong>{% if loop.first %} <span class="timeline__current">Current</span>{% endif %}
-            <span class="cell-sub">{{ change.changed_on | long_date }}</span>
-          </li>
-          {% endfor %}
-        </ol>
+      {% if booking.total_php is not none %}
+      <section class="card" aria-labelledby="price-heading">
+        <h2 id="price-heading">Estimated total</h2>
+        <p class="status-line"><span>Total</span><strong>₱{{ '{:,}'.format(booking.total_php) }}</strong></p>
+        <ul class="plain-list">
+          {% for line in booking.price_lines %}<li>{{ line.label }}: ₱{{ '{:,}'.format(line.amount_php) }}</li>{% endfor %}
+        </ul>
+        <p class="page-note">Worked out from the pick-up and return times and the rates at the time the request came in. Late-return charges are not included.</p>
       </section>
+      {% endif %}
+
+      {% if is_car and (booking.license_on_file or booking.driver_option == 'self_drive') %}
+      <section class="card" aria-labelledby="license-heading">
+        <h2 id="license-heading">Driver's license</h2>
+        {% if booking.license_on_file %}
+        <a href="/admin/bookings/{{ booking.id }}/license" target="_blank" rel="noopener noreferrer">
+          <img class="license-photo" src="/admin/bookings/{{ booking.id }}/license" alt="License photo no longer available" loading="lazy">
+        </a>
+        <p class="page-note">Private: only signed-in admins can see this photo.
+          {% if booking.license_delete_on %}It is deleted automatically on {{ booking.license_delete_on | long_date }}{% if booking.status != 'completed' %} at the latest (sooner if the booking is rejected, cancelled or completed){% endif %}.{% endif %}</p>
+        {% if not booking.is_sample %}
+        <form method="post" action="/admin/bookings/{{ booking.id }}/license/delete">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+          <button type="submit" class="btn btn--outline" data-confirm="Delete this license photo now? This cannot be undone." data-busy-label="Deleting…">Delete photo now</button>
+        </form>
+        {% endif %}
+        {% else %}
+        <p class="page-note">No license photo is on file for this self-drive request.</p>
+        {% endif %}
+      </section>
+      {% endif %}
     </div>
 
     <div class="detail__side">
@@ -71,24 +91,11 @@
         {% if booking.is_sample %}
         <p class="page-note">This is a sample booking, so its status cannot be changed.</p>
         {% elif next_options %}
-        {% if booking.status == 'pending' %}
-        <form class="action-row" method="post" action="{{ base }}/status">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-          <button type="submit" name="status" value="approved" class="btn btn--primary" data-busy-label="Approving…">Approve</button>
-          <button type="submit" name="status" value="rejected" class="btn btn--outline" data-confirm="Reject this booking?" data-busy-label="Rejecting…">Reject</button>
-        </form>
-        {% endif %}
         <form class="stack" method="post" action="{{ base }}/status">
           <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
           {{ select('status', 'Update status', next_options, next_options[0][0]) }}
           <button type="submit" class="btn btn--outline" data-busy-label="Saving…">Save status</button>
         </form>
-        {% if 'cancelled' in next_options | map(attribute=0) | list %}
-        <form method="post" action="{{ base }}/status">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-          <button type="submit" name="status" value="cancelled" class="btn btn--outline btn--block" data-confirm="Cancel this booking?" data-busy-label="Cancelling…">Cancel booking</button>
-        </form>
-        {% endif %}
         {% else %}
         <p class="page-note">This booking is {{ status_labels[booking.status] | lower }}, so its status can no longer be changed.</p>
         {% endif %}
@@ -103,9 +110,22 @@
         <form class="stack" method="post" action="{{ base }}/payment">
           <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
           {{ select('payment_status', 'Update payment status', payment_labels.items(), booking.payment_status) }}
-          <button type="submit" class="btn btn--outline" data-busy-label="Saving…">Save payment status</button>
+          {{ select('payment_type', 'Payment type', [('gcash', 'GCash'), ('bank_transfer', 'Bank transfer')], booking.payment_type, placeholder='Select payment type') }}
+          <button type="submit" class="btn btn--outline" data-busy-label="Saving…">Save payment</button>
         </form>
         {% endif %}
+      </section>
+
+      <section class="card" aria-labelledby="history-heading">
+        <h2 id="history-heading">Booking history</h2>
+        <ol class="timeline">
+          {% for change in history %}
+          <li>
+            <strong>{{ status_labels[change.status] }}</strong>{% if loop.first %} <span class="timeline__current">Current</span>{% endif %}
+            <span class="cell-sub">{{ change.changed_on | long_date }}</span>
+          </li>
+          {% endfor %}
+        </ol>
       </section>
     </div>
   </div>

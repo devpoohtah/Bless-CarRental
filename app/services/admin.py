@@ -112,11 +112,45 @@ def _remove(collection, item):
 
 
 def create_car(data: CarInput, image: UploadFile | None) -> str:
-    return _create(repo.CARS, Vehicle, "cars", CAR_PLACEHOLDER, data, image)
+    if not _has_file(image):
+        # No image: use placeholder
+        photo = Photo(src=CAR_PLACEHOLDER, alt=data.name)
+    else:
+        # Upload single image (full res, WebP, quality 90)
+        uploaded = images.upload(image, "cars")
+        photo = Photo(src=uploaded.url, alt=data.name, public_id=uploaded.public_id)
+    item = Vehicle(id="", photo=photo, is_sample=False, **data.model_dump())
+    try:
+        return repo.save(repo.CARS, item)
+    except Exception:
+        if _has_file(image) and photo.public_id:
+            images.delete(photo.public_id)
+        raise
 
 
 def update_car(car: Vehicle, data: CarInput, image: UploadFile | None, remove_image: bool = False) -> None:
-    _update(repo.CARS, "cars", CAR_PLACEHOLDER, car, data, image, remove_image)
+    if _has_file(image):
+        # New image uploaded
+        uploaded = images.upload(image, "cars")
+        photo = Photo(src=uploaded.url, alt=data.name, public_id=uploaded.public_id)
+    elif remove_image and car.photo.public_id:
+        # Remove requested, no new image: revert to placeholder
+        photo = Photo(src=CAR_PLACEHOLDER, alt=data.name)
+    else:
+        # Keep existing
+        photo = car.photo.model_copy(update={"alt": data.name})
+
+    updated = car.model_copy(update={**data.model_dump(), "photo": photo, "is_sample": False})
+    try:
+        repo.save(repo.CARS, updated, car.id)
+    except Exception:
+        if _has_file(image) and photo.public_id:
+            images.delete(photo.public_id)
+        raise
+    # Clean up old image if replaced or removed
+    if _has_file(image) or remove_image:
+        if car.photo.public_id and (not _has_file(image) or car.photo.public_id != photo.public_id):
+            images.delete(car.photo.public_id)
 
 
 def delete_car(car: Vehicle) -> None:

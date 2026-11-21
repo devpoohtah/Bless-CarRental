@@ -45,7 +45,9 @@ def test_accepts_jpeg_png_and_webp_and_converts_to_webp(cloudinary_ready, data):
     assert result.url.startswith("https://") and result.public_id == "bless/cars/x"
     options = cloudinary_ready[0][1]
     assert options["format"] == "webp" and options["folder"] == "bless/cars"
-    assert options["transformation"][0]["crop"] == "limit" and options["transformation"][0]["width"] == 1600
+    assert options["quality"] == 90
+    # No transformation: upload preserves full resolution
+    assert "transformation" not in options
 
 
 def test_rejects_non_images_even_when_named_like_one(cloudinary_ready):

@@ -21,7 +21,7 @@ Availability = Literal["inquire", "available", "unavailable"]
 
 # The choices the admin car form offers, and the only values it saves. To offer another vehicle type,
 # add it here: the dropdown and the validation both read this list.
-VEHICLE_TYPES = ("SUV", "Van", "Sedan")
+VEHICLE_TYPES = ("Sedan", "MPV", "SUV", "Pick up", "Van")
 TRANSMISSIONS = ("A/T", "M/T")
 # Older records and sample content spell the transmission out.
 _ALIASES = {"automatic": "A/T", "manual": "M/T"}
