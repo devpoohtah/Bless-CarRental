@@ -36,11 +36,11 @@
 <fieldset data-step>
   <legend>Trip</legend>
   <div class="booking-form__grid">
-    <div class="field field--wide field--float">
+    <div class="field field--wide">
       <select id="bk-item" name="car" required>
-        <option value="">Choose a car</option>
+        <option value="" disabled hidden{% if not car_param %} selected{% endif %}></option>
         {% for c in cars %}
-        <option value="{{ c.id }}"{% if c.id == selected.id %} selected{% endif %}
+        <option value="{{ c.id }}"{% if car_param and c.id == selected.id %} selected{% endif %}
           data-name="{{ c.name }}" data-type="{{ c.vehicle_type }}" data-seats="{{ c.seats if c.seats else 'To be confirmed' }}"
           data-max="{{ c.seats or '' }}" data-transmission="{{ c.transmission or 'To be confirmed' }}"
           data-rate="{{ c.daily_rate_php | php }}" data-photo="{{ static_url(c.photo.src) }}" data-photo-alt="{{ c.photo.alt }}">{{ c.name }}</option>
@@ -48,15 +48,15 @@
       </select>
       <label for="bk-item">Type of car</label>
     </div>
-    <div class="field field--float">
+    <div class="field">
       <input id="bk-pickup" name="pickup_location" type="text" maxlength="200" autocomplete="off" required placeholder=" ">
       <label for="bk-pickup">Pick-up location</label>
     </div>
-    <div class="field field--float">
+    <div class="field">
       <input id="bk-dropoff" name="dropoff_location" type="text" maxlength="200" autocomplete="off" required placeholder=" ">
       <label for="bk-dropoff">Drop-off location</label>
     </div>
-    <div class="field field--wide field--float">
+    <div class="field field--wide">
       <input id="bk-destination" name="destination" type="text" maxlength="200" autocomplete="off" required placeholder=" ">
       <label for="bk-destination">Destination</label>
     </div>
@@ -88,19 +88,19 @@
 <fieldset data-step>
   <legend>Passengers and extras</legend>
   <div class="booking-form__grid">
-    <div class="field field--float">
+    <div class="field">
       <input id="bk-people" name="passengers" type="number" inputmode="numeric" min="1" max="{{ selected.seats or 60 }}" required placeholder=" ">
       <label for="bk-people">Number of passengers</label>
     </div>
-    <div class="field field--float">
+    <div class="field">
       <select id="bk-driver" name="driver_option">
-        <option value="">Not sure yet</option>
+        <option value="" disabled hidden selected>Not sure yet</option>
         <option value="with_driver">With a driver</option>
         <option value="self_drive">Self-drive</option>
       </select>
       <label for="bk-driver">Driver (optional)</label>
     </div>
-    <div class="field field--wide field--float">
+    <div class="field field--wide">
       <textarea id="bk-details" name="details" rows="3" maxlength="2000" placeholder=" "></textarea>
       <label for="bk-details">Anything else we should know? (optional)</label>
     </div>

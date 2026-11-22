@@ -103,6 +103,13 @@ def clock(value: time) -> str:
     return f"{value:%I:%M %p}".lstrip("0")
 
 
+def linebreaks(text: str) -> str:
+    """Convert newlines to <br> tags for HTML rendering."""
+    if not text:
+        return ""
+    return text.replace("\r\n", "\n").replace("\n", "<br>")
+
+
 templates.env.filters.update(php=php, short_date=short_date, long_date=long_date, date_range=date_range, clock=clock,
-                             date_time=date_time)
+                             date_time=date_time, linebreaks=linebreaks)
 templates.env.globals["now_label"] = now_label

@@ -14,20 +14,20 @@
   </div>
 
   {{ errors_box(errors) }}
-  <form class="form form--split" method="post" enctype="multipart/form-data">
+  <form class="form form--split form--notch" method="post" enctype="multipart/form-data">
     <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
     <div class="form__main">
       <section class="form__group" aria-labelledby="car-details">
         <h2 id="car-details">Details</h2>
-        {{ field('name', 'Car name', form.name, required=True) }}
+        {{ field('name', 'Car name', form.name, required=True, placeholder=True) }}
         {{ select('vehicle_type', 'Vehicle type', vehicle_options, form.vehicle_type, required=True, placeholder='Select a vehicle type') }}
-        {{ field('seats', 'Seats', form.seats, type='number', inputmode='numeric', min=1) }}
+        {{ field('seats', 'Seats', form.seats, type='number', inputmode='numeric', min=1, placeholder=True) }}
         {{ select('transmission', 'Transmission', transmission_options, form.transmission, placeholder='Not set', hint='A/T is automatic and M/T is manual.') }}
       </section>
 
       <section class="form__group" aria-labelledby="car-rates">
         <h2 id="car-rates">Rate and availability</h2>
-        {{ field('daily_rate_php', 'Daily rate (PHP)', form.daily_rate_php, type='number', inputmode='numeric', min=0) }}
+        {{ field('daily_rate_php', 'Daily rate (PHP)', form.daily_rate_php, type='number', inputmode='numeric', min=0, placeholder=True) }}
         {{ select('availability', 'Availability', availability_labels.items(), form.availability or 'inquire') }}
       </section>
     </div>

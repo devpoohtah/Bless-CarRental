@@ -14,7 +14,7 @@
   </div>
 
   {{ errors_box(errors) }}
-  <form class="form form--split" method="post" enctype="multipart/form-data">
+  <form class="form form--split form--notch" method="post" enctype="multipart/form-data">
     <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
     <div class="form__main">
       <section class="form__group" aria-labelledby="tour-details">
@@ -22,8 +22,8 @@
         {{ field('name', 'Package name', form.name, required=True, wide=True) }}
         {{ field('destination', 'Destination', form.destination, required=True) }}
         {{ field('duration', 'Duration', form.duration, hint='For example: 1 day.') }}
-        {{ textarea('summary', 'Short summary', form.summary, rows=2, required=True) }}
-        {{ textarea('description', 'Full description', form.description, rows=6, required=True) }}
+        {{ textarea('summary', 'Short summary', form.summary, rows=4, required=True) }}
+        {{ textarea('description', 'Full description', form.description, rows=10, required=True, placeholder=False, class='field--tall') }}
       </section>
 
       <section class="form__group" aria-labelledby="tour-price">

@@ -408,7 +408,9 @@ def test_a_page_with_nothing_to_book_says_so_and_offers_messenger(fake_db):
 
 def test_the_booking_pages_link_back_to_the_landing_page_sections():
     html = client.get("/book/car").text
-    assert 'href="/#tours"' in html and 'href="/#home"' in html and 'href="/#services"' in html
+    # On booking pages, main sections link to their pages, not home-page anchors
+    assert 'href="/tours"' in html and 'href="/cars"' in html
+    assert 'href="#how-it-works"' in html and 'href="#about"' in html
     assert 'href="/"' in html  # breadcrumb
 
 

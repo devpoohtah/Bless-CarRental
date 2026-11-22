@@ -11,11 +11,11 @@
 <fieldset data-step>
   <legend>Your information</legend>
   <div class="booking-form__grid">
-    <div class="field field--wide field--float">
+    <div class="field field--wide">
       <input id="bk-name" name="customer_name" type="text" maxlength="120" autocomplete="name" required placeholder=" ">
       <label for="bk-name">Full name</label>
     </div>
-    <div class="field field--float">
+    <div class="field" id="bk-phone-field">
       <div class="phone-input">
         <input id="bk-phone" name="customer_phone" type="tel" inputmode="numeric" maxlength="12"
               autocomplete="tel-national" placeholder=" " required
@@ -27,13 +27,13 @@
       <label for="bk-phone">Contact number</label>
       <p class="field__hint" id="bk-phone-hint">Philippine mobile number, for example +63 917 123 4567. We use it to reach you about your request.</p>
     </div>
-    <div class="field field--float">
+    <div class="field" id="bk-email-field">
       <input id="bk-email" name="customer_email" type="email" maxlength="120" autocomplete="email" required aria-describedby="bk-email-hint" placeholder=" ">
       <label for="bk-email">Email</label>
       <p class="field__hint" id="bk-email-hint">We email a 6-digit code to confirm it is you.</p>
     </div>
     {% if license %}
-    <div class="field field--wide field--float" data-license hidden>
+    <div class="field field--wide" data-license hidden>
       <input id="bk-license" name="license_file" type="file" accept="image/jpeg,image/png,image/webp" aria-describedby="bk-license-hint">
       <label for="bk-license">Driver's license photo</label>
       <p class="field__hint" id="bk-license-hint">Needed for a self-drive rental. Send a clear photo of the front of your license (JPEG, PNG or WebP, up to 5 MB). We use it only to check that you may drive and keep it private. We delete it 15 days after your booking is completed (right away if it is rejected or cancelled), and sooner if you ask us to. See our <a class="link" href="/privacy">Privacy Policy</a>.</p>

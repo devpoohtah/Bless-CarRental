@@ -90,7 +90,7 @@ def _challenge_body(challenge: str, email: str, test_code: str | None) -> dict:
 
 
 def _page(request: Request, template: str, **context) -> HTMLResponse:
-    context |= {"nav_links": content.NAV_LINKS, "nav_base": "/", "current_year": date.today().year,
+    context |= {"nav_links": content.BOOKING_NAV_LINKS, "nav_base": "", "current_year": date.today().year,
                 "today_iso": today_ph().isoformat(),
                 "turnstile_site_key": config.integrations.turnstile_site_key if config.integrations.turnstile_ready else ""}
     return templates.TemplateResponse(request, f"customer/pages/{template}", context)
@@ -104,7 +104,7 @@ def _bookable(items) -> list:
 def car_page(request: Request, car: str = "") -> HTMLResponse:
     cars = _bookable(content.list_vehicles())
     selected = next((c for c in cars if c.id == car), cars[0] if cars else None)
-    return _page(request, "book_car.html", cars=cars, selected=selected,
+    return _page(request, "book_car.html", cars=cars, selected=selected, car_param=car,
                  blocked=service.all_blocked_ranges("car", [c.name for c in cars]))
 
 
@@ -112,7 +112,7 @@ def car_page(request: Request, car: str = "") -> HTMLResponse:
 def tour_page(request: Request, tour: str = "") -> HTMLResponse:
     tours = _bookable(content.list_tours())
     selected = next((t for t in tours if t.id == tour), tours[0] if tours else None)
-    return _page(request, "book_tour.html", tours=tours, selected=selected,
+    return _page(request, "book_tour.html", tours=tours, selected=selected, tour_param=tour,
                  blocked=service.all_blocked_ranges("tour", [t.name for t in tours]))
 
 

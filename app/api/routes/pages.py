@@ -53,6 +53,14 @@ def tours(request: Request) -> HTMLResponse:
     return _catalog_page(request, "tours.html", tours=content.list_tours())
 
 
+@router.get("/tours/{tour_id}", response_class=HTMLResponse, include_in_schema=False)
+def tour_detail(request: Request, tour_id: str) -> HTMLResponse:
+    tour = next((t for t in content.list_tours() if t.id == tour_id), None)
+    if tour is None:
+        raise HTTPException(status_code=404, detail="Tour package not found")
+    return _catalog_page(request, "tour_detail.html", tour=tour)
+
+
 @router.get("/favicon.ico", include_in_schema=False)
 async def favicon() -> FileResponse:
     # Browsers request /favicon.ico on their own; serve the logo instead of a 404.

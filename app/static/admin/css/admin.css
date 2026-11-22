@@ -153,18 +153,6 @@ body { background: var(--bg-page); color: var(--text-on-dark); }
 .field select::placeholder,
 .field textarea::placeholder { color: var(--royal); opacity: 0.5; }
 
-/* File input styling */
-.field input[type="file"]::file-selector-button {
-  min-height: 3rem; padding: 0.625rem 1rem; margin-right: 0.875rem;
-  border: 1px solid var(--border-light-muted); border-radius: var(--radius-input);
-  background: var(--bg-surface); font: inherit; font-size: 1rem; font-weight: 600;
-  color: var(--royal); cursor: pointer;
-  transition: background-color 0.15s, border-color 0.15s;
-}
-.field input[type="file"]::file-selector-button:hover {
-  background: rgba(22, 38, 96, 0.06);
-  border-color: var(--royal);
-}
 
 /* Image field: hide inner label visually but keep for screen readers */
 .field[data-image-field] > label:not(.check label) {
@@ -279,7 +267,7 @@ a.chip:hover { filter: brightness(1.15); }
 .calendar__list { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.25rem; margin: 0.25rem 0 0; padding: 0; list-style: none; }
 .calendar__list li { min-width: 0; }
 /* Stretch (not flex-start) and clip, so a long name is cut with an ellipsis inside the chip instead of spilling out of it. */
-.calendar__list .chip { display: flex; flex-direction: column; align-items: stretch; gap: 0; overflow: hidden; min-height: 2.75rem; }
+.calendar__list .chip { display: inline-flex; align-items: center; gap: 0.375rem; max-width: 100%; padding: 0.25rem 0.5rem; border-radius: var(--radius-md); font-size: 0.8125rem; font-weight: 600; line-height: 1.3; }
 
 .agenda { display: grid; gap: 1.5rem; }
 .agenda__day h3 { margin-bottom: 0.5rem; font-size: 1rem; font-weight: 700; color: var(--royal); }
@@ -360,8 +348,8 @@ a.chip:hover { filter: brightness(1.15); }
 .legend-group__info:hover + .legend-group__tip, .legend-group__info:focus-visible + .legend-group__tip { visibility: visible; opacity: 1; }
 .calendar__head { display: flex; align-items: center; justify-content: space-between; gap: 0.25rem; }
 .calendar__count { padding: 0 0.5rem; border-radius: 999px; background: var(--bg-surface); font-size: 0.6875rem; font-weight: 600; color: var(--royal); opacity: 0.7; }
-.chip__when { display: inline-flex; align-items: center; gap: 0.25rem; min-width: 0; font-size: 0.6875rem; font-weight: 500; white-space: nowrap; color: var(--royal); }
-.chip__when .icon { flex: none; color: var(--royal); }
+.chip__when { display: inline-flex; align-items: center; gap: 0.25rem; min-width: 0; font-size: 0.6875rem; font-weight: 500; white-space: nowrap; color: inherit; }
+.chip__when .icon { flex: none; color: inherit; }
 .chip__stage { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .chip__sub { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.6875rem; font-weight: 400; }
 .chip__text .chip__sub { font-size: inherit; opacity: 0.85; }
@@ -388,6 +376,132 @@ a.chip:hover { filter: brightness(1.15); }
 /* Login page: replace inline styles with classes for CSP compliance */
 .page-note--no-margin { margin: 0; }
 .field--mt-half { margin-top: .5rem; }
+
+/* ---------- Notched floating label form (admin car form) ---------- */
+.form--notch .field { position: relative; gap: 0; }
+.form--notch .field > label {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--royal);
+  opacity: 0.6;
+  pointer-events: none;
+  transition: transform 0.15s ease, font-size 0.15s ease, color 0.15s ease, font-weight 0.15s ease, opacity 0.15s ease;
+  white-space: nowrap;
+  background: var(--bg-surface);
+  padding: 0 6px;
+  max-width: calc(100% - 28px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.form--notch .field__req { color: var(--danger); opacity: 1; }
+
+/* Text, number, textarea: label moves to border on focus or value */
+.form--notch .field:focus-within > label,
+.form--notch .field:has(input:not(:placeholder-shown)) > label,
+.form--notch .field:has(textarea:not(:placeholder-shown)) > label {
+  transform: translateY(-50%) scale(0.75);
+  top: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--royal);
+  opacity: 1;
+}
+
+/* Select, file: label always on border */
+.form--notch .field:has(select) > label,
+.form--notch .field:has(input[type="file"]) > label {
+  transform: translateY(-50%) scale(0.75);
+  top: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--royal);
+  opacity: 1;
+}
+
+/* Input/select/textarea styling for notched form */
+.form--notch .field input,
+.form--notch .field select,
+.form--notch .field textarea {
+  height: 52px;
+  padding: 14px 12px 8px;
+  border: 1.5px solid var(--border-light-muted);
+  border-radius: 10px;
+  background: transparent;
+  font: inherit;
+  font-size: 16px;
+  color: var(--royal);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.form--notch .field textarea { min-height: 5rem; resize: vertical; padding-top: 14px; padding-bottom: 8px; }
+.form--notch .field textarea.field--tall { min-height: 20rem; }
+.form--notch .field input[type="file"] { padding: 14px 12px; cursor: pointer; height: 64px; }
+
+/* Select: custom chevron */
+.form--notch .field select {
+  appearance: none;
+  padding-right: 40px;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23162660' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 20px 20px;
+}
+
+/* Focus ring */
+.form--notch .field input:focus,
+.form--notch .field select:focus,
+.form--notch .field textarea:focus {
+  outline: none;
+  border-color: var(--focus-light);
+  box-shadow: 0 0 0 3px rgba(22, 38, 96, 0.15);
+}
+
+/* Error state */
+.form--notch .field input[aria-invalid="true"],
+.form--notch .field select[aria-invalid="true"],
+.form--notch .field textarea[aria-invalid="true"],
+.form--notch .field.error input,
+.form--notch .field.error select,
+.form--notch .field.error textarea {
+  border-color: var(--danger);
+}
+.form--notch .field.error > label,
+.form--notch .field:has(input[aria-invalid="true"]) > label,
+.form--notch .field:has(select[aria-invalid="true"]) > label,
+.form--notch .field:has(textarea[aria-invalid="true"]) > label {
+  color: var(--danger);
+}
+
+/* Hint text: 6px gap below box */
+.form--notch .field__hint {
+  margin-top: 6px;
+  font-size: 0.8125rem;
+  color: var(--royal);
+  opacity: 0.7;
+}
+
+/* File input button — bordered box like other fields, centered in 52px input */
+.form--notch .field input[type="file"]::file-selector-button {
+  height: 36px;
+  padding: 0 1rem;
+  margin-right: 12px;
+  border: 1px solid var(--border-light-muted);
+  border-radius: 8px;
+  background: var(--bg-surface);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--royal);
+  cursor: pointer;
+  align-self: center;
+}
+.form--notch .field input[type="file"]::file-selector-button:hover {
+  background: rgba(22, 38, 96, 0.06);
+  border-color: var(--royal);
+}
 
 /* Error pages (admin) */
 .admin-error { display: flex; align-items: center; justify-content: center; min-height: 60vh; padding: 3rem 1.5rem; background: var(--bg-page); }

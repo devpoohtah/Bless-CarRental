@@ -1,40 +1,45 @@
 {% extends 'admin/base.html' %}
 {% from 'admin/components/form.html' import field, form_actions_bar, errors_box %}
-{% block title %}Pricing | {{ site.short_name }} Admin{% endblock %}
+{% block title %}Car pricing | {{ site.short_name }} Admin{% endblock %}
 
 {% block content %}
 <div class="page">
+  <a class="back-link" href="/admin/services/cars">{{ icon('chevron-left', 'icon icon--sm') }}Back to Car Management</a>
   <div class="page-head">
     <div>
-      <h1>Pricing</h1>
+      <h1>Car pricing</h1>
       <p class="page-lead">Extra-hour charges for car rentals. Each car's daily rate is set on its own page under Cars. Changes apply to new requests; bookings already received keep their price.</p>
     </div>
   </div>
 
   {% include 'admin/components/notice.html' %}
   {{ errors_box(errors) }}
-  <form class="form" method="post">
+  <form class="form form--notch" method="post">
     <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
     <div class="form__main">
       <section class="form__group" aria-labelledby="price-rule">
         <h2 id="price-rule">How extra hours are charged</h2>
         <p class="page-note">The rental is counted in 24-hour blocks from the pick-up time to the return time, and each block costs the car's daily rate. The hours left over are charged like this. Part of an hour counts as a full hour.</p>
-        {{ field('flat_until_hours', 'The flat price covers up to this many hours', form.flat_until_hours, type='number', inputmode='numeric', min=1, required=True,
-                 hint='Leftover hours beyond this, up to 24, are charged as one more day at the car\'s daily rate.') }}
+        {{ field('flat_until_hours', 'Flat price up to (hours)', form.flat_until_hours, type='number', inputmode='numeric', min=1, required=True,
+                 hint='The flat price covers up to this many hours. Leftover hours beyond this, up to 24, are charged as one more day at the car\'s daily rate.') }}
       </section>
 
       <section class="form__group" aria-labelledby="price-five">
-        <h2 id="price-five">5-seater cars (up to 5 seats)</h2>
-        {{ field('five_hourly_hours', 'First hours charged per hour', form.five_hourly_hours, type='number', inputmode='numeric', min=0, required=True) }}
+        <h2 id="price-five">5-seater cars</h2>
+        {{ field('five_hourly_hours', 'Hours charged per hour', form.five_hourly_hours, type='number', inputmode='numeric', min=0, required=True,
+                 hint='First hours charged per hour.') }}
         {{ field('five_hourly_rate_php', 'Price per hour (PHP)', form.five_hourly_rate_php, type='number', inputmode='numeric', min=0, required=True) }}
-        {{ field('five_flat_php', 'Flat price after those hours (PHP)', form.five_flat_php, type='number', inputmode='numeric', min=0, required=True) }}
+        {{ field('five_flat_php', 'Flat price after (PHP)', form.five_flat_php, type='number', inputmode='numeric', min=0, required=True,
+                 hint='Flat price after those hours (PHP).') }}
       </section>
 
       <section class="form__group" aria-labelledby="price-seven">
-        <h2 id="price-seven">7-seater cars (6 to 7 seats)</h2>
-        {{ field('seven_hourly_hours', 'First hours charged per hour', form.seven_hourly_hours, type='number', inputmode='numeric', min=0, required=True) }}
+        <h2 id="price-seven">7-seater cars</h2>
+        {{ field('seven_hourly_hours', 'Hours charged per hour', form.seven_hourly_hours, type='number', inputmode='numeric', min=0, required=True,
+                 hint='First hours charged per hour.') }}
         {{ field('seven_hourly_rate_php', 'Price per hour (PHP)', form.seven_hourly_rate_php, type='number', inputmode='numeric', min=0, required=True) }}
-        {{ field('seven_flat_php', 'Flat price after those hours (PHP)', form.seven_flat_php, type='number', inputmode='numeric', min=0, required=True) }}
+        {{ field('seven_flat_php', 'Flat price after (PHP)', form.seven_flat_php, type='number', inputmode='numeric', min=0, required=True,
+                 hint='Flat price after those hours (PHP).') }}
         <p class="page-note">Cars with more than 7 seats get no automatic price: the request is saved without a total and you quote it.</p>
       </section>
     </div>

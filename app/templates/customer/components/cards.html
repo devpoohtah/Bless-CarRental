@@ -24,7 +24,7 @@
       <div><dt>{{ icon('tag', 'icon icon--sm') }}Price</dt><dd>{{ tour.price_php | php }}</dd></div>
     </dl>
     <div class="card__actions">
-      <button type="button" class="btn btn--outline" data-open-dialog="tour-{{ tour.id }}">View details<span class="sr-only"> for {{ tour.name }}</span></button>
+      <a class="btn btn--outline" href="/tours/{{ tour.id }}">View details<span class="sr-only"> for {{ tour.name }}</span></a>
       {{ book_button('tour', tour, 'Book now') }}
     </div>
   </div>

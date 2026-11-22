@@ -44,6 +44,17 @@ NAV_LINKS = [
     NavLink(label="Contact", href="#contact", section_id="contact"),
 ]
 
+# On booking pages, main sections link to their pages instead of home-page anchors
+BOOKING_NAV_LINKS = [
+    NavLink(label="Tours", href="/tours", section_id="tours"),
+    NavLink(label="Car Rental", href="/cars", section_id="car-rental"),
+    NavLink(label="How it works", href="#how-it-works", section_id="how-it-works"),
+    NavLink(label="About", href="#about", section_id="about"),
+    NavLink(label="Gallery", href="#gallery", section_id="gallery"),
+    NavLink(label="FAQ", href="#faq", section_id="faq"),
+    NavLink(label="Contact", href="#contact", section_id="contact"),
+]
+
 
 def _photo(src: str, alt: str) -> Photo:
     return Photo(src=src, alt=alt)

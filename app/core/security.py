@@ -24,12 +24,13 @@ LOGIN_CSP = (
 # Added Firestore origins for onSnapshot listener (connect-src) and Firebase SDK script origin (script-src)
 # apis.google.com: the Firebase auth SDK loads its gapi helper script from there.
 # challenges.cloudflare.com: the Turnstile widget on the booking forms (script, its iframe, and its checks).
+# blob: needed for image upload preview (URL.createObjectURL)
 STRICT_CSP_TEMPLATE = (
     "default-src 'self'; "
     "script-src 'self' https://cdn.jsdelivr.net https://challenges.cloudflare.com https://www.gstatic.com https://apis.google.com 'nonce-{nonce}'; "
     "style-src 'self' https://fonts.googleapis.com https://cdn.jsdelivr.net 'nonce-{nonce}'; "
     "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; "
-    "img-src 'self' https: data:; "
+    "img-src 'self' https: data: blob:; "
     "connect-src 'self' https://cdn.jsdelivr.net https://challenges.cloudflare.com https://firestore.googleapis.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com; "
     "frame-src https://challenges.cloudflare.com https://bless-rental.firebaseapp.com; "
     "base-uri 'self'; "

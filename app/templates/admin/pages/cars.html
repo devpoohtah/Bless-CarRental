@@ -10,7 +10,10 @@
       <h1>Car Management</h1>
       <p class="page-lead">Add, edit and manage cars, rental rates and availability.</p>
     </div>
-    <a class="btn btn--action" href="/admin/services/cars/new">{{ icon('plus', 'icon') }}Add car</a>
+    <div style="display: flex; align-items: center; gap: 0.5rem;">
+      <a class="btn btn--outline-light" href="/admin/pricing" aria-label="Car pricing settings" title="Car pricing settings" style="width: 40px; height: 40px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--radius-md); color: var(--accent); border-color: var(--accent); background: transparent;">{{ icon('cog', 'icon') }}</a>
+      <a class="btn btn--action" href="/admin/services/cars/new">{{ icon('plus', 'icon') }}Add car</a>
+    </div>
   </div>
 
   {% if cars %}

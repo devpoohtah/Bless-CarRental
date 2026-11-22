@@ -1,16 +1,16 @@
 {# Form field macros for the admin. Labels sit above inputs; * marks required fields. #}
-{% macro field(id, label, value='', type='text', required=False, hint='', wide=False, inputmode='', min='') %}
+{% macro field(id, label, value='', type='text', required=False, hint='', wide=False, inputmode='', min='', placeholder=False) %}
 <div class="field{{ ' field--wide' if wide }}">
   <label for="{{ id }}">{{ label }}{% if required %} <span class="field__req" aria-hidden="true">*</span>{% endif %}</label>
-  <input id="{{ id }}" name="{{ id }}" type="{{ type }}" value="{{ '' if value is none else value }}"{% if required %} required{% endif %}{% if inputmode %} inputmode="{{ inputmode }}"{% endif %}{% if min != '' %} min="{{ min }}"{% endif %}{% if hint %} aria-describedby="{{ id }}-hint"{% endif %}>
+  <input id="{{ id }}" name="{{ id }}" type="{{ type }}" value="{{ '' if value is none else value }}"{% if required %} required{% endif %}{% if inputmode %} inputmode="{{ inputmode }}"{% endif %}{% if min != '' %} min="{{ min }}"{% endif %}{% if hint %} aria-describedby="{{ id }}-hint"{% endif %}{% if placeholder %} placeholder=" "{% endif %}>
   {% if hint %}<p class="field__hint" id="{{ id }}-hint">{{ hint }}</p>{% endif %}
 </div>
 {% endmacro %}
 
-{% macro textarea(id, label, value='', rows=3, required=False) %}
+{% macro textarea(id, label, value='', rows=3, required=False, placeholder=False, class='') %}
 <div class="field field--wide">
   <label for="{{ id }}">{{ label }}{% if required %} <span class="field__req" aria-hidden="true">*</span>{% endif %}</label>
-  <textarea id="{{ id }}" name="{{ id }}" rows="{{ rows }}"{% if required %} required{% endif %}>{{ '' if value is none else value }}</textarea>
+  <textarea id="{{ id }}" name="{{ id }}" rows="{{ rows }}" class="{{ class }}"{% if required %} required{% endif %}{% if placeholder %} placeholder=" "{% endif %}>{{ '' if value is none else value }}</textarea>
 </div>
 {% endmacro %}
 

@@ -44,7 +44,7 @@ def _examples(rules: CarPricing) -> list[dict]:
 
 
 def _render(request: Request, status_code: int = 200, **context) -> HTMLResponse:
-    context |= {"active_nav": "pricing", "notice": notice_for(request), "errors": context.get("errors", [])}
+    context |= {"active_nav": "cars", "notice": notice_for(request), "errors": context.get("errors", [])}
     return templates.TemplateResponse(request, "admin/pages/pricing.html", context, status_code=status_code)
 
 

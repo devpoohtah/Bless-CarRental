@@ -142,18 +142,20 @@ def test_landing_shows_the_first_three_tours_and_links_to_all(monkeypatch):
     from app.services import content
     monkeypatch.setattr(content, "list_tours", lambda: _tours(5))
     html = client.get("/").text
-    assert html.count('data-open-dialog="tour-tour-') == 3 and 'id="tour-tour-3"' in html and 'id="tour-tour-4"' not in html
+    # Landing page still shows tour cards with View details linking to /tours/{id}
+    assert 'href="/tours/tour-1"' in html and 'href="/tours/tour-3"' in html
     assert 'href="/tours"' in html
 
 
-def test_tours_page_lists_every_tour_with_its_details_dialog(monkeypatch):
+def test_tours_page_lists_every_tour_with_detail_links(monkeypatch):
     from app.services import content
     monkeypatch.setattr(content, "list_tours", lambda: _tours(5))
     response = client.get("/tours")
     html = response.text
     assert response.status_code == 200 and "<h1>Travel tour packages</h1>" in html
-    assert html.count('data-open-dialog="tour-tour-') == 5 and 'id="tour-tour-5"' in html
-    assert 'href="/book/tour?tour=tour-5"' in html and 'href="/#tours"' in html
+    # Each tour card links to its detail page
+    assert 'href="/tours/tour-1"' in html and 'href="/tours/tour-5"' in html
+    assert 'href="/book/tour?tour=tour-5"' in html
 
 
 def test_header_is_a_floating_island_with_the_menu_panel_outside_the_bar():

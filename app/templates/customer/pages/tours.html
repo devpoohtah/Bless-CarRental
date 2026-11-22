@@ -1,5 +1,5 @@
 {% extends 'customer/base.html' %}
-{% from 'customer/components/cards.html' import tour_card, tour_dialogs %}
+{% from 'customer/components/cards.html' import tour_card %}
 {% block title %}Travel tour packages | {{ site.business_name }}{% endblock %}
 
 {% block content %}
@@ -28,8 +28,4 @@
     </div>
   </div>
 </section>
-{% endblock %}
-
-{% block dialogs %}
-{{ tour_dialogs(tours) }}
 {% endblock %}

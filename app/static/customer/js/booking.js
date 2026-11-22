@@ -30,14 +30,30 @@
   const TAKEN = "That item is already booked on some of those dates. Choose dates without a crossed-out day.";
   let picker = null;
 
-  const chosen = () => item.selectedOptions[0];
-  const ranges = () => blocked[chosen().dataset.name] || [];
+  // Returns the selected option, or null if the empty placeholder is selected
+  const chosen = () => {
+    const opt = item.selectedOptions[0];
+    return opt && opt.value ? opt : null;
+  };
+  const ranges = () => {
+    const ch = chosen();
+    return ch ? blocked[ch.dataset.name] || [] : [];
+  };
   // ISO dates compare correctly as plain strings.
   const taken = (from, to) => ranges().some(([a, b]) => a <= to && from <= b);
 
   // The summary beside the form follows the chosen option.
   function showItem() {
-    const data = chosen().dataset;
+    const ch = chosen();
+    if (!ch) {
+      // Clear summary when no car/tour selected
+      document.querySelectorAll("[data-bind]").forEach((el) => { el.textContent = ""; });
+      document.querySelectorAll("[data-bind-src]").forEach((el) => { el.src = ""; el.alt = ""; });
+      document.querySelectorAll("[data-show-if]").forEach((el) => { el.hidden = true; });
+      people.max = "60";
+      return;
+    }
+    const data = ch.dataset;
     document.querySelectorAll("[data-bind]").forEach((el) => { el.textContent = data[el.dataset.bind] ?? ""; });
     document.querySelectorAll("[data-bind-src]").forEach((el) => {
       el.src = data[el.dataset.bindSrc] || "";

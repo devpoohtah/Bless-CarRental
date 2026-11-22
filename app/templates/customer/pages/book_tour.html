@@ -37,11 +37,11 @@
 <fieldset data-step>
   <legend>Tour and dates</legend>
   <div class="booking-form__grid">
-    <div class="field field--wide field--float">
+    <div class="field field--wide">
       <select id="bk-item" name="tour" required>
-        <option value="">Choose a tour package</option>
+        <option value="" disabled hidden{% if not tour_param %} selected{% endif %}></option>
         {% for t in tours %}
-        <option value="{{ t.id }}"{% if t.id == selected.id %} selected{% endif %}
+        <option value="{{ t.id }}"{% if tour_param and t.id == selected.id %} selected{% endif %}
           data-name="{{ t.name }}" data-destination="{{ t.destination }}" data-summary="{{ t.summary }}"
           data-duration="{{ t.duration or 'To be confirmed' }}" data-price="{{ t.price_php | php }}"
           data-photo="{{ static_url(t.photo.src) }}" data-photo-alt="{{ t.photo.alt }}"
@@ -54,11 +54,11 @@
       <label for="bk-item">Tour package</label>
     </div>
     {{ calendar('Click the tour date. For a tour of several days, click the last day too.') }}
-    <div class="field field--float">
+    <div class="field">
       <input id="bk-start" name="start_date" type="date" min="{{ today_iso }}" max="{{ max_date_iso }}" required placeholder=" ">
       <label for="bk-start">Tour date</label>
     </div>
-    <div class="field field--float">
+    <div class="field">
       <input id="bk-end" name="end_date" type="date" min="{{ today_iso }}" max="{{ max_date_iso }}" placeholder=" ">
       <label for="bk-end">Last day of the tour (optional)</label>
     </div>
@@ -67,16 +67,16 @@
 <fieldset data-step>
   <legend>Guests and pick-up</legend>
   <div class="booking-form__grid">
-    <div class="field field--float">
+    <div class="field">
       <input id="bk-people" name="guests" type="number" inputmode="numeric" min="1" max="{{ selected.vehicle_seats or 60 }}" required placeholder=" ">
       <label for="bk-people">Number of guests</label>
     </div>
-    <div class="field field--float">
+    <div class="field">
       <input id="bk-pickup" name="pickup_location" type="text" maxlength="200" autocomplete="off" aria-describedby="bk-pickup-hint" placeholder=" ">
       <label for="bk-pickup">Pick-up location (optional)</label>
       <p class="field__hint" id="bk-pickup-hint">A hotel, address or landmark.</p>
     </div>
-    <div class="field field--wide field--float">
+    <div class="field field--wide">
       <textarea id="bk-details" name="details" rows="3" maxlength="2000" placeholder=" "></textarea>
       <label for="bk-details">Anything else we should know? (optional)</label>
     </div>

@@ -252,7 +252,9 @@ def test_the_pricing_page_shows_the_saved_rates_and_examples(fake_db):
     assert 'name="five_hourly_rate_php" type="number" value="200"' in page
     assert "5-seater at ₱1,500 a day, 3 days + 6 hrs: <strong>₱5,500</strong>" in page
     assert "7-seater at ₱2,500 a day, 3 days + 15 hrs: <strong>₱10,000</strong>" in page
-    assert 'href="/admin/pricing"' in page
+    cars_page = client.get("/admin/services/cars").text
+    assert 'href="/admin/pricing"' in cars_page
+    assert 'aria-label="Car pricing settings"' in cars_page
 
 
 def test_saving_new_rates_changes_new_prices_at_once(fake_db):

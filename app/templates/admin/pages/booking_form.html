@@ -13,7 +13,7 @@
   </div>
 
   {{ errors_box(errors) }}
-  <form class="form" method="post">
+  <form class="form form--notch" method="post">
     <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
     <section class="form__group" aria-labelledby="booking-service">
       <h2 id="booking-service">Service and schedule</h2>
