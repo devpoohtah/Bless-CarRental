@@ -66,17 +66,33 @@ def prepare(upload: UploadFile) -> bytes:
     raise LicenseError("That photo has too much detail to store. Try a simpler photo of the license.")
 
 
-def save(booking_id: str, image: bytes) -> None:
+def save(booking_id: str, front: bytes, back: bytes | None = None) -> None:
+    """Store both front and back of the license. Back is optional for backward compat."""
     firebase.get_db().collection(repo.LICENSES).document(booking_id).set({
-        "data": image,
+        "front": front,
+        "back": back,
         "content_type": CONTENT_TYPE,
         "created_at": datetime.now(timezone.utc).isoformat(),
     })
 
 
-def load(booking_id: str) -> bytes | None:
+def load_front(booking_id: str) -> bytes | None:
     doc = firebase.get_db().collection(repo.LICENSES).document(booking_id).get()
-    return doc.to_dict().get("data") if doc.exists else None
+    if not doc.exists:
+        return None
+    data = doc.to_dict()
+    # Backward compat: old docs have "data" field, new ones have "front"
+    return data.get("front") or data.get("data")
+
+
+def load_back(booking_id: str) -> bytes | None:
+    doc = firebase.get_db().collection(repo.LICENSES).document(booking_id).get()
+    return doc.to_dict().get("back") if doc.exists else None
+
+
+def load(booking_id: str) -> bytes | None:
+    """Backward compat: returns front photo."""
+    return load_front(booking_id)
 
 
 def delete(booking_id: str) -> None:

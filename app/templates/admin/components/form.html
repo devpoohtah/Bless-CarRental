@@ -1,28 +1,35 @@
-{# Form field macros for the admin. Labels sit above inputs; * marks required fields. #}
-{% macro field(id, label, value='', type='text', required=False, hint='', wide=False, inputmode='', min='', placeholder=False) %}
+{# Form field macros for the admin. Floating label style (notched). Labels move to border on focus or value. #}
+{% macro field(id, label, value='', type='text', required=False, hint='', wide=False, inputmode='', min='', max='', maxlength='', placeholder=True) %}
 <div class="field{{ ' field--wide' if wide }}">
-  <label for="{{ id }}">{{ label }}{% if required %} <span class="field__req" aria-hidden="true">*</span>{% endif %}</label>
-  <input id="{{ id }}" name="{{ id }}" type="{{ type }}" value="{{ '' if value is none else value }}"{% if required %} required{% endif %}{% if inputmode %} inputmode="{{ inputmode }}"{% endif %}{% if min != '' %} min="{{ min }}"{% endif %}{% if hint %} aria-describedby="{{ id }}-hint"{% endif %}{% if placeholder %} placeholder=" "{% endif %}>
+  <div class="field__control">
+    <input id="{{ id }}" name="{{ id }}" type="{{ type }}" value="{{ '' if value is none else value }}" {% if placeholder %}placeholder=" "{% endif %}{% if required %} required{% endif %}{% if inputmode %} inputmode="{{ inputmode }}"{% endif %}{% if min != '' %} min="{{ min }}"{% endif %}{% if max != '' %} max="{{ max }}"{% endif %}{% if maxlength != '' %} maxlength="{{ maxlength }}"{% endif %}{% if hint %} aria-describedby="{{ id }}-hint"{% endif %}>
+    <label for="{{ id }}">{{ label }}{% if required %} <span class="field__req" aria-hidden="true">*</span>{% endif %}</label>
+  </div>
   {% if hint %}<p class="field__hint" id="{{ id }}-hint">{{ hint }}</p>{% endif %}
 </div>
 {% endmacro %}
 
-{% macro textarea(id, label, value='', rows=3, required=False, placeholder=False, class='') %}
+{% macro textarea(id, label, value='', rows=3, required=False, placeholder=True, class='') %}
 <div class="field field--wide">
-  <label for="{{ id }}">{{ label }}{% if required %} <span class="field__req" aria-hidden="true">*</span>{% endif %}</label>
-  <textarea id="{{ id }}" name="{{ id }}" rows="{{ rows }}" class="{{ class }}"{% if required %} required{% endif %}{% if placeholder %} placeholder=" "{% endif %}>{{ '' if value is none else value }}</textarea>
+  <div class="field__control">
+    <textarea id="{{ id }}" name="{{ id }}" rows="{{ rows }}" class="{{ class }}" placeholder=" "{% if required %} required{% endif %}>{{ '' if value is none else value }}</textarea>
+    <label for="{{ id }}">{{ label }}{% if required %} <span class="field__req" aria-hidden="true">*</span>{% endif %}</label>
+  </div>
+  {% if hint is defined and hint %}<p class="field__hint" id="{{ id }}-hint">{{ hint }}</p>{% endif %}
 </div>
 {% endmacro %}
 
 {% macro select(id, label, options, selected, disabled=False, required=False, placeholder='', hint='') %}
 <div class="field">
-  <label for="{{ id }}">{{ label }}{% if required %} <span class="field__req" aria-hidden="true">*</span>{% endif %}</label>
-  <select id="{{ id }}" name="{{ id }}"{% if disabled %} disabled{% endif %}{% if required %} required{% endif %}{% if hint %} aria-describedby="{{ id }}-hint"{% endif %}>
-    {% if placeholder %}<option value=""{% if not selected %} selected{% endif %}>{{ placeholder }}</option>{% endif %}
-    {% for value, text in options %}
-    <option value="{{ value }}"{% if value == selected %} selected{% endif %}>{{ text }}</option>
-    {% endfor %}
-  </select>
+  <div class="field__control">
+    <select id="{{ id }}" name="{{ id }}"{% if disabled %} disabled{% endif %}{% if required %} required{% endif %}{% if hint %} aria-describedby="{{ id }}-hint"{% endif %}>
+      {% if placeholder %}<option value=""{% if not selected %} selected{% endif %}>{{ placeholder }}</option>{% endif %}
+      {% for value, text in options %}
+      <option value="{{ value }}"{% if value == selected %} selected{% endif %}>{{ text }}</option>
+      {% endfor %}
+    </select>
+    <label for="{{ id }}">{{ label }}{% if required %} <span class="field__req" aria-hidden="true">*</span>{% endif %}</label>
+  </div>
   {% if hint %}<p class="field__hint" id="{{ id }}-hint">{{ hint }}</p>{% endif %}
 </div>
 {% endmacro %}
@@ -41,8 +48,10 @@
 <div class="field field--wide" data-image-field>
   <img class="thumb" data-image-preview alt="{{ current.alt if current else 'New image preview' }}" width="320" height="240"{% if current %} src="{{ static_url(current.src) }}" data-original="{{ static_url(current.src) }}"{% else %} hidden{% endif %}>
   <p class="field__hint" data-image-note role="status" hidden></p>
-  <label for="{{ name }}">{{ label }}{% if current %} (choose a file to replace it){% endif %}</label>
-  <input id="{{ name }}" name="{{ name }}" type="file" accept="image/jpeg,image/png,image/webp" aria-describedby="{{ name }}-hint" data-image-input>
+  <div class="field__control">
+    <input id="{{ name }}" name="{{ name }}" type="file" accept="image/jpeg,image/png,image/webp" aria-describedby="{{ name }}-hint" data-image-input>
+    <label for="{{ name }}">{{ label }}{% if current %} (choose a file to replace it){% endif %}</label>
+  </div>
   <p class="field__hint" id="{{ name }}-hint">JPEG, PNG or WebP, up to 5 MB. It is saved as WebP.{% if show_license_warning %} Cover or crop out license plate numbers before uploading, because the image is public on the website.{% endif %}</p>
   {% if current and current.public_id %}
   <div class="check">

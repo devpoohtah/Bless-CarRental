@@ -12,7 +12,7 @@ from datetime import date, datetime, timedelta
 
 from app.db import firebase
 from app.db import repositories as repo
-from app.schemas.booking import Booking, BookingStatus, BookingType, StatusChange
+from app.schemas.booking import AdditionalPayment, Booking, BookingStatus, BookingType, StatusChange
 from app.core.clock import PHILIPPINES, today_ph
 from app.schemas.forms import BookingInput, PublicCarBookingInput, PublicTourBookingInput
 from app.services import content, licenses, pricing
@@ -30,7 +30,6 @@ STATUS_LABELS = {
 }
 PAYMENT_LABELS = {"unpaid": "Unpaid", "partial": "Partially paid", "paid": "Paid"}
 TYPE_LABELS = {"car": "Car rental", "tour": "Tour booking"}
-DRIVER_LABELS = {"with_driver": "With a driver", "self_drive": "Self-drive"}
 
 # Which statuses a booking can move to from its current one. Rejected, completed and
 # cancelled are final.
@@ -61,7 +60,9 @@ def _sample_bookings(today: date) -> list[Booking]:
     def dt(days: int) -> datetime:
         return datetime.combine(d(days), datetime.min.time()).replace(tzinfo=PHILIPPINES)
 
-    def booking(n, kind, item, start, end, status, payment, requested, path):
+    def booking(n, kind, item, start, end, status, payment, requested, path,
+                total_php: int | None = None, downpayment_amount: int = 0,
+                downpayment_type: str | None = None, amount_paid: int = 0, payment_type: str | None = None):
         return Booking(
             id=f"sample-{n}",
             booking_type=kind,
@@ -76,38 +77,70 @@ def _sample_bookings(today: date) -> list[Booking]:
             requested_at=dt(requested),
             status=status,
             payment_status=payment,
+            downpayment_amount=downpayment_amount,
+            downpayment_type=downpayment_type,
+            amount_paid=amount_paid,
+            payment_type=payment_type,
+            total_php=total_php,
             history=[StatusChange(status=s, changed_on=d(day)) for s, day in path],
         )
 
+    # Sample totals (in PHP) for bookings that have pricing
+    CAR_TOTAL = 8000
+    TOUR_TOTAL = 12000
+
     return [
-        booking(1, "car", "Compact Sedan", 3, 5, "pending", "unpaid", -1, [("pending", -1)]),
-        booking(2, "tour", "Island Day Tour", 10, 10, "pending", "unpaid", 0, [("pending", 0)]),
+        # No downpayment, no payments
+        booking(1, "car", "Compact Sedan", 3, 5, "pending", "unpaid", -1, [("pending", -1)],
+                total_php=CAR_TOTAL),
+        booking(2, "tour", "Island Day Tour", 10, 10, "pending", "unpaid", 0, [("pending", 0)],
+                total_php=TOUR_TOTAL),
+        # Downpayment only (partial)
         booking(3, "car", "Family SUV", 1, 4, "approved", "partial", -4,
-                [("pending", -4), ("approved", -3)]),
+                [("pending", -4), ("approved", -3)], total_php=CAR_TOTAL,
+                downpayment_amount=500, downpayment_type="gcash"),
+        # Downpayment + full remaining (paid)
         booking(4, "tour", "Beach Getaway Package", 7, 9, "approved", "paid", -6,
-                [("pending", -6), ("approved", -5)]),
+                [("pending", -6), ("approved", -5)], total_php=TOUR_TOTAL,
+                downpayment_amount=500, downpayment_type="bank_transfer", amount_paid=TOUR_TOTAL - 500, payment_type="cash"),
+        # Downpayment + full remaining (paid)
         booking(5, "car", "Family SUV", -2, 2, "ongoing", "paid", -9,
-                [("pending", -9), ("approved", -8), ("ongoing", -2)]),
+                [("pending", -9), ("approved", -8), ("ongoing", -2)], total_php=CAR_TOTAL,
+                downpayment_amount=500, downpayment_type="gcash", amount_paid=CAR_TOTAL - 500, payment_type="gcash"),
+        # Downpayment + full remaining (paid)
         booking(6, "tour", "Heritage and Church Tour", -12, -12, "completed", "paid", -20,
-                [("pending", -20), ("approved", -19), ("ongoing", -12), ("completed", -12)]),
+                [("pending", -20), ("approved", -19), ("ongoing", -12), ("completed", -12)],
+                total_php=TOUR_TOTAL, downpayment_amount=500, downpayment_type="bank_transfer",
+                amount_paid=TOUR_TOTAL - 500, payment_type="bank_transfer"),
+        # Rejected - no payments
         booking(7, "car", "Compact Sedan", 5, 6, "rejected", "unpaid", -3,
-                [("pending", -3), ("rejected", -2)]),
+                [("pending", -3), ("rejected", -2)], total_php=CAR_TOTAL),
+        # Cancelled - had downpayment but cancelled
         booking(8, "tour", "Island Day Tour", 14, 14, "cancelled", "unpaid", -7,
-                [("pending", -7), ("approved", -6), ("cancelled", -1)]),
+                [("pending", -7), ("approved", -6), ("cancelled", -1)], total_php=TOUR_TOTAL,
+                downpayment_amount=500, downpayment_type="gcash"),
+        # Approved but no downpayment yet
         booking(9, "car", "Compact Sedan", 2, 3, "approved", "unpaid", -2,
-                [("pending", -2), ("approved", -1)]),
+                [("pending", -2), ("approved", -1)], total_php=CAR_TOTAL),
     ]
 
 
-def list_bookings(booking_type: BookingType | None = None) -> list[Booking]:
+def list_bookings(booking_type: BookingType | None = None, search: str | None = None) -> list[Booking]:
     rows = repo.list_all(repo.BOOKINGS, Booking) if firebase.is_configured() else _sample_bookings(date.today())
     def sort_key(b: Booking):
         if b.requested_at:
-            return b.requested_at
-        # Fallback for old data: use requested_on at end of day so it sorts after any with time on that date
+            dt = b.requested_at
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=PHILIPPINES)
+            return dt
         return datetime.combine(b.requested_on, datetime.max.time()).replace(tzinfo=PHILIPPINES)
     rows = sorted(rows, key=lambda b: (sort_key(b), b.start_date), reverse=True)
-    return [b for b in rows if booking_type in (None, b.booking_type)]
+    if booking_type is not None:
+        rows = [b for b in rows if b.booking_type == booking_type]
+    if search:
+        s = search.strip().lower()
+        rows = [b for b in rows if s in b.reference.lower() or s in b.customer_name.lower()]
+    return rows
 
 
 def pending_count() -> int:
@@ -198,14 +231,12 @@ def _find(items, item_id: str, what: str):
     chosen = next((entry for entry in items if entry.id == item_id), None)
     if chosen is None:
         raise FormError(f"Choose a {what} from the list.")
-    if chosen.availability == "unavailable":
-        raise FormError(f"{chosen.name} is currently unavailable. Choose another, or message us on Messenger.")
     return chosen
 
 
 def build_car_booking(data: PublicCarBookingInput, email_verified: bool = False) -> Booking:
     """Runs every check for a website car rental request and returns the Pending booking without saving it.
-    Status and payment are decided here, never by the customer."""
+    Status and payment are decided here, never by the customer. All car rentals are self-drive."""
     car = _find(content.list_vehicles(), data.car, "car")
     today = _check_start_date(data.start_date)
     now_ph = datetime.now(PHILIPPINES)
@@ -219,7 +250,7 @@ def build_car_booking(data: PublicCarBookingInput, email_verified: bool = False)
         customer_email=data.customer_email, item_name=car.name,
         start_date=data.start_date, end_date=data.end_date, start_time=data.start_time, end_time=data.end_time,
         details=data.details or "", passengers=data.passengers, pickup_location=data.pickup_location,
-        dropoff_location=data.dropoff_location, destination=data.destination, driver_option=data.driver_option,
+        dropoff_location=data.dropoff_location, destination=data.destination, driver_option="self_drive",
         requested_on=today, requested_at=now_ph, status="pending", payment_status="unpaid",
         history=[StatusChange(status="pending", changed_on=today)], email_verified=email_verified, is_sample=False,
         total_php=price.total_php if price else None, price_lines=price.lines if price else [],
@@ -227,17 +258,18 @@ def build_car_booking(data: PublicCarBookingInput, email_verified: bool = False)
 
 
 def create_car_booking(data: PublicCarBookingInput, email_verified: bool = False,
-                       license_image: bytes | None = None) -> Booking:
-    """Saves a website car rental request as a Pending booking, with the license photo if there is one."""
+                       license_front: bytes | None = None, license_back: bytes | None = None) -> Booking:
+    """Saves a website car rental request as a Pending booking, with the license photos if there are any."""
     booking = build_car_booking(data, email_verified)
-    if license_image is None:
+    if license_front is None:
         return booking.model_copy(update={"id": repo.save(repo.BOOKINGS, booking)})
-    # The photo is keyed by the booking id, so pick the id first. The photo goes in first and is removed again
-    # if the booking cannot be saved, so a photo never stays behind without a booking.
+    # The photos are keyed by the booking id, so pick the id first. Photos go in first and are removed again
+    # if the booking cannot be saved, so photos never stay behind without a booking.
     booking_id = repo.new_id(repo.BOOKINGS)
-    licenses.save(booking_id, license_image)
+    licenses.save(booking_id, license_front, license_back)
     booking = booking.model_copy(update={
-        "license_on_file": True,
+        "license_front_on_file": True,
+        "license_back_on_file": license_back is not None,
         "license_delete_on": booking.end_date + timedelta(days=LICENSE_KEPT_DAYS_AFTER_END)})
     try:
         repo.save(repo.BOOKINGS, booking, booking_id)
@@ -245,7 +277,7 @@ def create_car_booking(data: PublicCarBookingInput, email_verified: bool = False
         try:
             licenses.delete(booking_id)
         except Exception:
-            log.exception("Could not remove the license photo of booking %s after a failed save", booking_id)
+            log.exception("Could not remove the license photos of booking %s after a failed save", booking_id)
         raise
     return booking.model_copy(update={"id": booking_id})
 
@@ -285,7 +317,7 @@ def change_status(booking: Booking, new_status: str) -> Booking:
     changes: dict = {"status": new_status, "history": history}
     if booking.license_on_file and new_status in LICENSE_DELETED_AT_ONCE_BY:
         _remove_license_photo(booking.id)  # first: if this fails the status does not change, so nothing is left behind
-        changes |= {"license_on_file": False, "license_delete_on": None}
+        changes |= {"license_front_on_file": False, "license_back_on_file": False, "license_delete_on": None}
     elif booking.license_on_file and new_status == "completed":
         soon = today_ph() + timedelta(days=LICENSE_KEPT_DAYS_AFTER_COMPLETION)
         changes["license_delete_on"] = min(soon, booking.license_delete_on or soon)
@@ -301,6 +333,77 @@ def change_payment(booking: Booking, new_status: str, payment_type: str | None =
     if payment_type:
         update["payment_type"] = payment_type
     repo.save(repo.BOOKINGS, booking.model_copy(update=update), booking.id)
+
+
+def record_downpayment(booking: Booking, amount: int, payment_type: str) -> Booking:
+    """Record the downpayment for a booking (GCash or Bank Transfer only)."""
+    if amount < 0:
+        raise FormError("Downpayment amount cannot be negative.")
+    if payment_type not in ("gcash", "bank_transfer"):
+        raise FormError("Downpayment must be GCash or Bank Transfer.")
+    if booking.total_php is not None and amount > booking.total_php:
+        raise FormError(f"Downpayment exceeds total amount (₱{booking.total_php:,}).")
+
+    update = {"downpayment_amount": amount, "downpayment_type": payment_type}
+    # Auto-update payment_status if this is the first payment
+    if booking.payment_status == "unpaid":
+        update["payment_status"] = "partial"
+
+    updated = booking.model_copy(update=update)
+    repo.save(repo.BOOKINGS, updated, booking.id)
+    return updated
+
+
+def record_remaining_payment(booking: Booking, amount: int, payment_type: str | None = None) -> Booking:
+    """Record a payment toward the remaining balance (GCash, Bank Transfer, or Cash)."""
+    if amount < 0:
+        raise FormError("Payment amount cannot be negative.")
+    if payment_type and payment_type not in ("gcash", "bank_transfer", "cash"):
+        raise FormError("Payment type must be GCash, Bank Transfer, or Cash.")
+
+    new_amount_paid = booking.amount_paid + amount
+    if booking.total_php is not None and booking.total_paid + amount > booking.total_php:
+        raise FormError(f"Total payments exceed total amount (₱{booking.total_php:,}).")
+
+    # Determine new payment status based on total paid (downpayment + remaining)
+    total_paid = booking.downpayment_amount + new_amount_paid
+    if booking.total_php is None:
+        new_status = "partial"
+    elif total_paid >= booking.total_php:
+        new_status = "paid"
+    elif total_paid > 0:
+        new_status = "partial"
+    else:
+        new_status = "unpaid"
+
+    update = {"amount_paid": new_amount_paid, "payment_status": new_status}
+    if payment_type:
+        update["payment_type"] = payment_type
+
+    updated = booking.model_copy(update=update)
+    repo.save(repo.BOOKINGS, updated, booking.id)
+    return updated
+
+
+def record_additional_payment(booking: Booking, amount: int, payment_type: str, description: str) -> Booking:
+    """Record an additional payment (e.g., delivery fee, hotel pickup fee)."""
+    if amount < 1:
+        raise FormError("Additional payment amount must be at least ₱1.")
+    if payment_type not in ("gcash", "bank_transfer", "cash"):
+        raise FormError("Payment type must be GCash, Bank Transfer, or Cash.")
+    if not description or not description.strip():
+        raise FormError("Description is required.")
+
+    additional = AdditionalPayment(
+        amount_php=amount,
+        payment_type=payment_type,
+        description=description.strip(),
+        date=date.today(),
+    )
+    updated_payments = [*booking.additional_payments, additional]
+    updated = booking.model_copy(update={"additional_payments": updated_payments})
+    repo.save(repo.BOOKINGS, updated, booking.id)
+    return updated
 
 
 def recent_bookings(limit: int = 5) -> list[Booking]:
@@ -354,11 +457,11 @@ def _remove_license_photo(booking_id: str) -> None:
 
 
 def delete_license(booking: Booking) -> Booking:
-    """Deletes the photo now, for example because the customer asked for it."""
+    """Deletes the photos now, for example because the customer asked for it."""
     if not booking.license_on_file:
         raise FormError("There is no license photo to delete.")
     _remove_license_photo(booking.id)
-    updated = booking.model_copy(update={"license_on_file": False, "license_delete_on": None})
+    updated = booking.model_copy(update={"license_front_on_file": False, "license_back_on_file": False, "license_delete_on": None})
     repo.save(repo.BOOKINGS, updated, booking.id)
     return updated
 
@@ -372,7 +475,7 @@ def purge_expired_licenses(today: date | None = None) -> int:
     cheap. Returns how many were deleted. A failure on one photo is logged and the rest carry on."""
     today = today or today_ph()
     deleted = 0
-    for booking in repo.list_where(repo.BOOKINGS, Booking, license_on_file=True):
+    for booking in repo.list_where(repo.BOOKINGS, Booking, license_front_on_file=True):
         due = booking.license_delete_on or booking.end_date + timedelta(days=LICENSE_KEPT_DAYS_AFTER_END)
         if due > today:
             continue
@@ -380,7 +483,7 @@ def purge_expired_licenses(today: date | None = None) -> int:
             delete_license(booking)
             deleted += 1
         except Exception:
-            log.exception("Could not purge the license photo of booking %s", booking.id)
+            log.exception("Could not purge the license photos of booking %s", booking.id)
     return deleted
 
 

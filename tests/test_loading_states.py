@@ -41,9 +41,12 @@ def test_booking_action_buttons_have_busy_labels(fake_db):
     booking_id = repo.save(repo.BOOKINGS, Booking(
         id="", booking_type="car", customer_name="Ana", customer_phone="09171234567", item_name="Vios",
         start_date=today, end_date=today, requested_on=today, status="pending", payment_status="unpaid",
-        history=[StatusChange(status="pending", changed_on=today)], is_sample=False))
+        history=[StatusChange(status="pending", changed_on=today)], is_sample=False, total_php=8000))
     html = client.get(f"/admin/bookings/{booking_id}").text
-    # Status form has one "Save status" button; payment form has one "Save payment" button
+    # Downpayment form has "Recording…", remaining payment form has "Recording…",
+    # additional payment form has "Recording…", status form has "Saving…",
+    # manual payment status form has "Saving…"
+    assert html.count('data-busy-label="Recording…"') == 3
     assert html.count('data-busy-label="Saving…"') == 2
 
 

@@ -14,7 +14,7 @@ from app.core import config
 from app.core.ratelimit import RateLimiter
 from app.main import app
 from app.services import mailer, otp, turnstile
-from tests.test_public_booking import add_booking, car_request, catalog, saved_bookings, tour_request, when  # noqa: F401
+from tests.test_public_booking import add_booking, car_request, catalog, saved_bookings, tour_request, when, post_car, with_license  # noqa: F401
 
 client = TestClient(app)
 pytestmark = pytest.mark.usefixtures("simulated_otp")  # tests below switch the mode themselves where they need to
@@ -43,7 +43,16 @@ def set_integrations(monkeypatch, **changes):
 
 
 def start(data=None, url="/book/car"):
-    return client.post(url, data=data or car_request(), headers=_headers())
+    """Send a booking request and return the first response (with challenge for OTP)."""
+    csrf_token = _get_csrf_token()
+    headers = {"X-CSRF-Token": csrf_token}
+    if data is None:
+        data = car_request()
+    if url == "/book/car":
+        response = client.post(url, data=data, files=with_license(), headers=headers)
+    else:
+        response = client.post(url, data=data, headers=headers)
+    return response
 
 
 def verify(challenge, code="123456"):

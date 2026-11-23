@@ -18,7 +18,6 @@ from app.services.errors import FormError
 AVAILABILITY_LABELS = {
     "inquire": "Ask for availability",
     "available": "Available",
-    "unavailable": "Currently unavailable",
 }
 
 # Shown until a real photo is uploaded.

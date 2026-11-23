@@ -76,7 +76,8 @@ def _vehicles(*specs):
     from app.schemas.catalog import Photo, Vehicle
     photo = Photo(src="customer/img/vehicles/vehicle-family-suv-placeholder.svg", alt="A car")
     return [Vehicle(id=i, name=name, vehicle_type="SUV", seats=seats, transmission="A/T", daily_rate_php=rate,
-                    availability=availability, photo=photo, is_sample=False)
+                    availability=availability, photo=photo, is_sample=False,
+                    summary="Spacious and comfortable for your journey.", description="A reliable vehicle perfect for family trips and city driving. Features air conditioning, ample luggage space, and a smooth ride.")
             for i, name, seats, rate, availability in specs]
 
 
@@ -96,12 +97,12 @@ def test_car_rental_is_a_carousel_with_seats_rate_and_a_link_to_all_cars(monkeyp
     assert "stack-grid" not in section  # the card grid lives on /cars now
 
 
-def test_a_single_vehicle_has_no_carousel_buttons_and_an_unavailable_one_cannot_be_booked(monkeypatch):
+def test_a_single_vehicle_has_no_carousel_buttons_and_can_be_booked(monkeypatch):
     from app.services import content
-    monkeypatch.setattr(content, "list_vehicles", lambda: _vehicles(("old-car", "Old Car", 5, 1000, "unavailable")))
+    monkeypatch.setattr(content, "list_vehicles", lambda: _vehicles(("old-car", "Old Car", 5, 1000, "inquire")))
     section = _car_rental_section(client.get("/").text)
     assert "data-vcar-prev" not in section and 'href="/cars"' in section
-    assert "/book/car?car=old-car" not in section and "Currently unavailable</button>" in section
+    assert 'href="/book/car?car=old-car"' in section
 
 
 def test_car_rental_without_vehicles_says_so(monkeypatch):
@@ -115,13 +116,12 @@ def test_cars_page_lists_every_vehicle_with_its_booking_button(monkeypatch):
     from app.services import content
     monkeypatch.setattr(content, "list_vehicles", lambda: _vehicles(("ertiga", "Ertiga", 7, 1500, "available"),
                                                                     ("vios", "Toyota Vios", 4, 1800, "inquire"),
-                                                                    ("old-car", "Old Car", 5, 1000, "unavailable")))
+                                                                    ("old-car", "Old Car", 5, 1000, "inquire")))
     response = client.get("/cars")
     html = response.text
     assert response.status_code == 200 and "<h1>Car rental</h1>" in html and 'aria-label="Breadcrumb"' in html
     assert html.count('class="card__media card__media--vehicle"') == 3  # whole-car image style, vehicles only
-    assert 'href="/book/car?car=ertiga"' in html and 'href="/book/car?car=vios"' in html
-    assert "/book/car?car=old-car" not in html and "Currently unavailable</button>" in html
+    assert 'href="/book/car?car=ertiga"' in html and 'href="/book/car?car=vios"' in html and 'href="/book/car?car=old-car"' in html
     assert 'href="/#car-rental"' in html and 'href="/#home"' in html  # navbar links lead back to the landing page
 
 

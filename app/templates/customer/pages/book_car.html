@@ -18,6 +18,9 @@
     <p class="book__sub" data-bind="type">{{ selected.vehicle_type }}</p>
   </div>
 </div>
+{% if selected.summary %}
+<p class="book__text" data-bind="summary">{{ selected.summary }}</p>
+{% endif %}
 <dl class="facts">
   <div><dt>{{ icon('users', 'icon icon--sm') }}Passengers</dt><dd data-bind="seats">{{ selected.seats if selected.seats else 'To be confirmed' }}</dd></div>
   <div><dt>{{ icon('cog', 'icon icon--sm') }}Transmission</dt><dd data-bind="transmission">{{ selected.transmission or 'To be confirmed' }}</dd></div>
@@ -43,7 +46,8 @@
         <option value="{{ c.id }}"{% if car_param and c.id == selected.id %} selected{% endif %}
           data-name="{{ c.name }}" data-type="{{ c.vehicle_type }}" data-seats="{{ c.seats if c.seats else 'To be confirmed' }}"
           data-max="{{ c.seats or '' }}" data-transmission="{{ c.transmission or 'To be confirmed' }}"
-          data-rate="{{ c.daily_rate_php | php }}" data-photo="{{ static_url(c.photo.src) }}" data-photo-alt="{{ c.photo.alt }}">{{ c.name }}</option>
+          data-rate="{{ c.daily_rate_php | php }}" data-photo="{{ static_url(c.photo.src) }}" data-photo-alt="{{ c.photo.alt }}"
+          data-summary="{{ c.summary or '' }}">{{ c.name }}</option>
         {% endfor %}
       </select>
       <label for="bk-item">Type of car</label>
@@ -91,14 +95,6 @@
     <div class="field">
       <input id="bk-people" name="passengers" type="number" inputmode="numeric" min="1" max="{{ selected.seats or 60 }}" required placeholder=" ">
       <label for="bk-people">Number of passengers</label>
-    </div>
-    <div class="field">
-      <select id="bk-driver" name="driver_option">
-        <option value="" disabled hidden selected>Not sure yet</option>
-        <option value="with_driver">With a driver</option>
-        <option value="self_drive">Self-drive</option>
-      </select>
-      <label for="bk-driver">Driver (optional)</label>
     </div>
     <div class="field field--wide">
       <textarea id="bk-details" name="details" rows="3" maxlength="2000" placeholder=" "></textarea>

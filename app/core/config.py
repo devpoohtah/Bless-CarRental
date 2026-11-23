@@ -68,6 +68,10 @@ def _admin_emails() -> frozenset[str]:
     return frozenset(e.strip().lower() for e in _env("ADMIN_EMAILS").split(",") if e.strip())
 
 
+def _staff_emails() -> frozenset[str]:
+    return frozenset(e.strip().lower() for e in _env("STAFF_EMAILS").split(",") if e.strip())
+
+
 @dataclass(frozen=True)
 class Integrations:
     """Firebase, Cloudinary and admin access, read from the environment once at start-up."""
@@ -89,6 +93,8 @@ class Integrations:
     cloudinary_api_secret: str = field(default_factory=lambda: _env("CLOUDINARY_API_SECRET"))
     # Lower-case emails allowed into /admin. Empty means nobody can sign in.
     admin_emails: frozenset[str] = field(default_factory=_admin_emails)
+    # Lower-case emails allowed into /admin as staff. Empty means no staff.
+    staff_emails: frozenset[str] = field(default_factory=_staff_emails)
     # Backend only. Booking alerts go to this Telegram group; unset means alerts are skipped.
     telegram_bot_token: str = field(default_factory=lambda: _env("TELEGRAM_BOT_TOKEN"))
     telegram_chat_id: str = field(default_factory=lambda: _env("TELEGRAM_CHAT_ID"))

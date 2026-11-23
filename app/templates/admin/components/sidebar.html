@@ -1,4 +1,5 @@
 {% set active = active_nav | default('') %}
+{% set role = admin_role | default('admin') %}
 {% macro link(href, key, icon_name, label, active, badge=false) %}
 <a class="admin-nav__link" href="{{ href }}" title="{{ label }}"{% if active == key %} aria-current="page"{% endif %}>{{ icon(icon_name, 'icon') }}<span class="admin-nav__text">{{ label }}</span>{% if badge %}<span class="admin-nav__badge" data-pending-badge role="status" hidden></span>{% endif %}</a>
 {% endmacro %}
@@ -7,7 +8,7 @@
     <img class="admin-brand__logo" src="{{ static_url('shared/img/bless-logo.webp') }}" alt="" width="40" height="40">
     <span class="admin-brand__text">
       <span class="admin-brand__name">{{ site.short_name }}</span>
-      <span class="admin-brand__sub">Admin</span>
+      <span class="admin-brand__sub">{{ 'Staff' if role == 'staff' else 'Admin' }}</span>
     </span>
   </a>
   <p class="admin-clock"><span class="sr-only">Philippine time: </span><time data-admin-clock>{{ now_label() }}</time></p>

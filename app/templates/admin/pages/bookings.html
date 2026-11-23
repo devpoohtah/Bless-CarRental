@@ -13,15 +13,25 @@
     <a class="btn btn--action" href="/admin/bookings/new">{{ icon('plus', 'icon') }}Add booking</a>
   </div>
 
-  <nav class="filter-tabs" aria-label="Filter bookings by type">
-    <a href="/admin/bookings"{% if not active_type %} aria-current="true"{% endif %}>All</a>
-    <a href="/admin/bookings?type=car"{% if active_type == 'car' %} aria-current="true"{% endif %}>Car rentals</a>
-    <a href="/admin/bookings?type=tour"{% if active_type == 'tour' %} aria-current="true"{% endif %}>Tour bookings</a>
-  </nav>
+  <div class="filter-bar" aria-label="Filter and search bookings">
+    <form class="filter-bar__search" method="get" action="/admin/bookings">
+      <label for="search" class="sr-only">Search by reference or customer name</label>
+      <input type="search" id="search" name="search" placeholder="Search reference or name…"
+             value="{{ search or '' }}" aria-describedby="search-hint">
+      {% if active_type %}
+      <input type="hidden" name="type" value="{{ active_type }}">
+      {% endif %}
+    </form>
+    <nav class="filter-tabs" aria-label="Filter bookings by type">
+      <a href="/admin/bookings{% if search %}?search={{ search }}{% endif %}" class="filter-tab--all"{% if not active_type %} aria-current="true"{% endif %}>All</a>
+      <a href="/admin/bookings?type=car{% if search %}&search={{ search }}{% endif %}"{% if active_type == 'car' %} aria-current="true"{% endif %}>Car rentals</a>
+      <a href="/admin/bookings?type=tour{% if search %}&search={{ search }}{% endif %}"{% if active_type == 'tour' %} aria-current="true"{% endif %}>Tour bookings</a>
+    </nav>
+  </div>
 
   {% if bookings %}
   <div class="table-scroll" role="region" aria-label="Bookings" tabindex="0">
-    <table class="data-table">
+    <table class="data-table" id="bookings-table">
       <thead>
         <tr>
           <th scope="col">Reference</th>
@@ -31,19 +41,30 @@
           <th scope="col">Requested</th>
           <th scope="col">Status</th>
           <th scope="col">Payment</th>
+          <th scope="col">Balance</th>
           <th scope="col"><span class="sr-only">Actions</span></th>
         </tr>
       </thead>
-      <tbody>
+      <tbody id="bookings-tbody">
         {% for b in bookings %}
-        <tr>
+        <tr data-ref="{{ b.reference | lower }}" data-customer="{{ b.customer_name | lower }}">
           <td data-label="Ref" class="cell-ref">{{ b.reference }}</td>
           <th scope="row"><span class="cell-title">{{ b.customer_name }}</span><span class="cell-sub">{{ type_labels[b.booking_type] }}</span></th>
           <td data-label="Item">{{ b.item_name }}</td>
           <td data-label="Dates">{{ b.start_date | date_range(b.end_date) }}</td>
-          <td data-label="Requested">{{ b.requested_on | short_date }}</td>
+          <td data-label="Requested">
+            {% if b.requested_at %}{{ b.requested_at.date() | date_time(b.requested_at.time()) }}
+            {% else %}{{ b.requested_on | short_date }}{% endif %}
+          </td>
           <td data-label="Status">{{ status_labels[b.status] }}</td>
           <td data-label="Pay">{{ payment_labels[b.payment_status] }}</td>
+          <td data-label="Balance">
+            {% if b.total_php is not none %}
+              {% if b.remaining_balance == 0 %}<strong class="text-success">Paid</strong>
+              {% elif b.remaining_balance == b.total_php %}<span class="text-warning">₱{{ '{:,}'.format(b.remaining_balance) }}</span>
+              {% else %}<span class="text-info">₱{{ '{:,}'.format(b.remaining_balance) }}</span>{% endif %}
+            {% else %}<span class="text-muted">Not priced</span>{% endif %}
+          </td>
           <td class="cell-actions"><a class="btn btn--outline btn--sm" href="/admin/bookings/{{ b.id }}">View<span class="sr-only"> booking of {{ b.customer_name }}</span></a></td>
         </tr>
         {% endfor %}
@@ -53,6 +74,11 @@
   {% if bookings | selectattr('is_sample') | list %}
   <p class="page-note">These bookings are sample data, not real bookings.</p>
   {% endif %}
+
+  <nav class="pagination" aria-label="Booking pages" id="pagination-nav">
+    <div class="pagination__info" id="pagination-info"></div>
+    <div class="pagination__controls" id="pagination-controls"></div>
+  </nav>
   {% else %}
   {% if active_type %}
   {{ empty_state('No ' ~ ('car rentals' if active_type == 'car' else 'tour bookings') ~ ' yet', 'Nothing has been booked under this filter.', '/admin/bookings', 'Show all bookings', None, 'primary') }}
@@ -61,4 +87,70 @@
   {% endif %}
   {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script nonce="{{ csp_nonce }}">
+document.addEventListener('DOMContentLoaded', function() {
+  const tbody = document.getElementById('bookings-tbody');
+  const rows = Array.from(tbody.querySelectorAll('tr'));
+  const infoEl = document.getElementById('pagination-info');
+  const controlsEl = document.getElementById('pagination-controls');
+  const PER_PAGE = 6;
+  let currentPage = 1;
+
+  // Inline SVG icons (from Lucide, stroke-width=2)
+  const ICON_CHEVRON_LEFT = '<svg class="icon icon--sm" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m15 18-6-6 6-6"/></svg>';
+  const ICON_CHEVRON_RIGHT = '<svg class="icon icon--sm" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m9 18 6-6-6-6"/></svg>';
+
+  function render() {
+    const total = rows.length;
+    const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
+    if (currentPage > totalPages) currentPage = totalPages;
+
+    const start = (currentPage - 1) * PER_PAGE;
+    const end = start + PER_PAGE;
+
+    rows.forEach((row, i) => {
+      row.style.display = (i >= start && i < end) ? '' : 'none';
+    });
+
+    // Info - white text
+    infoEl.textContent = `Page ${currentPage} of ${totalPages} (${total} total)`;
+
+    // Controls - arrow buttons + current page indicator in middle
+    controlsEl.innerHTML = '';
+    if (totalPages <= 1) return;
+
+    const makeBtn = (label, page, disabled = false, ariaLabel = '') => {
+      const btn = document.createElement('a');
+      btn.className = `btn btn--outline btn--sm${disabled ? ' btn--disabled' : ''}`;
+      btn.href = '#';
+      btn.innerHTML = label;
+      btn.dataset.page = page;
+      if (disabled) btn.setAttribute('aria-disabled', 'true');
+      if (ariaLabel) btn.setAttribute('aria-label', ariaLabel);
+      return btn;
+    };
+
+    // Previous (arrow only)
+    const prev = makeBtn(ICON_CHEVRON_LEFT, currentPage - 1, currentPage === 1, 'Previous page');
+    prev.addEventListener('click', e => { e.preventDefault(); if (currentPage > 1) { currentPage--; render(); } });
+    controlsEl.appendChild(prev);
+
+    // Current page indicator
+    const pageIndicator = document.createElement('span');
+    pageIndicator.className = 'pagination__page-indicator';
+    pageIndicator.textContent = `Page ${currentPage}`;
+    controlsEl.appendChild(pageIndicator);
+
+    // Next (arrow only)
+    const next = makeBtn(ICON_CHEVRON_RIGHT, currentPage + 1, currentPage === totalPages, 'Next page');
+    next.addEventListener('click', e => { e.preventDefault(); if (currentPage < totalPages) { currentPage++; render(); } });
+    controlsEl.appendChild(next);
+  }
+
+  render();
+});
+</script>
 {% endblock %}

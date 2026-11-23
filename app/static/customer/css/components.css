@@ -174,14 +174,33 @@ a.tile:focus-visible { outline-color: var(--accent); }
 .quote__note { margin: 0; font-size: 0.8125rem; color: var(--text-on-light-muted); }
 
 /* ===== Notched floating label style (adapted from admin .form--notch) ===== */
+.booking-form {
+  --field-h: 52px;
+}
 .booking-form .field {
   position: relative;
   gap: 0;
 }
-.booking-form .field > label {
+
+/* Inner wrapper around input+label: provides positioning context for label */
+.booking-form .field__control {
+  position: relative;
+  display: grid;
+  min-width: 0;
+}
+.booking-form .field__control > input,
+.booking-form .field__control > select,
+.booking-form .field__control > textarea {
+  width: 100%;
+}
+
+/* BASE label rule — covers all three structures */
+.booking-form .field > label,
+.booking-form .field__control > label,
+.booking-form .phone-input > label {
   position: absolute;
   left: 12px;
-  top: 50%;
+  top: calc(var(--field-h) / 2);
   transform: translateY(-50%);
   font-size: 16px;
   font-weight: 400;
@@ -194,16 +213,20 @@ a.tile:focus-visible { outline-color: var(--accent); }
   padding: 0 6px;
 }
 
-/* Contact fields in step 4 (Contact Number, Email): label sits inside 52px input box */
-.booking-form #bk-phone-field > label,
-.booking-form #bk-email-field > label {
-  top: 14px;
+/* Phone label override: starts after the +63 prefix */
+.booking-form .phone-input > label {
+  left: calc(12px + 2.75rem);
 }
 
-/* Text, number, textarea: label moves to border on focus or value */
+/* FLOATING state (focus or has value) — covers all three structures */
 .booking-form .field:focus-within > label,
-.booking-form .field:has(input:not(:placeholder-shown)) > label,
-.booking-form .field:has(textarea:not(:placeholder-shown)) > label {
+.booking-form .field:focus-within .field__control > label,
+.booking-form .phone-input:focus-within > label,
+.booking-form .field:has(> input:not(:placeholder-shown)) > label,
+.booking-form .field:has(> textarea:not(:placeholder-shown)) > label,
+.booking-form .field__control:has(input:not(:placeholder-shown)) > label,
+.booking-form .field__control:has(textarea:not(:placeholder-shown)) > label,
+.booking-form .phone-input:has(input:not(:placeholder-shown)) > label {
   transform: translateY(-50%) scale(0.75);
   top: 0;
   font-size: 12px;
@@ -212,9 +235,17 @@ a.tile:focus-visible { outline-color: var(--accent); }
   opacity: 1;
 }
 
-/* Select, file: label always on border */
-.booking-form .field:has(select) > label,
-.booking-form .field:has(input[type="file"]) > label {
+/* Phone label in floating state: moves to border like others */
+.booking-form .phone-input:focus-within > label,
+.booking-form .phone-input:has(input:not(:placeholder-shown)) > label {
+  left: 12px;
+}
+
+/* SELECT/FILE (label always on border) — covers all three structures */
+.booking-form .field:has(> select) > label,
+.booking-form .field:has(> input[type="file"]) > label,
+.booking-form .field__control:has(select) > label,
+.booking-form .field__control:has(input[type="file"]) > label {
   transform: translateY(-50%) scale(0.75);
   top: 0;
   font-size: 12px;
@@ -268,10 +299,15 @@ a.tile:focus-visible { outline-color: var(--accent); }
 .booking-form .field.error textarea {
   border-color: var(--danger);
 }
+/* Error label color — covers all three structures */
 .booking-form .field.error > label,
-.booking-form .field:has(input[aria-invalid="true"]) > label,
-.booking-form .field:has(select[aria-invalid="true"]) > label,
-.booking-form .field:has(textarea[aria-invalid="true"]) > label {
+.booking-form .field:has(> input[aria-invalid="true"]) > label,
+.booking-form .field:has(> select[aria-invalid="true"]) > label,
+.booking-form .field:has(> textarea[aria-invalid="true"]) > label,
+.booking-form .field__control:has(input[aria-invalid="true"]) > label,
+.booking-form .field__control:has(select[aria-invalid="true"]) > label,
+.booking-form .field__control:has(textarea[aria-invalid="true"]) > label,
+.booking-form .phone-input:has(input[aria-invalid="true"]) > label {
   color: var(--danger);
 }
 
@@ -291,8 +327,7 @@ a.tile:focus-visible { outline-color: var(--accent); }
   left: 12px;
   top: 50%;
   transform: translateY(-50%);
-  color: var(--royal);
-  opacity: 0.6;
+  color: var(--text-on-light-muted);
   pointer-events: none;
   font-size: 16px;
   font-weight: 400;

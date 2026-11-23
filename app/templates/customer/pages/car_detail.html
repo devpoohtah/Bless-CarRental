@@ -25,7 +25,7 @@
         <h1 class="detail__title">{{ vehicle.name }}</h1>
 
         {% if vehicle.description %}
-        <p class="detail__desc">{{ vehicle.description }}</p>
+        <p class="detail__desc">{{ vehicle.description | linebreaks | safe }}</p>
         {% endif %}
 
         <dl class="facts facts--detail">
@@ -33,7 +33,7 @@
           <div><dt>{{ icon('cog', 'icon icon--sm') }}Transmission</dt><dd>{{ vehicle.transmission or 'To be confirmed' }}</dd></div>
           <div><dt>{{ icon('tag', 'icon icon--sm') }}Rental rate</dt><dd>{{ vehicle.daily_rate_php | php }}/day</dd></div>
           <div><dt>{{ icon('badge-check', 'icon icon--sm') }}Availability</dt><dd>
-            {% set status = {'inquire': 'Ask for availability', 'available': 'Available', 'unavailable': 'Currently unavailable'}[vehicle.availability] %}
+            {% set status = {'inquire': 'Ask for availability', 'available': 'Available'}[vehicle.availability] %}
             <span class="pill">{{ status }}</span>
           </dd></div>
         </dl>
@@ -43,13 +43,8 @@
         {% endif %}
 
         <div class="detail__actions">
-          {% set book_href = ('/book/car?car=' ~ vehicle.id | urlencode) if vehicle.availability != 'unavailable' else None %}
-          {% if book_href %}
-          <a class="btn btn--primary btn--lg" href="{{ book_href }}">Book this vehicle</a>
+          <a class="btn btn--primary btn--lg" href="/book/car?car={{ vehicle.id | urlencode }}">Book this vehicle</a>
           <a class="btn btn--outline btn--lg" href="{{ site.messenger_url }}" target="_blank" rel="noopener noreferrer">Message us on Messenger<span class="sr-only"> (opens in a new tab)</span></a>
-          {% else %}
-          <a class="btn btn--primary btn--lg" href="{{ site.messenger_url }}" target="_blank" rel="noopener noreferrer">Inquire on Messenger<span class="sr-only"> (opens in a new tab)</span></a>
-          {% endif %}
           <a class="btn btn--outline btn--lg" href="/cars">Back to all cars</a>
         </div>
       </div>

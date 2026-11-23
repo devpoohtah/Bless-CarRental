@@ -2,6 +2,8 @@
 {% from 'admin/components/empty.html' import empty_state %}
 {% block title %}Car Management | {{ site.short_name }} Admin{% endblock %}
 
+{% set role = admin_role | default('admin') %}
+
 {% block content %}
 <div class="page">
   {% include 'admin/components/notice.html' %}
@@ -10,10 +12,12 @@
       <h1>Car Management</h1>
       <p class="page-lead">Add, edit and manage cars, rental rates and availability.</p>
     </div>
+    {% if role == 'admin' %}
     <div style="display: flex; align-items: center; gap: 0.5rem;">
       <a class="btn btn--outline-light" href="/admin/pricing" aria-label="Car pricing settings" title="Car pricing settings" style="width: 40px; height: 40px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--radius-md); color: var(--accent); border-color: var(--accent); background: transparent;">{{ icon('cog', 'icon') }}</a>
       <a class="btn btn--action" href="/admin/services/cars/new">{{ icon('plus', 'icon') }}Add car</a>
     </div>
+    {% endif %}
   </div>
 
   {% if cars %}
@@ -26,7 +30,7 @@
           <th scope="col">Transmission</th>
           <th scope="col">Daily rate</th>
           <th scope="col">Availability</th>
-          <th scope="col"><span class="sr-only">Actions</span></th>
+          {% if role == 'admin' %}<th scope="col"><span class="sr-only">Actions</span></th>{% endif %}
         </tr>
       </thead>
       <tbody>
@@ -37,7 +41,7 @@
           <td data-label="Transmission">{{ car.transmission or 'Not set' }}</td>
           <td data-label="Daily rate">{{ car.daily_rate_php | php('Not set') }}</td>
           <td data-label="Availability">{{ availability_labels[car.availability] }}</td>
-          <td class="cell-actions"><a class="btn btn--outline btn--sm" href="/admin/services/cars/{{ car.id }}/edit">Edit<span class="sr-only"> {{ car.name }}</span></a></td>
+          {% if role == 'admin' %}<td class="cell-actions"><a class="btn btn--outline btn--sm" href="/admin/services/cars/{{ car.id }}/edit">Edit<span class="sr-only"> {{ car.name }}</span></a></td>{% endif %}
         </tr>
         {% endfor %}
       </tbody>
@@ -47,7 +51,11 @@
   <p class="page-note">These cars are sample data shared with the landing page, not saved records.</p>
   {% endif %}
   {% else %}
+  {% if role == 'admin' %}
   {{ empty_state('No cars yet', 'Cars you add here are listed on the website and can be chosen when a booking is made.', '/admin/services/cars/new', 'Add car') }}
+  {% else %}
+  <div class="empty-state"><div class="empty-state__icon">{{ icon('car-front', 'icon icon--lg') }}</div><h2 class="empty-state__title">No cars yet</h2><p class="empty-state__text">Cars added by admins are listed here.</p></div>
+  {% endif %}
   {% endif %}
 </div>
 {% endblock %}

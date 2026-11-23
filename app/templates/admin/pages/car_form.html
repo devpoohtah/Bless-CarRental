@@ -1,5 +1,5 @@
 {% extends 'admin/base.html' %}
-{% from 'admin/components/form.html' import field, select, image_field, form_actions_bar, errors_box %}
+{% from 'admin/components/form.html' import field, textarea, select, image_field, form_actions_bar, errors_box %}
 {% set editing = car is not none %}
 {% block title %}{{ 'Edit car' if editing else 'Add car' }} | {{ site.short_name }} Admin{% endblock %}
 
@@ -9,7 +9,7 @@
     <div>
       <a class="btn btn--outline-light" href="/admin/services/cars">{{ icon('chevron-left', 'icon icon--sm') }}Back to Car Management</a>
       <h1 style="margin-top: 1rem;">{{ 'Edit car' if editing else 'Add car' }}</h1>
-      <p class="page-lead">{{ (car.name ~ '.') if editing else 'Enter the car details, rental rate and availability.' }} Fields marked * are required.</p>
+      <p class="page-lead">{{ (car.name ~ '.') if editing else 'Enter the car details, description, rental rate and availability.' }} Fields marked * are required.</p>
     </div>
   </div>
 
@@ -23,6 +23,8 @@
         {{ select('vehicle_type', 'Vehicle type', vehicle_options, form.vehicle_type, required=True, placeholder='Select a vehicle type') }}
         {{ field('seats', 'Seats', form.seats, type='number', inputmode='numeric', min=1, placeholder=True) }}
         {{ select('transmission', 'Transmission', transmission_options, form.transmission, placeholder='Not set', hint='A/T is automatic and M/T is manual.') }}
+        {{ textarea('summary', 'Short summary', form.summary, rows=4, required=True) }}
+        {{ textarea('description', 'Full description', form.description, rows=10, required=True, placeholder=False, class='field--tall') }}
       </section>
 
       <section class="form__group" aria-labelledby="car-rates">

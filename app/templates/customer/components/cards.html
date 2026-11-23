@@ -1,12 +1,8 @@
 {# Card macros for tours, destinations, services and vehicles. #}
 
-{# Links to the booking page for this car or tour, with it chosen. Unavailable items cannot be booked. #}
+{# Links to the booking page for this car or tour, with it chosen. All items are bookable. #}
 {% macro book_button(kind, entry, label, extra='', variant='primary') %}
-{% if entry.availability == 'unavailable' %}
-<button type="button" class="btn btn--{{ variant }}{{ ' ' ~ extra if extra }}" disabled>Currently unavailable</button>
-{% else %}
 <a class="btn btn--{{ variant }}{{ ' ' ~ extra if extra }}" href="/book/{{ kind }}?{{ kind }}={{ entry.id | urlencode }}">{{ label }}<span class="sr-only"> {{ entry.name }}</span></a>
-{% endif %}
 {% endmacro %}
 
 {% macro tour_card(tour) %}
@@ -56,7 +52,7 @@
 {% endmacro %}
 
 {% macro vehicle_card(v) %}
-{% set status = {'inquire': 'Ask for availability', 'available': 'Available', 'unavailable': 'Currently unavailable'}[v.availability] %}
+{% set status = {'inquire': 'Ask for availability', 'available': 'Available'}[v.availability] %}
 <article class="card">
   <div class="card__media card__media--vehicle">
     <img src="{{ static_url(v.photo.src) }}" alt="{{ v.photo.alt }}" width="1200" height="900" loading="lazy" decoding="async">
@@ -70,6 +66,9 @@
       </div>
       <span class="pill">{{ status }}</span>
     </div>
+    {% if v.summary %}
+    <p class="card__text">{{ v.summary }}</p>
+    {% endif %}
     <dl class="facts">
       <div><dt>{{ icon('users', 'icon icon--sm') }}Passengers</dt><dd>{{ v.seats if v.seats else 'To be confirmed' }}</dd></div>
       <div><dt>{{ icon('cog', 'icon icon--sm') }}Transmission</dt><dd>{{ v.transmission or 'To be confirmed' }}</dd></div>
@@ -98,7 +97,7 @@
 {% endmacro %}
 
 {% macro vehicle_info(v, shown) %}
-{% set status = {'inquire': 'Ask for availability', 'available': 'Available', 'unavailable': 'Currently unavailable'}[v.availability] %}
+{% set status = {'inquire': 'Ask for availability', 'available': 'Available'}[v.availability] %}
 <div class="vinfo" data-vinfo{% if not shown %} hidden{% endif %}>
   <p class="vslide__type">{{ v.vehicle_type }}</p>
   <h3 class="vslide__name">{{ v.name }}</h3>
@@ -123,7 +122,7 @@
   [('Duration', tour.duration or 'To be confirmed', 'clock'), ('Price', tour.price_php | php, 'tag')]
     + ([('Vehicle', tour.vehicle_name ~ (' (' ~ tour.vehicle_seats ~ ' seats)' if tour.vehicle_seats else ''), 'users')] if tour.vehicle_name else []),
   tour.is_sample,
-  book_href=('/book/tour?tour=' ~ tour.id | urlencode) if tour.availability != 'unavailable' else None) }}
+  book_href='/book/tour?tour=' ~ tour.id | urlencode) }}
 {% endfor %}
 {% endmacro %}
 

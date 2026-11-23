@@ -23,7 +23,9 @@ def _post_with_csrf(url: str, data: dict, files: dict | None = None, **kwargs):
     return client.post(url, data=data, files=files, headers=headers, **kwargs)
 
 CAR = dict(name="Toyota Vios", vehicle_type="Sedan", seats="5", transmission="Automatic",
-           daily_rate_php="2500", availability="available")
+           daily_rate_php="2500", availability="available",
+           summary="Reliable sedan for city and highway driving.",
+           description="A well-maintained sedan suitable for daily commuting and weekend trips. Features air conditioning and comfortable seating for 5.")
 TOUR = dict(name="Guimaras Day Trip", destination="Guimaras", duration="1 day", summary="Island day trip.",
             description="Full day on the island.", price_php="1800", availability="inquire")
 

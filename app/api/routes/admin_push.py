@@ -4,11 +4,11 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from app.core.auth import AdminUser, require_admin
+from app.core.auth import AdminUser, require_staff
 from app.db.firebase import require_configured
 from app.services import push
 
-router = APIRouter(prefix="/admin/push", include_in_schema=False, dependencies=[Depends(require_admin)])
+router = APIRouter(prefix="/admin/push", include_in_schema=False, dependencies=[Depends(require_staff)])
 
 
 class Registration(BaseModel):
@@ -17,7 +17,7 @@ class Registration(BaseModel):
 
 
 @router.post("/register")
-def register(body: Registration, admin: AdminUser = Depends(require_admin)) -> JSONResponse:
+def register(body: Registration, admin: AdminUser = Depends(require_staff)) -> JSONResponse:
     require_configured()
     push.register_token(body.token, admin.email)
     return JSONResponse({"ok": True})

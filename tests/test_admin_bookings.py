@@ -33,10 +33,60 @@ def test_history_ends_at_the_current_status():
         assert b.history[-1].status == b.status
 
 
+def test_approving_a_pending_booking_fails_when_dates_overlap_an_approved_booking(fake_db):
+    """Booking A is approved; pending booking B overlaps same car/dates; approving B must fail."""
+    from datetime import date, timedelta
+    from app.schemas.booking import Booking, StatusChange
+    today = date.today()
+    # Booking A: approved, days 5-7
+    a = repo.save(repo.BOOKINGS, Booking(
+        id="", booking_type="car", customer_name="Ana", customer_phone="09170000000", item_name="Family SUV",
+        start_date=today + timedelta(days=5), end_date=today + timedelta(days=7), requested_on=today,
+        status="approved", payment_status="unpaid", history=[StatusChange(status="approved", changed_on=today)], is_sample=False))
+    # Booking B: pending, overlapping days 6-8
+    b = repo.save(repo.BOOKINGS, Booking(
+        id="", booking_type="car", customer_name="Ben", customer_phone="09170000001", item_name="Family SUV",
+        start_date=today + timedelta(days=6), end_date=today + timedelta(days=8), requested_on=today,
+        status="pending", payment_status="unpaid", history=[StatusChange(status="pending", changed_on=today)], is_sample=False))
+
+    # Try to approve B - must fail because A is approved and blocks those dates
+    try:
+        service.change_status(service.get_booking(b), "approved")
+        assert False, "Expected FormError"
+    except service.FormError as e:
+        assert "already booked" in str(e)
+
+    # B must still be pending in the database
+    assert service.get_booking(b).status == "pending"
+
+
+def test_approving_a_pending_booking_succeeds_when_dates_do_not_overlap(fake_db):
+    """Booking A is approved; pending booking B does NOT overlap; approving B must succeed."""
+    from datetime import date, timedelta
+    from app.schemas.booking import Booking, StatusChange
+    today = date.today()
+    # Booking A: approved, days 5-7
+    a = repo.save(repo.BOOKINGS, Booking(
+        id="", booking_type="car", customer_name="Ana", customer_phone="09170000000", item_name="Family SUV",
+        start_date=today + timedelta(days=5), end_date=today + timedelta(days=7), requested_on=today,
+        status="approved", payment_status="unpaid", history=[StatusChange(status="approved", changed_on=today)], is_sample=False))
+    # Booking B: pending, non-overlapping days 10-12
+    b = repo.save(repo.BOOKINGS, Booking(
+        id="", booking_type="car", customer_name="Ben", customer_phone="09170000001", item_name="Family SUV",
+        start_date=today + timedelta(days=10), end_date=today + timedelta(days=12), requested_on=today,
+        status="pending", payment_status="unpaid", history=[StatusChange(status="pending", changed_on=today)], is_sample=False))
+
+    # Approve B - must succeed because dates don't overlap
+    updated = service.change_status(service.get_booking(b), "approved")
+    assert updated.status == "approved"
+    assert service.get_booking(b).status == "approved"
+
+
 # ---- list and filters ----
 def test_list_shows_all_bookings_with_filter_links():
     html = client.get("/admin/bookings").text
     assert "Booking Management" in html
+    # Shows all sample bookings
     assert html.count('href="/admin/bookings/sample-') == len(service.list_bookings())
     for href in ("/admin/bookings", "/admin/bookings?type=car", "/admin/bookings?type=tour"):
         assert f'href="{href}"' in html
@@ -55,6 +105,7 @@ def test_filter_by_type():
 
 def test_unknown_filter_value_shows_everything():
     html = client.get("/admin/bookings?type=nonsense").text
+    # Unknown filter falls back to all
     assert html.count('href="/admin/bookings/sample-') == len(service.list_bookings())
 
 

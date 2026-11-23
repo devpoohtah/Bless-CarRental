@@ -26,7 +26,12 @@ def photo(fmt="PNG", size=(3000, 2000), color=(90, 30, 60)) -> bytes:
 
 
 def with_license(content=None, name="license.png", mime="image/png") -> dict:
-    return {"license_file": (name, content if content is not None else photo(), mime)}
+    """Returns both front and back license files for self-drive (both required now)."""
+    img = content if content is not None else photo()
+    return {
+        "license_file_front": (name.replace(".", "-front."), img, mime),
+        "license_file_back": (name.replace(".", "-back."), img, mime),
+    }
 
 
 def post_car(files=None, **changes):
@@ -94,12 +99,14 @@ def test_a_self_drive_request_keeps_the_license_privately(catalog):
     response = post_car(files=with_license(), driver_option="self_drive")
     assert response.status_code == 201
     [booking] = saved_bookings(catalog)
-    assert booking["license_on_file"] is True
+    assert booking["license_front_on_file"] is True
+    assert booking["license_back_on_file"] is True
     assert booking["license_delete_on"] == (date.fromisoformat(booking["end_date"]) + timedelta(days=30)).isoformat()
     [(booking_id, stored)] = stored_licenses(catalog).items()
     assert booking_id in catalog.data["bookings"]  # keyed by the booking id
-    assert Image.open(io.BytesIO(stored["data"])).format == "WEBP"
-    # The photo is not in the bookings document, which the admin browser reads live.
+    assert Image.open(io.BytesIO(stored["front"])).format == "WEBP"
+    assert Image.open(io.BytesIO(stored["back"])).format == "WEBP"
+    # The photos are not in the bookings document, which the admin browser reads live.
     assert not any(isinstance(v, (bytes, bytearray)) for v in booking.values())
     assert "license_file" not in str(booking)
 
@@ -111,24 +118,28 @@ def test_a_self_drive_request_without_a_photo_is_refused(catalog):
 
 
 def test_a_bad_photo_is_refused_before_any_code_is_sent(catalog):
-    response = post_car(files=with_license(b"not a photo", "a.png"), driver_option="self_drive")
+    # Both front and back are bad
+    bad = {"license_file_front": ("a.png", b"not a photo", "image/png"),
+           "license_file_back": ("b.png", b"not a photo", "image/png")}
+    response = post_car(files=bad, driver_option="self_drive")
     assert response.status_code == 422 and "JPEG, PNG or WebP" in response.json()["errors"][0]
     assert saved_bookings(catalog) == [] and stored_licenses(catalog) == {}
 
 
-@pytest.mark.parametrize("option", ["with_driver", ""])
-def test_no_photo_is_needed_or_kept_without_self_drive(catalog, option):
-    response = post_car(files=with_license(), driver_option=option)  # a file sent anyway is dropped unread
+# All car rentals are now self-drive and require license photos.
+# This test verifies that license photos are always required and stored.
+def test_license_photos_always_required_for_car_rentals(catalog):
+    response = post_car(files=with_license())
     assert response.status_code == 201
     [booking] = saved_bookings(catalog)
-    assert booking["license_on_file"] is False and stored_licenses(catalog) == {}
+    assert booking["license_front_on_file"] is True and booking["license_back_on_file"] is True and stored_licenses(catalog) != {}
 
 
 def test_nothing_is_stored_until_the_email_code_is_right(catalog):
     csrf = client.get("/") and client.cookies.get("csrf_token", "")
     response = client.post("/book/car", data=car_request(driver_option="self_drive"), files=with_license(),
                            headers={"X-CSRF-Token": csrf})
-    assert response.status_code == 202  # the code step: the photo waits in memory only
+    assert response.status_code == 202  # the code step: the photos wait in memory only
     assert saved_bookings(catalog) == [] and stored_licenses(catalog) == {}
 
 
@@ -143,8 +154,11 @@ def test_a_failed_booking_save_leaves_no_photo_behind(catalog, monkeypatch):
 
 def test_tour_bookings_never_take_a_license(catalog):
     page = client.get("/book/tour").text
-    assert "license_file" not in page
-    assert 'name="license_file"' in client.get("/book/car").text
+    assert "license_file_front" not in page
+    assert "license_file_back" not in page
+    car_page = client.get("/book/car").text
+    assert 'name="license_file_front"' in car_page
+    assert 'name="license_file_back"' in car_page
 
 
 # ---- the admin ----
@@ -153,35 +167,46 @@ def add_car_booking(db, status="pending", with_photo=True) -> str:
     booking = Booking(id="", booking_type="car", customer_name="Ana Reyes", customer_phone="09171234567",
                       item_name="Family SUV", start_date=today, end_date=today, requested_on=today, status=status,
                       payment_status="unpaid", history=[StatusChange(status=status, changed_on=today)],
-                      driver_option="self_drive", license_on_file=with_photo, is_sample=False)
+                      driver_option="self_drive", license_front_on_file=with_photo, license_back_on_file=with_photo, is_sample=False)
     booking_id = repo.save(repo.BOOKINGS, booking)
     if with_photo:
-        licenses.save(booking_id, licenses.prepare(FakeUpload(photo())))
+        licenses.save(booking_id, licenses.prepare(FakeUpload(photo())), licenses.prepare(FakeUpload(photo())))
     return booking_id
 
 
 def test_an_admin_sees_the_photo_and_it_is_never_cached(fake_db):
     booking_id = add_car_booking(fake_db)
-    response = client.get(f"/admin/bookings/{booking_id}/license")
+    # Test front endpoint
+    response = client.get(f"/admin/bookings/{booking_id}/license/front")
     assert response.status_code == 200 and response.headers["content-type"] == "image/webp"
     assert "no-store" in response.headers["cache-control"]
     assert response.headers["x-content-type-options"] == "nosniff"
     assert Image.open(io.BytesIO(response.content)).format == "WEBP"
+    # Test back endpoint
+    response = client.get(f"/admin/bookings/{booking_id}/license/back")
+    assert response.status_code == 200 and response.headers["content-type"] == "image/webp"
+    assert Image.open(io.BytesIO(response.content)).format == "WEBP"
+    # Test backward compat endpoint
+    response = client.get(f"/admin/bookings/{booking_id}/license")
+    assert response.status_code == 200 and response.headers["content-type"] == "image/webp"
     page = client.get(f"/admin/bookings/{booking_id}").text
-    assert f"/admin/bookings/{booking_id}/license" in page
+    assert f"/admin/bookings/{booking_id}/license/front" in page
+    assert f"/admin/bookings/{booking_id}/license/back" in page
 
 
 def test_the_photo_needs_an_admin_sign_in(fake_db, real_auth):
     booking_id = add_car_booking(fake_db)
-    response = TestClient(app).get(f"/admin/bookings/{booking_id}/license", follow_redirects=False)
-    assert response.status_code in (303, 401) and response.headers.get("content-type") != "image/webp"
+    for endpoint in ["/license/front", "/license/back", "/license"]:
+        response = TestClient(app).get(f"/admin/bookings/{booking_id}{endpoint}", follow_redirects=False)
+        assert response.status_code in (303, 401) and response.headers.get("content-type") != "image/webp"
 
 
 def test_there_is_no_photo_for_a_booking_without_one(fake_db):
     booking_id = add_car_booking(fake_db, with_photo=False)
-    assert client.get(f"/admin/bookings/{booking_id}/license").status_code == 404
-    assert client.get("/admin/bookings/missing/license").status_code == 404
-    assert "No license photo is on file" in client.get(f"/admin/bookings/{booking_id}").text
+    assert client.get(f"/admin/bookings/{booking_id}/license/front").status_code == 404
+    assert client.get(f"/admin/bookings/{booking_id}/license/back").status_code == 404
+    assert client.get("/admin/bookings/missing/license/front").status_code == 404
+    assert "No license photos on file" in client.get(f"/admin/bookings/{booking_id}").text
 
 
 @pytest.mark.parametrize("final", ["rejected", "cancelled"])
@@ -189,15 +214,17 @@ def test_the_photo_is_deleted_when_a_pending_booking_ends(fake_db, final):
     booking_id = add_car_booking(fake_db)
     service.change_status(service.get_booking(booking_id), final)
     assert stored_licenses(fake_db) == {}
-    assert service.get_booking(booking_id).license_on_file is False
-    assert client.get(f"/admin/bookings/{booking_id}/license").status_code == 404
+    booking = service.get_booking(booking_id)
+    assert booking.license_front_on_file is False and booking.license_back_on_file is False
+    assert client.get(f"/admin/bookings/{booking_id}/license/front").status_code == 404
+    assert client.get(f"/admin/bookings/{booking_id}/license/back").status_code == 404
 
 
 def test_a_completed_booking_keeps_the_photo_for_15_more_days(fake_db):
     booking_id = add_car_booking(fake_db, status="ongoing")
     service.change_status(service.get_booking(booking_id), "completed")
     booking = service.get_booking(booking_id)
-    assert booking_id in stored_licenses(fake_db) and booking.license_on_file is True
+    assert booking_id in stored_licenses(fake_db) and booking.license_front_on_file is True and booking.license_back_on_file is True
     assert booking.license_delete_on == today_ph() + timedelta(days=15)
 
 
@@ -212,7 +239,8 @@ def test_completing_never_extends_a_day_that_is_already_sooner(fake_db):
 def test_the_photo_stays_while_the_booking_is_live(fake_db):
     booking_id = add_car_booking(fake_db, status="approved")
     service.change_status(service.get_booking(booking_id), "ongoing")
-    assert booking_id in stored_licenses(fake_db) and service.get_booking(booking_id).license_on_file is True
+    booking = service.get_booking(booking_id)
+    assert booking_id in stored_licenses(fake_db) and booking.license_front_on_file is True and booking.license_back_on_file is True
 
 
 def test_a_status_does_not_change_if_the_photo_cannot_be_deleted(fake_db, monkeypatch):
@@ -221,7 +249,7 @@ def test_a_status_does_not_change_if_the_photo_cannot_be_deleted(fake_db, monkey
     with pytest.raises(service.FormError, match="could not be deleted"):
         service.change_status(service.get_booking(booking_id), "rejected")
     booking = service.get_booking(booking_id)
-    assert booking.status == "pending" and booking.license_on_file is True
+    assert booking.status == "pending" and booking.license_front_on_file is True and booking.license_back_on_file is True
 
 
 # ---- request size ----
@@ -241,7 +269,7 @@ def test_an_oversized_body_without_a_declared_length_is_refused_too():
 
 def test_a_browser_style_post_works(catalog):
     """The page sends the CSRF token as a form field, not a header, so the middleware reads the multipart body
-    (photo included) before the route does. The route must still receive the photo."""
+    (photos included) before the route does. The route must still receive the photos."""
     client.get("/")
     data = car_request(driver_option="self_drive") | {"csrf_token": client.cookies.get("csrf_token", "")}
     response = client.post("/book/car", data=data, files=with_license())
@@ -249,6 +277,9 @@ def test_a_browser_style_post_works(catalog):
     done = client.post("/book/verify", data={"challenge": response.json()["challenge"], "code": "123456",
                                              "csrf_token": client.cookies.get("csrf_token", "")})
     assert done.status_code == 201 and len(stored_licenses(catalog)) == 1
+    # Both front and back stored
+    [(_, stored)] = stored_licenses(catalog).items()
+    assert "front" in stored and "back" in stored
 
 
 # ---- retention: deleting on request and the daily sweep ----
@@ -263,8 +294,9 @@ def test_an_admin_can_delete_the_photo_on_request(fake_db):
     assert response.status_code == 303 and "notice=license" in response.headers["location"]
     assert stored_licenses(fake_db) == {}
     booking = service.get_booking(booking_id)
-    assert booking.license_on_file is False and booking.license_delete_on is None
-    assert client.get(f"/admin/bookings/{booking_id}/license").status_code == 404
+    assert booking.license_front_on_file is False and booking.license_back_on_file is False and booking.license_delete_on is None
+    assert client.get(f"/admin/bookings/{booking_id}/license/front").status_code == 404
+    assert client.get(f"/admin/bookings/{booking_id}/license/back").status_code == 404
 
 
 def test_deleting_a_photo_that_is_not_there_is_refused(fake_db):
@@ -276,7 +308,7 @@ def test_deleting_a_photo_that_is_not_there_is_refused(fake_db):
 def test_the_delete_button_and_the_planned_day_show_on_the_booking(fake_db):
     booking_id = add_car_booking(fake_db, status="completed")
     page = client.get(f"/admin/bookings/{booking_id}").text
-    assert f"/admin/bookings/{booking_id}/license/delete" in page and "Delete photo now" in page
+    assert f"/admin/bookings/{booking_id}/license/delete" in page and "Delete photos now" in page
 
 
 def set_delete_day(booking_id, day):
@@ -292,8 +324,8 @@ def test_the_sweep_deletes_only_photos_whose_day_has_come(fake_db):
     no_photo = add_car_booking(fake_db, with_photo=False)
     assert service.purge_expired_licenses() == 2
     assert set(stored_licenses(fake_db)) == {later}
-    assert service.get_booking(due).license_on_file is False and service.get_booking(later).license_on_file is True
-    assert service.get_booking(no_photo).license_on_file is False
+    assert service.get_booking(due).license_front_on_file is False and service.get_booking(later).license_front_on_file is True
+    assert service.get_booking(no_photo).license_front_on_file is False
 
 
 def test_a_booking_without_a_planned_day_falls_back_to_30_days_after_its_end(fake_db):
@@ -318,7 +350,7 @@ def test_one_failing_photo_does_not_stop_the_sweep(fake_db, monkeypatch):
     monkeypatch.setattr(licenses, "delete", flaky)
     assert service.purge_expired_licenses() == 1
     assert set(stored_licenses(fake_db)) == {first}
-    assert service.get_booking(first).license_on_file is True  # still flagged, so the next sweep tries again
+    assert service.get_booking(first).license_front_on_file is True  # still flagged, so the next sweep tries again
 
 
 def test_the_sweep_runs_at_most_once_an_hour_and_never_raises(fake_db, monkeypatch):
@@ -347,6 +379,7 @@ def test_the_car_form_states_the_retention_and_the_consent(catalog):
     car, tour = client.get("/book/car").text, client.get("/book/tour").text
     assert "15 days after your booking is completed" in car
     assert "including the use of my driver" in car and "including the use of my driver" not in tour
+    assert "Driver's license" in car and "Driver's license" not in tour
 
 
 def test_the_privacy_page_states_the_retention():

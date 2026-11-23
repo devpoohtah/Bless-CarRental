@@ -88,9 +88,9 @@ def test_allowlist_ignores_case_and_blank_entries(monkeypatch):
     monkeypatch.setenv("ADMIN_EMAILS", " Owner@Example.com, ,second@example.com ,")
     assert config._admin_emails() == frozenset({"owner@example.com", "second@example.com"})
     monkeypatch.setattr(config, "integrations", replace(config.integrations, admin_emails=config._admin_emails()))
-    assert auth.is_allowed({"email": "OWNER@example.com", "email_verified": True, "admin": True})
-    assert not auth.is_allowed({"email": "owner@example.com"})  # no email_verified claim
-    assert not auth.is_allowed({})  # no admin claim
+    assert auth.is_allowed_admin({"email": "OWNER@example.com", "email_verified": True, "admin": True})
+    assert not auth.is_allowed_admin({"email": "owner@example.com"})  # no email_verified claim
+    assert not auth.is_allowed_admin({})  # no admin claim
 
 
 def test_session_is_created_for_an_allowed_account_with_a_hardened_cookie(firebase_auth):

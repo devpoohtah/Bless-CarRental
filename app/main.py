@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.concurrency import run_in_threadpool
 
 from app.api.routes import admin, admin_bookings, admin_push, admin_pricing, admin_services, auth, bookings, pages
-from app.core.auth import LoginRequired
+from app.core.auth import Forbidden, LoginRequired
 from app.core.config import STATIC_DIR, integrations, settings
 from app.core.bodylimit import BodySizeLimitMiddleware
 from app.core.csrf import CSRFMiddleware, csrf_token
@@ -73,6 +73,13 @@ def create_app() -> FastAPI:
     @app.exception_handler(LoginRequired)
     async def send_to_login(request: Request, exc: LoginRequired) -> RedirectResponse:
         return RedirectResponse("/admin/login", status_code=303)
+
+    @app.exception_handler(Forbidden)
+    async def send_403(request: Request, exc: Forbidden) -> HTMLResponse:
+        admin = request.url.path.startswith("/admin")
+        template_dir = "admin/errors" if admin else "customer/errors"
+        context = {"active_nav": "dashboard" if admin else None}
+        return templates.TemplateResponse(request, f"{template_dir}/403.html", context, status_code=403)
 
     @app.exception_handler(HTTPException)
     async def http_exception_handler(request: Request, exc: HTTPException) -> HTMLResponse:

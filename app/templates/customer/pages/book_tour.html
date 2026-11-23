@@ -68,17 +68,23 @@
   <legend>Guests and pick-up</legend>
   <div class="booking-form__grid">
     <div class="field">
-      <input id="bk-people" name="guests" type="number" inputmode="numeric" min="1" max="{{ selected.vehicle_seats or 60 }}" required placeholder=" ">
-      <label for="bk-people">Number of guests</label>
+      <div class="field__control">
+        <input id="bk-people" name="guests" type="number" inputmode="numeric" min="1" max="{{ selected.vehicle_seats or 60 }}" required placeholder=" ">
+        <label for="bk-people">Number of guests</label>
+      </div>
     </div>
     <div class="field">
-      <input id="bk-pickup" name="pickup_location" type="text" maxlength="200" autocomplete="off" aria-describedby="bk-pickup-hint" placeholder=" ">
-      <label for="bk-pickup">Pick-up location (optional)</label>
+      <div class="field__control">
+        <input id="bk-pickup" name="pickup_location" type="text" maxlength="200" autocomplete="off" aria-describedby="bk-pickup-hint" placeholder=" ">
+        <label for="bk-pickup">Pick-up location (optional)</label>
+      </div>
       <p class="field__hint" id="bk-pickup-hint">A hotel, address or landmark.</p>
     </div>
     <div class="field field--wide">
-      <textarea id="bk-details" name="details" rows="3" maxlength="2000" placeholder=" "></textarea>
-      <label for="bk-details">Anything else we should know? (optional)</label>
+      <div class="field__control">
+        <textarea id="bk-details" name="details" rows="3" maxlength="2000" placeholder=" "></textarea>
+        <label for="bk-details">Anything else we should know? (optional)</label>
+      </div>
     </div>
   </div>
 </fieldset>

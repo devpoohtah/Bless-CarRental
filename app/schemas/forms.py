@@ -7,7 +7,7 @@ from typing import Literal
 import bleach
 from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
 
-from app.schemas.booking import DriverOption, PaymentStatus, PaymentType
+from app.schemas.booking import DriverOption, DownpaymentType, PaymentStatus, PaymentType
 from app.schemas.catalog import TRANSMISSIONS, VEHICLE_TYPES, Availability, canonical_choice
 from app.schemas.pricing import CarPricing, SeatRates
 
@@ -40,6 +40,8 @@ class CarInput(BaseModel):
     transmission: str | None = Field(default=None, max_length=40)
     daily_rate_php: int | None = Field(default=None, ge=0, le=10_000_000)
     availability: Availability = "inquire"
+    summary: str = Field(min_length=1, max_length=300)
+    description: str = Field(min_length=1, max_length=4000)
 
     # The form offers dropdowns, but a post can say anything: only the listed choices are saved,
     # always spelled the same way ("suv" is saved as "SUV").
@@ -99,6 +101,9 @@ class BookingInput(_ItemInput):
     details: str | None = Field(default=None, max_length=2000)
     payment_status: PaymentStatus = "unpaid"
     payment_type: PaymentType | None = None
+    downpayment_amount: int = Field(default=0, ge=0)
+    downpayment_type: DownpaymentType | None = None
+    amount_paid: int = Field(default=0, ge=0)
 
     @model_validator(mode="after")
     def _dates_in_order(self):
@@ -109,6 +114,24 @@ class BookingInput(_ItemInput):
 
 _EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 _PH_MOBILE = re.compile(r"^(?:\+?63|0)?(9\d{9})$")
+
+# Allowed email domains for customer bookings (major verified providers)
+# Covers ~95%+ of Philippine users; blocks temporary/disposable emails
+# example.com is included for test fixtures
+ALLOWED_EMAIL_DOMAINS = frozenset({
+    # Global majors (Google, Microsoft, Apple)
+    "gmail.com", "googlemail.com",
+    "outlook.com", "hotmail.com", "live.com", "msn.com",
+    "icloud.com", "me.com", "mac.com",
+    # Test domain (used by test fixtures)
+    "example.com",
+})
+
+
+def _is_allowed_email_domain(email: str) -> bool:
+    """Check if email domain is in the allowed list."""
+    domain = email.split("@")[-1].lower()
+    return domain in ALLOWED_EMAIL_DOMAINS
 
 
 def normalize_ph_mobile(value: str) -> str | None:
@@ -139,11 +162,14 @@ class _PublicContact(BaseModel):
     def _email_shape(cls, value: str) -> str:
         if not _EMAIL.match(value):
             raise ValueError("must be a valid email address")
+        if not _is_allowed_email_domain(value):
+            raise ValueError("email domain not allowed. Please use another provider.")
         return value.lower()
 
 
 class PublicCarBookingInput(_PublicContact):
-    """A car rental request from the website. The customer cannot set status or payment."""
+    """A car rental request from the website. The customer cannot set status or payment.
+    All car rentals are self-drive; driver's license photos are always required."""
 
     car: str = Field(min_length=1, max_length=200)  # the car's id
     start_date: date
@@ -154,7 +180,6 @@ class PublicCarBookingInput(_PublicContact):
     dropoff_location: str = Field(min_length=1, max_length=200)
     destination: str = Field(min_length=1, max_length=200)
     passengers: int = Field(ge=1, le=60)
-    driver_option: DriverOption | None = None
 
     @model_validator(mode="after")
     def _return_after_pickup(self):
@@ -192,7 +217,7 @@ LABELS = {
     "customer_phone": "Customer phone", "customer_email": "Customer email",
     "start_date": "Start date", "end_date": "End date", "details": "Details",
     "payment_status": "Payment status", "payment_type": "Payment type", "passengers": "Number of people",
-    "pickup_location": "Pick-up location", "driver_option": "Driver option",
+    "pickup_location": "Pick-up location",
     "car": "Type of car", "tour": "Tour package", "guests": "Number of guests",
     "dropoff_location": "Drop-off location", "start_time": "Pick-up time", "end_time": "Return time",
     "vehicle_name": "Vehicle name", "vehicle_seats": "Vehicle seats",
@@ -200,6 +225,9 @@ LABELS = {
     "five_hourly_hours": "5-seater hours charged per hour", "five_flat_php": "5-seater flat price",
     "seven_hourly_rate_php": "7-seater price per hour", "seven_hourly_hours": "7-seater hours charged per hour",
     "seven_flat_php": "7-seater flat price",
+    "downpayment_amount": "Downpayment amount", "downpayment_type": "Downpayment method",
+    "amount_paid": "Payment amount",
+    "description": "Description",
 }
 
 

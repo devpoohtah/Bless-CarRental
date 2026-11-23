@@ -7,7 +7,7 @@ from types import SimpleNamespace
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
-from app.core.auth import require_admin
+from app.core.auth import AdminUser, require_admin
 from app.core.templating import notice_for, templates
 from app.db.firebase import require_configured
 from app.schemas.forms import PricingInput, validate
@@ -43,20 +43,20 @@ def _examples(rules: CarPricing) -> list[dict]:
     return rows
 
 
-def _render(request: Request, status_code: int = 200, **context) -> HTMLResponse:
-    context |= {"active_nav": "cars", "notice": notice_for(request), "errors": context.get("errors", [])}
+def _render(request: Request, admin: AdminUser, status_code: int = 200, **context) -> HTMLResponse:
+    context |= {"active_nav": "cars", "notice": notice_for(request), "errors": context.get("errors", []), "admin_role": admin.role.value}
     return templates.TemplateResponse(request, "admin/pages/pricing.html", context, status_code=status_code)
 
 
 @router.get("", response_class=HTMLResponse)
-def pricing_page(request: Request) -> HTMLResponse:
+def pricing_page(request: Request, admin: AdminUser = Depends(require_admin)) -> HTMLResponse:
     rules = pricing.load_rules()
-    return _render(request, form=_values(rules), examples=_examples(rules))
+    return _render(request, admin, form=_values(rules), examples=_examples(rules))
 
 
 @router.post("")
 def pricing_save(
-    request: Request, flat_until_hours: str = Form(""), five_hourly_rate_php: str = Form(""),
+    request: Request, admin: AdminUser = Depends(require_admin), flat_until_hours: str = Form(""), five_hourly_rate_php: str = Form(""),
     five_hourly_hours: str = Form(""), five_flat_php: str = Form(""), seven_hourly_rate_php: str = Form(""),
     seven_hourly_hours: str = Form(""), seven_flat_php: str = Form(""),
 ):
@@ -67,6 +67,6 @@ def pricing_save(
                seven_flat_php=seven_flat_php)
     data, errors = validate(PricingInput, raw)
     if data is None:
-        return _render(request, 422, form=raw, errors=errors, examples=_examples(pricing.load_rules()))
+        return _render(request, admin, 422, form=raw, errors=errors, examples=_examples(pricing.load_rules()))
     pricing.save_rules(data.to_rules())
     return RedirectResponse("/admin/pricing?notice=saved", status_code=303)

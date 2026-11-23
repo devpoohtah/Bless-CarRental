@@ -3,7 +3,7 @@ from dataclasses import replace
 import pytest
 
 from app.core import config
-from app.core.auth import AdminUser, require_admin
+from app.core.auth import AdminUser, require_admin, require_staff, Role
 from app.api.routes import bookings as bookings_route
 from app.core.ratelimit import RateLimiter
 from app.db import firebase
@@ -21,7 +21,8 @@ def isolate_from_real_services(monkeypatch):
         cloudinary_api_secret="", admin_emails=frozenset(), telegram_bot_token="", telegram_chat_id="",
         admin_base_url="", firebase_vapid_key="", otp_delivery="", gmail_user="", gmail_app_password="",
         resend_api_key="", turnstile_site_key="", turnstile_secret_key=""))
-    app.dependency_overrides[require_admin] = lambda: AdminUser(email="admin@example.com", uid="test-uid")
+    app.dependency_overrides[require_admin] = lambda: AdminUser(email="admin@example.com", uid="test-uid", role=Role.ADMIN)
+    app.dependency_overrides[require_staff] = lambda: AdminUser(email="admin@example.com", uid="test-uid", role=Role.ADMIN)
     yield
     app.dependency_overrides.clear()
 
@@ -39,6 +40,7 @@ def fake_db(monkeypatch) -> FakeDb:
 def real_auth():
     """Turns the admin bypass off so the real sign-in checks run."""
     app.dependency_overrides.pop(require_admin, None)
+    app.dependency_overrides.pop(require_staff, None)
 
 
 @pytest.fixture

@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse
 
-from app.core.auth import require_admin
+from app.core.auth import AdminUser, require_admin, require_staff
 from app.core.templating import notice_for, templates
 from app.db.firebase import require_configured
 from app.schemas.catalog import TRANSMISSIONS, VEHICLE_TYPES, canonical_choice
@@ -11,17 +11,17 @@ from app.schemas.forms import CarInput, TourInput, validate
 from app.services import admin as service
 from app.services.errors import FormError
 
-router = APIRouter(prefix="/admin/services", include_in_schema=False, dependencies=[Depends(require_admin)])
+router = APIRouter(prefix="/admin/services", include_in_schema=False, dependencies=[Depends(require_staff)])
 
-CAR_FIELDS = ("name", "vehicle_type", "seats", "transmission", "daily_rate_php", "availability")
+CAR_FIELDS = ("name", "vehicle_type", "seats", "transmission", "daily_rate_php", "availability", "summary", "description")
 TOUR_FIELDS = ("name", "destination", "duration", "summary", "description", "price_php", "availability",
                "vehicle_name", "vehicle_seats")
 
 
-def render(request: Request, template: str, active_nav: str, status_code: int = 200, **context) -> HTMLResponse:
+def render(request: Request, template: str, active_nav: str, admin: AdminUser, status_code: int = 200, **context) -> HTMLResponse:
     context |= {"active_nav": active_nav, "availability_labels": service.AVAILABILITY_LABELS,
                 "vehicle_options": [(v, v) for v in VEHICLE_TYPES],
-                "transmission_options": [(t, t) for t in TRANSMISSIONS], "notice": notice_for(request), "errors": context.get("errors", [])}
+                "transmission_options": [(t, t) for t in TRANSMISSIONS], "notice": notice_for(request), "errors": context.get("errors", []), "admin_role": admin.role.value}
     return templates.TemplateResponse(request, f"admin/pages/{template}", context, status_code=status_code)
 
 
@@ -75,53 +75,57 @@ async def services_home() -> RedirectResponse:
 
 # ---- cars ----
 @router.get("/cars", response_class=HTMLResponse)
-def cars(request: Request) -> HTMLResponse:
-    return render(request, "cars.html", "cars", cars=service.list_cars())
+def cars(request: Request, admin: AdminUser = Depends(require_staff)) -> HTMLResponse:
+    return render(request, "cars.html", "cars", admin, cars=service.list_cars())
 
 
-@router.get("/cars/new", response_class=HTMLResponse)
-def car_new(request: Request) -> HTMLResponse:
-    return render(request, "car_form.html", "cars", car=None, form={})
+@router.get("/cars/new", response_class=HTMLResponse, dependencies=[Depends(require_admin)])
+def car_new(request: Request, admin: AdminUser = Depends(require_admin)) -> HTMLResponse:
+    return render(request, "car_form.html", "cars", admin, car=None, form={})
 
 
-@router.post("/cars/new")
+@router.post("/cars/new", dependencies=[Depends(require_admin)])
 def car_create(
-    request: Request, name: str = Form(""), vehicle_type: str = Form(""), seats: str = Form(""),
+    request: Request, admin: AdminUser = Depends(require_admin), name: str = Form(""), vehicle_type: str = Form(""), seats: str = Form(""),
     transmission: str = Form(""), daily_rate_php: str = Form(""), availability: str = Form("inquire"),
+    summary: str = Form(""), description: str = Form(""),
     image: UploadFile | None = File(None),
 ):
     require_configured()
     raw = dict(name=name, vehicle_type=vehicle_type, seats=seats, transmission=transmission,
-               daily_rate_php=daily_rate_php, availability=availability)
+               daily_rate_php=daily_rate_php, availability=availability,
+               summary=summary, description=description)
     errors = _run(CarInput, raw, lambda data: service.create_car(data, image))
     if not errors:
         return _done("/admin/services/cars", "saved")
-    return render(request, "car_form.html", "cars", 422, car=None, form=raw, errors=errors)
+    return render(request, "car_form.html", "cars", admin, 422, car=None, form=raw, errors=errors)
 
 
-@router.get("/cars/{car_id}/edit", response_class=HTMLResponse)
-def car_edit(request: Request, car_id: str) -> HTMLResponse:
+@router.get("/cars/{car_id}/edit", response_class=HTMLResponse, dependencies=[Depends(require_admin)])
+def car_edit(request: Request, car_id: str, admin: AdminUser = Depends(require_admin)) -> HTMLResponse:
     car = _car_or_404(car_id)
-    return render(request, "car_form.html", "cars", car=car, form=_car_values(car))
+    return render(request, "car_form.html", "cars", admin, car=car, form=_car_values(car))
 
 
-@router.post("/cars/{car_id}/edit")
+@router.post("/cars/{car_id}/edit", dependencies=[Depends(require_admin)])
 def car_update(
-    request: Request, car_id: str, name: str = Form(""), vehicle_type: str = Form(""), seats: str = Form(""),
+    request: Request, car_id: str, admin: AdminUser = Depends(require_admin), name: str = Form(""), vehicle_type: str = Form(""), seats: str = Form(""),
     transmission: str = Form(""), daily_rate_php: str = Form(""), availability: str = Form("inquire"),
+    summary: str = Form(""), description: str = Form(""),
     image: UploadFile | None = File(None), remove_image: str = Form(""),
 ):
     require_configured()
     car = _car_or_404(car_id)
     raw = dict(name=name, vehicle_type=vehicle_type, seats=seats, transmission=transmission,
-               daily_rate_php=daily_rate_php, availability=availability)
+               daily_rate_php=daily_rate_php, availability=availability,
+               summary=summary, description=description)
     errors = _run(CarInput, raw, lambda data: service.update_car(car, data, image, bool(remove_image)))
     if not errors:
         return _done("/admin/services/cars", "saved")
-    return render(request, "car_form.html", "cars", 422, car=car, form=raw, errors=errors)
+    return render(request, "car_form.html", "cars", admin, 422, car=car, form=raw, errors=errors)
 
 
-@router.post("/cars/{car_id}/delete")
+@router.post("/cars/{car_id}/delete", dependencies=[Depends(require_admin)])
 def car_delete(car_id: str) -> RedirectResponse:
     require_configured()
     service.delete_car(_car_or_404(car_id))
@@ -130,18 +134,18 @@ def car_delete(car_id: str) -> RedirectResponse:
 
 # ---- tour packages ----
 @router.get("/tours", response_class=HTMLResponse)
-def tours(request: Request) -> HTMLResponse:
-    return render(request, "tours.html", "tours", tours=service.list_tour_packages())
+def tours(request: Request, admin: AdminUser = Depends(require_staff)) -> HTMLResponse:
+    return render(request, "tours.html", "tours", admin, tours=service.list_tour_packages())
 
 
-@router.get("/tours/new", response_class=HTMLResponse)
-def tour_new(request: Request) -> HTMLResponse:
-    return render(request, "tour_form.html", "tours", tour=None, form={})
+@router.get("/tours/new", response_class=HTMLResponse, dependencies=[Depends(require_admin)])
+def tour_new(request: Request, admin: AdminUser = Depends(require_admin)) -> HTMLResponse:
+    return render(request, "tour_form.html", "tours", admin, tour=None, form={})
 
 
-@router.post("/tours/new")
+@router.post("/tours/new", dependencies=[Depends(require_admin)])
 def tour_create(
-    request: Request, name: str = Form(""), destination: str = Form(""), duration: str = Form(""),
+    request: Request, admin: AdminUser = Depends(require_admin), name: str = Form(""), destination: str = Form(""), duration: str = Form(""),
     summary: str = Form(""), description: str = Form(""), price_php: str = Form(""),
     availability: str = Form("inquire"), vehicle_name: str = Form(""), vehicle_seats: str = Form(""),
     image: UploadFile | None = File(None), vehicle_image: UploadFile | None = File(None),
@@ -153,18 +157,18 @@ def tour_create(
     errors = _run(TourInput, raw, lambda data: service.create_tour_package(data, image, vehicle_image))
     if not errors:
         return _done("/admin/services/tours", "saved")
-    return render(request, "tour_form.html", "tours", 422, tour=None, form=raw, errors=errors)
+    return render(request, "tour_form.html", "tours", admin, 422, tour=None, form=raw, errors=errors)
 
 
-@router.get("/tours/{tour_id}/edit", response_class=HTMLResponse)
-def tour_edit(request: Request, tour_id: str) -> HTMLResponse:
+@router.get("/tours/{tour_id}/edit", response_class=HTMLResponse, dependencies=[Depends(require_admin)])
+def tour_edit(request: Request, tour_id: str, admin: AdminUser = Depends(require_admin)) -> HTMLResponse:
     tour = _tour_or_404(tour_id)
-    return render(request, "tour_form.html", "tours", tour=tour, form=_values(tour, TOUR_FIELDS))
+    return render(request, "tour_form.html", "tours", admin, tour=tour, form=_values(tour, TOUR_FIELDS))
 
 
-@router.post("/tours/{tour_id}/edit")
+@router.post("/tours/{tour_id}/edit", dependencies=[Depends(require_admin)])
 def tour_update(
-    request: Request, tour_id: str, name: str = Form(""), destination: str = Form(""), duration: str = Form(""),
+    request: Request, tour_id: str, admin: AdminUser = Depends(require_admin), name: str = Form(""), destination: str = Form(""), duration: str = Form(""),
     summary: str = Form(""), description: str = Form(""), price_php: str = Form(""),
     availability: str = Form("inquire"), vehicle_name: str = Form(""), vehicle_seats: str = Form(""),
     image: UploadFile | None = File(None), vehicle_image: UploadFile | None = File(None),
@@ -179,10 +183,10 @@ def tour_update(
         tour, data, image, vehicle_image, bool(remove_image), bool(remove_vehicle_image)))
     if not errors:
         return _done("/admin/services/tours", "saved")
-    return render(request, "tour_form.html", "tours", 422, tour=tour, form=raw, errors=errors)
+    return render(request, "tour_form.html", "tours", admin, 422, tour=tour, form=raw, errors=errors)
 
 
-@router.post("/tours/{tour_id}/delete")
+@router.post("/tours/{tour_id}/delete", dependencies=[Depends(require_admin)])
 def tour_delete(tour_id: str) -> RedirectResponse:
     require_configured()
     service.delete_tour_package(_tour_or_404(tour_id))

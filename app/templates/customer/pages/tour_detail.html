@@ -35,7 +35,7 @@
           <div><dt>{{ icon('car-front', 'icon icon--sm') }}Vehicle</dt><dd>{{ tour.vehicle_name }}{% if tour.vehicle_seats %} ({{ tour.vehicle_seats }} seats){% endif %}</dd></div>
           {% endif %}
           <div><dt>{{ icon('badge-check', 'icon icon--sm') }}Availability</dt><dd>
-            {% set status = {'inquire': 'Ask for availability', 'available': 'Available', 'unavailable': 'Currently unavailable'}[tour.availability] %}
+            {% set status = {'inquire': 'Ask for availability', 'available': 'Available'}[tour.availability] %}
             <span class="pill">{{ status }}</span>
           </dd></div>
         </dl>
@@ -45,13 +45,8 @@
         {% endif %}
 
         <div class="detail__actions">
-          {% set book_href = ('/book/tour?tour=' ~ tour.id | urlencode) if tour.availability != 'unavailable' else None %}
-          {% if book_href %}
-          <a class="btn btn--primary btn--lg" href="{{ book_href }}">Book now</a>
+          <a class="btn btn--primary btn--lg" href="/book/tour?tour={{ tour.id | urlencode }}">Book now</a>
           <a class="btn btn--outline btn--lg" href="{{ site.messenger_url }}" target="_blank" rel="noopener noreferrer">Message us on Messenger<span class="sr-only"> (opens in a new tab)</span></a>
-          {% else %}
-          <a class="btn btn--primary btn--lg" href="{{ site.messenger_url }}" target="_blank" rel="noopener noreferrer">Inquire on Messenger<span class="sr-only"> (opens in a new tab)</span></a>
-          {% endif %}
           <a class="btn btn--outline btn--lg" href="/tours">Back to all tours</a>
         </div>
       </div>

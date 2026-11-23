@@ -47,20 +47,23 @@ MESSENGER_HINT = "message us on Messenger"
 @dataclass
 class _Pending:
     """What waits in the code store until the customer confirms their email: the checked request and, for a
-    self-drive rental, the license photo (already a small WebP). Nothing is stored anywhere else before then."""
+    self-drive rental, the license photos (already small WebP). Nothing is stored anywhere else before then."""
 
     data: Any
-    license: bytes | None = None
+    license_front: bytes | None = None
+    license_back: bytes | None = None
 
 
-def _license_image(data, upload: UploadFile | None) -> bytes | None:
-    """The license photo for a car request, ready to keep. Required for a self-drive rental. With a driver
-    (or undecided) none is needed, so a file sent anyway is dropped unread."""
-    if data.driver_option != "self_drive":
-        return None
-    if upload is None or not upload.filename:
-        raise licenses.LicenseError("Upload a photo of your driver's license for a self-drive rental.")
-    return licenses.prepare(upload)
+def _license_images(data, front_upload: UploadFile | None, back_upload: UploadFile | None) -> tuple[bytes | None, bytes | None]:
+    """The license photos for a car request, ready to keep. Both front and back are always required
+    (all car rentals are self-drive)."""
+    if front_upload is None or not front_upload.filename:
+        raise licenses.LicenseError("Upload a photo of the front of your driver's license.")
+    if back_upload is None or not back_upload.filename:
+        raise licenses.LicenseError("Upload a photo of the back of your driver's license.")
+    front = licenses.prepare(front_upload)
+    back = licenses.prepare(back_upload)
+    return front, back
 
 
 def _errors(status_code: int, *messages: str, **extra) -> JSONResponse:
@@ -97,7 +100,8 @@ def _page(request: Request, template: str, **context) -> HTMLResponse:
 
 
 def _bookable(items) -> list:
-    return [item for item in items if item.availability != "unavailable"]
+    # Calendar already blocks booked dates, so show all items (both "inquire" and "available").
+    return list(items)
 
 
 @router.get("/book/car", response_class=HTMLResponse)
@@ -117,7 +121,7 @@ def tour_page(request: Request, tour: str = "") -> HTMLResponse:
 
 
 def _submit(request: Request, kind: str, raw: dict, honeypot: str, token: str, agree: str = "",
-            license_file: UploadFile | None = None):
+            license_file_front: UploadFile | None = None, license_file_back: UploadFile | None = None):
     """Checks a request and emails a code. Saves nothing: /book/verify does that once the code is right."""
     client = _client(request)
     if not limiter.allow(client):
@@ -142,16 +146,17 @@ def _submit(request: Request, kind: str, raw: dict, honeypot: str, token: str, a
     except Exception:
         log.exception("Could not check a website booking request")
         return _errors(503, f"We could not check your request. Please try again in a moment, or {MESSENGER_HINT}.")
-    license_image = None
+    license_front = None
+    license_back = None
     if kind == "car":
         try:
-            license_image = _license_image(data, license_file)  # checked before any email is sent, like build() above
+            license_front, license_back = _license_images(data, license_file_front, license_file_back)
         except FormError as exc:
             return _reject(kind, str(exc))
     if not email_limiter.allow(data.customer_email):
         return _errors(429, "Too many codes were sent to this email address. Please try again later.")
     try:
-        challenge, test_code = otp.store.start(kind, _Pending(data, license_image), data.customer_email)
+        challenge, test_code = otp.store.start(kind, _Pending(data, license_front, license_back), data.customer_email)
     except otp.OtpError as exc:
         return _otp_failure(exc)
     return JSONResponse(_challenge_body(challenge, data.customer_email, test_code), status_code=202)
@@ -189,7 +194,11 @@ def verify_code(background: BackgroundTasks, challenge: str = Form(""), code: st
     except otp.OtpError as exc:
         return _otp_failure(exc)
     # The code is used up now. Dates can have been taken since the form was sent, so the save checks them again.
-    extra = {"license_image": pending.license} if pending.license else {}
+    extra = {}
+    if pending.license_front:
+        extra["license_front"] = pending.license_front
+    if pending.license_back:
+        extra["license_back"] = pending.license_back
     try:
         booking = FORMS[kind][2](pending.data, email_verified=True, **extra)
     except FormError as exc:
@@ -221,16 +230,17 @@ def submit_car(
     request: Request, car: str = Form(""), start_date: str = Form(""),
     start_time: str = Form(""), end_date: str = Form(""), end_time: str = Form(""),
     pickup_location: str = Form(""), dropoff_location: str = Form(""), destination: str = Form(""),
-    passengers: str = Form(""), driver_option: str = Form(""), details: str = Form(""),
+    passengers: str = Form(""), details: str = Form(""),
     customer_name: str = Form(""), customer_phone: str = Form(""), customer_email: str = Form(""),
     website: str = Form(""), agree: str = Form(""), cf_turnstile_response: str = Form("", alias="cf-turnstile-response"),
-    license_file: UploadFile | None = File(None),
+    license_file_front: UploadFile | None = File(None),
+    license_file_back: UploadFile | None = File(None),
 ):
     raw = dict(car=car, start_date=start_date, start_time=start_time, end_date=end_date, end_time=end_time,
                pickup_location=pickup_location, dropoff_location=dropoff_location, destination=destination,
-               passengers=passengers, driver_option=driver_option, details=details, customer_name=customer_name,
+               passengers=passengers, details=details, customer_name=customer_name,
                customer_phone=customer_phone, customer_email=customer_email)
-    return _submit(request, "car", raw, website, cf_turnstile_response, agree, license_file)
+    return _submit(request, "car", raw, website, cf_turnstile_response, agree, license_file_front, license_file_back)
 
 
 @router.post("/book/tour")

@@ -239,35 +239,24 @@
     if (formatted !== phone.value) phone.value = formatted;
   });
 
-  // ---- license photo: car page only, and only for a self-drive rental ----
-  const driver = document.getElementById("bk-driver");
+  // ---- license photo: car page only, always required (self-drive only) ----
   const licenseBox = form.querySelector("[data-license]");
-  const licenseInput = document.getElementById("bk-license");
+  const licenseFrontInput = document.getElementById("bk-license-front");
+  const licenseBackInput = document.getElementById("bk-license-back");
   const LICENSE_TYPES = ["image/jpeg", "image/png", "image/webp"];
   const LICENSE_MAX_BYTES = 5 * 1024 * 1024;
 
-  // A hidden required field would block the step with "not focusable", so it is only required while it shows.
-  function syncLicense() {
-    const needed = driver.value === "self_drive";
-    licenseBox.hidden = !needed;
-    licenseInput.required = needed;
-    if (!needed) { licenseInput.value = ""; licenseInput.setCustomValidity(""); }
-  }
-
-  function checkLicense() {
-    const file = licenseInput.files[0];
+  function checkLicense(input) {
+    const file = input.files[0];
     let problem = "";
     if (file && !LICENSE_TYPES.includes(file.type)) problem = "The license must be a JPEG, PNG or WebP photo.";
     else if (file && file.size > LICENSE_MAX_BYTES) problem = "The photo is larger than 5 MB. Use a smaller file.";
-    licenseInput.setCustomValidity(problem);
-    if (problem) licenseInput.reportValidity();
+    input.setCustomValidity(problem);
+    if (problem) input.reportValidity();
   }
 
-  if (driver && licenseBox && licenseInput) {
-    driver.addEventListener("change", syncLicense);
-    licenseInput.addEventListener("change", checkLicense);
-    syncLicense();
-  }
+  if (licenseFrontInput) licenseFrontInput.addEventListener("change", () => checkLicense(licenseFrontInput));
+  if (licenseBackInput) licenseBackInput.addEventListener("change", () => checkLicense(licenseBackInput));
 
   // ---- estimated total: car page only. The server does the sum; this only asks and shows the answer ----
   const quotePanels = form.querySelectorAll("[data-quote]");

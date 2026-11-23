@@ -14,7 +14,7 @@ from app.main import app
 from app.schemas.catalog import Availability  # noqa: F401
 from app.schemas.pricing import CarPricing, SeatRates
 from app.services import notify, pricing
-from tests.test_public_booking import PHOTO, book, car_request, catalog, fresh_limiter, saved_bookings, when  # noqa: F401
+from tests.test_public_booking import PHOTO, book, car_request, catalog, fresh_limiter, saved_bookings, when, post_car, with_license  # noqa: F401
 from app.schemas.catalog import Vehicle
 
 client = TestClient(app)
@@ -151,7 +151,9 @@ def test_the_hourly_hours_must_be_fewer_than_the_flat_hours():
 # ---- a booking is priced on the server ----
 def add_car(db, car_id="priced-suv", seats=7, rate=2500):
     repo.save(repo.CARS, Vehicle(id="", name=car_id.replace("-", " ").title(), vehicle_type="SUV", seats=seats,
-                                 daily_rate_php=rate, availability="available", photo=PHOTO, is_sample=False), car_id)
+                                 daily_rate_php=rate, availability="available", photo=PHOTO, is_sample=False,
+                                 summary="Spacious and comfortable for your journey.",
+                                 description="A reliable vehicle perfect for family trips and city driving. Features air conditioning, ample luggage space, and a smooth ride."), car_id)
 
 
 def priced_request(**changes):
@@ -161,7 +163,7 @@ def priced_request(**changes):
 
 def test_a_booking_keeps_its_total_and_how_it_was_worked_out(catalog):
     add_car(catalog)
-    assert book("/book/car", priced_request()).status_code == 201  # 3 days + 6 hours on a 7-seater
+    assert post_car(files=with_license(), **priced_request()).status_code == 201  # 3 days + 6 hours on a 7-seater
     [saved] = saved_bookings(catalog)
     assert saved["total_php"] == 3 * 2500 + 1500
     assert [(line["label"], line["amount_php"]) for line in saved["price_lines"]] == [
@@ -170,9 +172,9 @@ def test_a_booking_keeps_its_total_and_how_it_was_worked_out(catalog):
 
 def test_later_price_changes_do_not_touch_bookings_already_received(catalog):
     add_car(catalog)
-    book("/book/car", priced_request())
+    post_car(files=with_license(), **priced_request())
     pricing.save_rules(CHEAPER)
-    book("/book/car", priced_request())  # pending bookings do not block the dates
+    post_car(files=with_license(), **priced_request())  # pending bookings do not block the dates
     first, second = [doc["total_php"] for doc in saved_bookings(catalog)]
     assert first == 9000 and second == 7500 + 1200  # 6 hours: flat 1200 under the new rates
 
@@ -180,20 +182,20 @@ def test_later_price_changes_do_not_touch_bookings_already_received(catalog):
 @pytest.mark.parametrize("seats, rate", [(7, None), (12, 3000)])
 def test_a_request_with_no_possible_price_is_still_saved_without_a_total(catalog, seats, rate):
     add_car(catalog, "odd-car", seats, rate)
-    assert book("/book/car", priced_request(car="odd-car")).status_code == 201
+    assert post_car(files=with_license(), **priced_request(car="odd-car")).status_code == 201
     [saved] = saved_bookings(catalog)
     assert saved["total_php"] is None and saved["price_lines"] == []
 
 
 def test_the_customer_cannot_set_the_price(catalog):
     add_car(catalog)
-    book("/book/car", priced_request(total_php="1", price_lines="x", daily_rate_php="1"))
+    post_car(files=with_license(), **priced_request(total_php="1", price_lines="x", daily_rate_php="1"))
     assert saved_bookings(catalog)[0]["total_php"] == 9000
 
 
 def test_the_alert_to_the_owner_shows_the_estimate(catalog):
     add_car(catalog)
-    book("/book/car", priced_request())
+    post_car(files=with_license(), **priced_request())
     from app.schemas.booking import Booking
     [saved] = saved_bookings(catalog)
     text = notify.booking_alert_text(Booking(**{**saved, "id": "x"}))
@@ -291,7 +293,7 @@ def test_pages_can_show_the_live_rates():
 # ---- the admin sees the estimate on the booking ----
 def test_the_booking_page_shows_the_estimate_and_its_lines(catalog):
     add_car(catalog)
-    book("/book/car", priced_request())
+    post_car(files=with_license(), **priced_request())
     [booking_id] = list(catalog.data["bookings"])
     page = client.get(f"/admin/bookings/{booking_id}").text
     assert "Estimated total" in page and "₱9,000" in page

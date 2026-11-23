@@ -8,7 +8,7 @@ These are plain Pydantic models so they can later be read from, and written to, 
 import re
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class Photo(BaseModel):
@@ -17,7 +17,18 @@ class Photo(BaseModel):
     public_id: str | None = Field(default=None, description="Cloudinary id, needed to delete the upload")
 
 
-Availability = Literal["inquire", "available", "unavailable"]
+Availability = Literal["inquire", "available"]
+
+
+def _normalize_availability(v: str | None) -> str:
+    """Map legacy/unexpected availability values to valid ones."""
+    if not v:
+        return "inquire"
+    v_lower = v.lower().strip()
+    if v_lower in ("available", "inquire"):
+        return v_lower
+    # Legacy: "unavailable" -> "inquire"
+    return "inquire"
 
 # The choices the admin car form offers, and the only values it saves. To offer another vehicle type,
 # add it here: the dropdown and the validation both read this list.
@@ -76,8 +87,14 @@ class Vehicle(BaseModel):
     daily_rate_php: int | None = None
     availability: Availability = "inquire"
     photo: Photo
-    description: str | None = None
+    summary: str | None = ""
+    description: str | None = ""
     is_sample: bool = True
+
+    @field_validator("availability", mode="before")
+    @classmethod
+    def _normalize_availability(cls, v: str | None) -> str:
+        return _normalize_availability(v)
 
 
 class Testimonial(BaseModel):

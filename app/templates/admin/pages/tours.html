@@ -2,6 +2,8 @@
 {% from 'admin/components/empty.html' import empty_state %}
 {% block title %}Tour Package Management | {{ site.short_name }} Admin{% endblock %}
 
+{% set role = admin_role | default('admin') %}
+
 {% block content %}
 <div class="page">
   {% include 'admin/components/notice.html' %}
@@ -10,7 +12,9 @@
       <h1>Tour Package Management</h1>
       <p class="page-lead">Add, edit and manage tour packages, prices and availability.</p>
     </div>
+    {% if role == 'admin' %}
     <a class="btn btn--action" href="/admin/services/tours/new">{{ icon('plus', 'icon') }}Add tour package</a>
+    {% endif %}
   </div>
 
   {% if tours %}
@@ -23,7 +27,7 @@
           <th scope="col">Vehicle</th>
           <th scope="col">Price</th>
           <th scope="col">Availability</th>
-          <th scope="col"><span class="sr-only">Actions</span></th>
+          {% if role == 'admin' %}<th scope="col"><span class="sr-only">Actions</span></th>{% endif %}
         </tr>
       </thead>
       <tbody>
@@ -34,7 +38,7 @@
           <td data-label="Vehicle">{{ (tour.vehicle_name ~ (' (' ~ tour.vehicle_seats ~ ' seats)' if tour.vehicle_seats else '')) if tour.vehicle_name else 'Not set' }}</td>
           <td data-label="Price">{{ tour.price_php | php('Not set') }}</td>
           <td data-label="Availability">{{ availability_labels[tour.availability] }}</td>
-          <td class="cell-actions"><a class="btn btn--outline btn--sm" href="/admin/services/tours/{{ tour.id }}/edit">Edit<span class="sr-only"> {{ tour.name }}</span></a></td>
+          {% if role == 'admin' %}<td class="cell-actions"><a class="btn btn--outline btn--sm" href="/admin/services/tours/{{ tour.id }}/edit">Edit<span class="sr-only"> {{ tour.name }}</span></a></td>{% endif %}
         </tr>
         {% endfor %}
       </tbody>
@@ -44,7 +48,11 @@
   <p class="page-note">These packages are sample data shared with the landing page, not saved records.</p>
   {% endif %}
   {% else %}
+  {% if role == 'admin' %}
   {{ empty_state('No tour packages yet', 'Packages you add here are listed on the website and can be chosen when a booking is made.', '/admin/services/tours/new', 'Add tour package') }}
+  {% else %}
+  <div class="empty-state"><div class="empty-state__icon">{{ icon('compass', 'icon icon--lg') }}</div><h2 class="empty-state__title">No tour packages yet</h2><p class="empty-state__text">Packages added by admins are listed here.</p></div>
+  {% endif %}
   {% endif %}
 </div>
 {% endblock %}
