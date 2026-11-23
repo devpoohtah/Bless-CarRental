@@ -13,6 +13,11 @@
   const csrfHeaders = { "X-CSRF-Token": form.elements.csrf_token?.value || "" };
   if (!form) return;
 
+  // Generate idempotency key (UUID v4) once per page load
+  const idempotencyKey = crypto.randomUUID();
+  const idemInput = document.getElementById("idempotency_key");
+  if (idemInput) idemInput.value = idempotencyKey;
+
   const formView = document.getElementById("booking-view-form");
   const codeView = document.getElementById("booking-view-code");
   const doneView = document.getElementById("booking-view-done");

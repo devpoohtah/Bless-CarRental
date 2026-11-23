@@ -22,6 +22,7 @@ BOOKINGS = "bookings"
 PUSH_TOKENS = "push_tokens"
 SETTINGS = "settings"  # owner-editable settings such as car_pricing; read and written only by the backend
 LICENSES = "booking_licenses"  # private: driver's license photos, read only by the backend
+IDEMPOTENCY_KEYS = "idempotency_keys"  # client-generated keys to prevent duplicate bookings
 
 M = TypeVar("M", bound=BaseModel)
 
@@ -76,3 +77,31 @@ def new_id(collection: str) -> str:
 
 def delete(collection: str, doc_id: str) -> None:
     firebase.get_db().collection(collection).document(doc_id).delete()
+
+
+# ---- Idempotency keys (prevent duplicate bookings from retries/double-clicks) ----
+# Stored as: idempotency_key (doc id) -> { booking_id: str, created_at: timestamp }
+# TTL: 24 hours (auto-expired by Cloud Firestore TTL policy on created_at, or checked manually)
+IDEMPOTENCY_TTL_HOURS = 24
+
+
+def check_idempotency_key(key: str) -> str | None:
+    """Returns the booking_id if this idempotency key was already used, else None."""
+    if not firebase.is_configured():
+        return None
+    doc = firebase.get_db().collection(IDEMPOTENCY_KEYS).document(key).get()
+    if doc.exists:
+        data = doc.to_dict()
+        return data.get("booking_id")
+    return None
+
+
+def store_idempotency_key(key: str, booking_id: str) -> None:
+    """Stores an idempotency key mapping to a booking_id with a timestamp for TTL."""
+    if not firebase.is_configured():
+        return
+    from datetime import datetime, timezone
+    firebase.get_db().collection(IDEMPOTENCY_KEYS).document(key).set({
+        "booking_id": booking_id,
+        "created_at": datetime.now(timezone.utc),
+    })

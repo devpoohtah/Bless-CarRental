@@ -18,7 +18,7 @@ from app.core import config
 from app.core.clock import today_ph
 from app.core.ratelimit import RateLimiter
 from app.core.templating import templates
-from app.db import firebase
+from app.db import firebase, repositories as repo
 from app.schemas.forms import PublicCarBookingInput, PublicTourBookingInput, validate
 from app.services import bookings as service
 from app.services import content, licenses, notify, otp, pricing, turnstile
@@ -52,6 +52,7 @@ class _Pending:
     data: Any
     license_front: bytes | None = None
     license_back: bytes | None = None
+    idempotency_key: str | None = None
 
 
 def _license_images(data, front_upload: UploadFile | None, back_upload: UploadFile | None) -> tuple[bytes | None, bytes | None]:
@@ -121,7 +122,8 @@ def tour_page(request: Request, tour: str = "") -> HTMLResponse:
 
 
 def _submit(request: Request, kind: str, raw: dict, honeypot: str, token: str, agree: str = "",
-            license_file_front: UploadFile | None = None, license_file_back: UploadFile | None = None):
+            license_file_front: UploadFile | None = None, license_file_back: UploadFile | None = None,
+            idempotency_key: str = ""):
     """Checks a request and emails a code. Saves nothing: /book/verify does that once the code is right."""
     client = _client(request)
     if not limiter.allow(client):
@@ -156,7 +158,7 @@ def _submit(request: Request, kind: str, raw: dict, honeypot: str, token: str, a
     if not email_limiter.allow(data.customer_email):
         return _errors(429, "Too many codes were sent to this email address. Please try again later.")
     try:
-        challenge, test_code = otp.store.start(kind, _Pending(data, license_front, license_back), data.customer_email)
+        challenge, test_code = otp.store.start(kind, _Pending(data, license_front, license_back, idempotency_key or None), data.customer_email)
     except otp.OtpError as exc:
         return _otp_failure(exc)
     return JSONResponse(_challenge_body(challenge, data.customer_email, test_code), status_code=202)
@@ -199,6 +201,17 @@ def verify_code(background: BackgroundTasks, challenge: str = Form(""), code: st
         extra["license_front"] = pending.license_front
     if pending.license_back:
         extra["license_back"] = pending.license_back
+
+    # Idempotency: if this request was already processed (same idempotency key), return the existing booking
+    idem_key = pending.idempotency_key
+    if idem_key:
+        existing_booking_id = repo.check_idempotency_key(idem_key)
+        if existing_booking_id:
+            existing = service.get_booking(existing_booking_id)
+            if existing:
+                log.info("Idempotent retry for key %s -> booking %s", idem_key, existing_booking_id)
+                return JSONResponse({"ok": True, "reference": existing.reference, "idempotent": True}, status_code=201)
+
     try:
         booking = FORMS[kind][2](pending.data, email_verified=True, **extra)
     except FormError as exc:
@@ -207,6 +220,11 @@ def verify_code(background: BackgroundTasks, challenge: str = Form(""), code: st
         log.exception("Could not save a website booking request")
         return _errors(503, f"We could not save your request. Please try again in a moment, or {MESSENGER_HINT}.",
                        code="rejected")
+
+    # Store idempotency key after successful booking creation
+    if idem_key:
+        repo.store_idempotency_key(idem_key, booking.id)
+
     background.add_task(notify.notify_new_booking, booking)
     return JSONResponse({"ok": True, "reference": booking.reference}, status_code=201)
 
@@ -235,12 +253,13 @@ def submit_car(
     website: str = Form(""), agree: str = Form(""), cf_turnstile_response: str = Form("", alias="cf-turnstile-response"),
     license_file_front: UploadFile | None = File(None),
     license_file_back: UploadFile | None = File(None),
+    idempotency_key: str = Form(""),
 ):
     raw = dict(car=car, start_date=start_date, start_time=start_time, end_date=end_date, end_time=end_time,
                pickup_location=pickup_location, dropoff_location=dropoff_location, destination=destination,
                passengers=passengers, details=details, customer_name=customer_name,
                customer_phone=customer_phone, customer_email=customer_email)
-    return _submit(request, "car", raw, website, cf_turnstile_response, agree, license_file_front, license_file_back)
+    return _submit(request, "car", raw, website, cf_turnstile_response, agree, license_file_front, license_file_back, idempotency_key)
 
 
 @router.post("/book/tour")
@@ -249,8 +268,9 @@ def submit_tour(
     end_date: str = Form(""), guests: str = Form(""), pickup_location: str = Form(""), details: str = Form(""),
     customer_name: str = Form(""), customer_phone: str = Form(""), customer_email: str = Form(""),
     website: str = Form(""), agree: str = Form(""), cf_turnstile_response: str = Form("", alias="cf-turnstile-response"),
+    idempotency_key: str = Form(""),
 ):
     raw = dict(tour=tour, start_date=start_date, end_date=end_date, guests=guests, pickup_location=pickup_location,
                details=details, customer_name=customer_name, customer_phone=customer_phone,
                customer_email=customer_email)
-    return _submit(request, "tour", raw, website, cf_turnstile_response, agree)
+    return _submit(request, "tour", raw, website, cf_turnstile_response, agree, idempotency_key=idempotency_key)

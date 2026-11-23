@@ -2,6 +2,18 @@
 {% from 'customer/components/cards.html' import tour_card %}
 {% block title %}Travel tour packages | {{ site.business_name }}{% endblock %}
 
+{% block head_extra %}
+{% set page_url = absolute_url(request, request.url.path) %}
+{% set share_image = absolute_url(request, '/static/shared/img/og-share.png') %}
+<link rel="canonical" href="{{ page_url }}">
+<meta property="og:type" content="website">
+<meta property="og:url" content="{{ page_url }}">
+<meta property="og:title" content="Tour Packages | {{ site.business_name }}">
+<meta property="og:description" content="Browse Guimaras island tours, heritage tours, and beach getaways. Book online or inquire.">
+<meta property="og:image" content="{{ share_image }}">
+<meta name="twitter:card" content="summary_large_image">
+{% endblock %}
+
 {% block content %}
 <section class="catalog">
   <div class="container">
