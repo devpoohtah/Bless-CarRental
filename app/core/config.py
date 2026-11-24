@@ -104,9 +104,13 @@ class Integrations:
     # How the booking verification code is delivered: "gmail", "resend" or "simulated" (fixed test
     # code 123456, no email sent). Unset picks "gmail" when its credentials exist, else nothing.
     otp_delivery: str = field(default_factory=lambda: _env("OTP_DELIVERY").lower())
-    # Backend only. Gmail SMTP for the verification code. Use a Google app password, never the login password.
+    # Backend only. Gmail HTTPS (OAuth2) for the verification code. Gmail REST API over HTTPS (port 443).
+    # Use Gmail_CLIENT_ID, GMAIL_CLIENT_SECRET, and GMAIL_REFRESH_TOKEN from Google Cloud Console.
+    # GMAIL_USER is optional for the From header display name.
     gmail_user: str = field(default_factory=lambda: _env("GMAIL_USER"))
-    gmail_app_password: str = field(default_factory=lambda: _env("GMAIL_APP_PASSWORD").replace(" ", ""))
+    gmail_client_id: str = field(default_factory=lambda: _env("GMAIL_CLIENT_ID"))
+    gmail_client_secret: str = field(default_factory=lambda: _env("GMAIL_CLIENT_SECRET"))
+    gmail_refresh_token: str = field(default_factory=lambda: _env("GMAIL_REFRESH_TOKEN").replace(" ", ""))
     # Backend only. Resend sends the customer emails (booking approved). Until a domain is verified in
     # Resend, only the account owner's address receives mail, so use onboarding@resend.dev for tests.
     resend_api_key: str = field(default_factory=lambda: _env("RESEND_API_KEY"))
@@ -143,7 +147,7 @@ class Integrations:
 
     @property
     def gmail_ready(self) -> bool:
-        return bool(self.gmail_user and self.gmail_app_password)
+        return bool(self.gmail_user and self.gmail_client_id and self.gmail_client_secret and self.gmail_refresh_token)
 
     @property
     def resend_ready(self) -> bool:

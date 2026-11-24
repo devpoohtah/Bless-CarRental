@@ -150,7 +150,7 @@ def test_expired_challenges_are_forgotten_when_a_new_one_starts(store):
 
 def test_a_failed_resend_send_frees_the_button_and_keeps_the_old_code(store, monkeypatch):
     s, clock = store
-    set_integrations(monkeypatch, otp_delivery="gmail", gmail_user="x@gmail.com", gmail_app_password="p")
+    set_integrations(monkeypatch, otp_delivery="gmail", gmail_user="x@gmail.com", gmail_client_id="cid", gmail_client_secret="csecret", gmail_refresh_token="rtoken")
     monkeypatch.setattr(mailer, "send_gmail", lambda *a: True)
     challenge, _ = s.start("car", {}, "ana@example.com")
     monkeypatch.setattr(mailer, "send_gmail", lambda *a: False)
@@ -180,13 +180,13 @@ def test_gmail_and_resend_modes_need_their_credentials(monkeypatch):
     assert config.integrations.otp_mode == ""
     set_integrations(monkeypatch, otp_delivery="resend")
     assert config.integrations.otp_mode == ""
-    set_integrations(monkeypatch, otp_delivery="", gmail_user="x@gmail.com", gmail_app_password="abcd")
+    set_integrations(monkeypatch, otp_delivery="", gmail_user="x@gmail.com", gmail_client_id="cid", gmail_client_secret="csecret", gmail_refresh_token="rtoken")
     assert config.integrations.otp_mode == "gmail"  # unset picks Gmail when it is set up
 
 
-def test_the_app_password_may_be_pasted_with_its_spaces(monkeypatch):
-    monkeypatch.setenv("GMAIL_APP_PASSWORD", "abcd efgh ijkl mnop")
-    assert config.Integrations().gmail_app_password == "abcdefghijklmnop"
+def test_gmail_refresh_token_may_be_pasted_with_spaces(monkeypatch):
+    monkeypatch.setenv("GMAIL_REFRESH_TOKEN", "abc def  ghi")
+    assert config.Integrations().gmail_refresh_token == "abcdefghi"
 
 
 def test_simulated_mode_shows_the_test_code_and_sends_no_email(catalog, monkeypatch):
@@ -201,7 +201,7 @@ def test_simulated_mode_shows_the_test_code_and_sends_no_email(catalog, monkeypa
 
 
 def test_gmail_mode_sends_a_random_code_by_email_and_never_returns_it(catalog, monkeypatch):
-    set_integrations(monkeypatch, otp_delivery="gmail", gmail_user="x@gmail.com", gmail_app_password="p")
+    set_integrations(monkeypatch, otp_delivery="gmail", gmail_user="x@gmail.com", gmail_client_id="cid", gmail_client_secret="csecret", gmail_refresh_token="rtoken")
     sent = []
     monkeypatch.setattr(mailer, "send_gmail", lambda to, subject, text_body, html_body=None: sent.append((to, subject, text_body)) or True)
     response = start()
@@ -221,7 +221,7 @@ def test_resend_mode_uses_the_resend_sender(catalog, monkeypatch):
 
 
 def test_if_the_email_cannot_be_sent_nothing_is_stored_and_the_customer_is_told(catalog, monkeypatch):
-    set_integrations(monkeypatch, otp_delivery="gmail", gmail_user="x@gmail.com", gmail_app_password="p")
+    set_integrations(monkeypatch, otp_delivery="gmail", gmail_user="x@gmail.com", gmail_client_id="cid", gmail_client_secret="csecret", gmail_refresh_token="rtoken")
     monkeypatch.setattr(mailer, "send_gmail", lambda *a: False)
     response = start()
     assert response.status_code == 503 and response.json()["code"] == "send_failed"
@@ -320,7 +320,7 @@ def test_the_ip_limit_also_covers_resend(catalog, monkeypatch):
 
 
 def test_the_fixed_code_never_appears_outside_simulated_mode(catalog, monkeypatch):
-    set_integrations(monkeypatch, otp_delivery="gmail", gmail_user="x@gmail.com", gmail_app_password="p")
+    set_integrations(monkeypatch, otp_delivery="gmail", gmail_user="x@gmail.com", gmail_client_id="cid", gmail_client_secret="csecret", gmail_refresh_token="rtoken")
     monkeypatch.setattr(mailer, "send_gmail", lambda *a: True)
     pages = [client.get("/book/car").text, client.get("/book/tour").text,
              start().text, start(tour_request(), "/book/tour").text]
@@ -410,40 +410,62 @@ def test_resend_errors_are_logged_without_the_key(monkeypatch, caplog):
     assert "domain is not verified" in caplog.text and "re_SECRET" not in caplog.text
 
 
-def test_gmail_logs_in_over_ssl_with_the_app_password(monkeypatch):
-    set_integrations(monkeypatch, gmail_user="bless@gmail.com", gmail_app_password="apppassword")
-    calls = {}
+def test_gmail_uses_oauth2_token_and_sends_via_rest_api(monkeypatch):
+    set_integrations(monkeypatch, gmail_user="bless@gmail.com", gmail_client_id="cid", gmail_client_secret="csecret", gmail_refresh_token="rtoken")
+    calls = {"token": None, "send": None}
 
-    class FakeSmtp:
-        def __init__(self, host, port, timeout):
-            calls["server"] = (host, port)
-
+    class FakeTokenResponse:
+        def __init__(self):
+            self._body = json.dumps({"access_token": "test_access_token"}).encode()
+        def read(self):
+            return self._body
         def __enter__(self):
             return self
-
         def __exit__(self, *a):
             return False
 
-        def login(self, user, password):
-            calls["login"] = (user, password)
+    class FakeSendResponse:
+        def __init__(self):
+            self.status = 200
+        def read(self):
+            return b'{"id": "msg123"}'
+        def __enter__(self):
+            return self
+        def __exit__(self, *a):
+            return False
 
-        def send_message(self, message):
-            calls["message"] = message
-    monkeypatch.setattr(mailer.smtplib, "SMTP_SSL", FakeSmtp)
+    def fake_urlopen(request, timeout):
+        calls["last_url"] = request.full_url
+        calls["last_headers"] = dict(request.header_items())
+        if request.full_url == mailer.GMAIL_TOKEN_URL:
+            calls["token_body"] = request.data.decode() if request.data else None
+            return FakeTokenResponse()
+        elif request.full_url == mailer.GMAIL_SEND_URL:
+            calls["send_body"] = json.loads(request.data.decode()) if request.data else None
+            return FakeSendResponse()
+        raise AssertionError(f"Unexpected URL: {request.full_url}")
+
+    monkeypatch.setattr(mailer.urllib.request, "urlopen", fake_urlopen)
     assert mailer.send_gmail("ana@example.com", "Hi", "Body") is True
-    assert calls["server"] == ("smtp.gmail.com", 465) and calls["login"] == ("bless@gmail.com", "apppassword")
-    assert calls["message"]["To"] == "ana@example.com" and calls["message"]["Subject"] == "Hi"
+
+    # Verify token request
+    assert calls["last_url"] == mailer.GMAIL_SEND_URL  # last call was the send
+    assert calls["send_body"] is not None
+    assert "raw" in calls["send_body"]
+    assert calls["send_body"]["raw"]  # base64 encoded message
+    assert calls["last_headers"]["Authorization"] == "Bearer test_access_token"
+    assert calls["last_headers"]["Content-type"] == "application/json"
 
 
-def test_a_gmail_failure_is_logged_without_the_password(monkeypatch, caplog):
-    set_integrations(monkeypatch, gmail_user="bless@gmail.com", gmail_app_password="apppassword")
+def test_a_gmail_failure_is_logged_without_secrets(monkeypatch, caplog):
+    set_integrations(monkeypatch, gmail_user="bless@gmail.com", gmail_client_id="cid", gmail_client_secret="csecret", gmail_refresh_token="rtoken")
 
-    def fail(*a, **k):
-        raise OSError("auth failed for apppassword")
-    monkeypatch.setattr(mailer.smtplib, "SMTP_SSL", fail)
+    def fail(request, timeout):
+        raise urllib.error.HTTPError(request.full_url, 401, "Unauthorized", {}, io.BytesIO(b'{"error": "invalid_grant"}'))
+    monkeypatch.setattr(mailer.urllib.request, "urlopen", fail)
     with caplog.at_level(logging.WARNING):
         assert mailer.send_gmail("ana@example.com", "s", "b") is False
-    assert "apppassword" not in caplog.text
+    assert "csecret" not in caplog.text and "rtoken" not in caplog.text
 
 
 # ---- the approval email ----

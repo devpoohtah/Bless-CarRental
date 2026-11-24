@@ -1,14 +1,15 @@
-"""Emails to customers: the booking verification code (Gmail SMTP or Resend) and the "booking approved" notice (Resend).
+"""Emails to customers: the booking verification code (Gmail REST API or Resend) and the "booking approved" notice (Resend).
 
 Plain text + HTML. Sending is best effort for the approval notice: a failure is logged and never blocks the admin's
 status change, so nothing there raises. The verification code reports success or failure to the caller, because
 the customer cannot continue without it. Secrets are never logged.
 """
 
+import base64
 import json
 import logging
-import smtplib
 import urllib.error
+import urllib.parse
 import urllib.request
 from email.message import EmailMessage
 
@@ -19,6 +20,8 @@ from app.schemas.booking import Booking
 log = logging.getLogger(__name__)
 TIMEOUT_SECONDS = 10
 RESEND_URL = "https://api.resend.com/emails"
+GMAIL_TOKEN_URL = "https://oauth2.googleapis.com/token"
+GMAIL_SEND_URL = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send"
 OTP_MINUTES = 10  # keep in step with app.services.otp.TTL_SECONDS
 
 # Brand colors (match tokens.css)
@@ -129,7 +132,7 @@ def _card_row(label: str, value: str, icon: str = "") -> str:
 
 
 def send_gmail(to: str, subject: str, text_body: str, html_body: str | None = None) -> bool:
-    """Sends through Gmail SMTP with an app password. True only if Gmail accepted the message."""
+    """Sends through Gmail REST API (OAuth2). True only if Gmail accepted the message."""
     cfg = config.integrations
     if not cfg.gmail_ready:
         return False
@@ -140,14 +143,64 @@ def send_gmail(to: str, subject: str, text_body: str, html_body: str | None = No
     message.set_content(text_body)
     if html_body:
         message.add_alternative(html_body, subtype="html")
+
+    # 1) Obtain access token via refresh token
+    token_data = {
+        "client_id": cfg.gmail_client_id,
+        "client_secret": cfg.gmail_client_secret,
+        "refresh_token": cfg.gmail_refresh_token,
+        "grant_type": "refresh_token",
+    }
+    token_request = urllib.request.Request(
+        GMAIL_TOKEN_URL,
+        data=urllib.parse.urlencode(token_data).encode(),
+        headers={"Content-Type": "application/x-www-form-urlencoded", "User-Agent": "bless-booking/1.0"},
+        method="POST",
+    )
     try:
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=TIMEOUT_SECONDS) as smtp:
-            smtp.login(cfg.gmail_user, cfg.gmail_app_password)
-            smtp.send_message(message)
-        return True
-    except Exception as exc:
-        log.warning("Gmail could not send an email (%s)", type(exc).__name__)
+        with urllib.request.urlopen(token_request, timeout=TIMEOUT_SECONDS) as token_response:
+            token_json = json.loads(token_response.read())
+            access_token = token_json.get("access_token")
+            if not access_token:
+                log.warning("Gmail token response missing access_token: %s", token_json)
+                return False
+    except urllib.error.HTTPError as exc:
+        try:
+            reason = exc.read().decode()
+        except Exception:
+            reason = ""
+        log.warning("Gmail token request failed (HTTP %s): %s", exc.code, reason)
         return False
+    except Exception as exc:
+        log.warning("Gmail token request error (%s): %s", type(exc).__name__, exc)
+        return False
+
+    # 2) Send message via Gmail API
+    raw_bytes = message.as_bytes()
+    raw_b64 = base64.urlsafe_b64encode(raw_bytes).decode()
+    send_payload = {"raw": raw_b64}
+    send_request = urllib.request.Request(
+        GMAIL_SEND_URL,
+        data=json.dumps(send_payload).encode(),
+        headers={
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json",
+            "User-Agent": "bless-booking/1.0",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(send_request, timeout=TIMEOUT_SECONDS) as send_response:
+            return 200 <= send_response.status < 300
+    except urllib.error.HTTPError as exc:
+        try:
+            reason = exc.read().decode()
+        except Exception:
+            reason = ""
+        log.warning("Gmail send failed (HTTP %s): %s", exc.code, reason)
+    except Exception as exc:
+        log.warning("Gmail send error (%s): %s", type(exc).__name__, exc)
+    return False
 
 
 def send_resend(to: str, subject: str, text_body: str, html_body: str | None = None) -> bool:

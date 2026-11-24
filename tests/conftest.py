@@ -19,7 +19,8 @@ def isolate_from_real_services(monkeypatch):
     monkeypatch.setattr(config, "integrations", replace(
         config.integrations, google_credentials="", cloudinary_cloud_name="", cloudinary_api_key="",
         cloudinary_api_secret="", admin_emails=frozenset(), telegram_bot_token="", telegram_chat_id="",
-        admin_base_url="", firebase_vapid_key="", otp_delivery="", gmail_user="", gmail_app_password="",
+        admin_base_url="", firebase_vapid_key="", otp_delivery="", gmail_user="", gmail_client_id="",
+        gmail_client_secret="", gmail_refresh_token="",
         resend_api_key="", turnstile_site_key="", turnstile_secret_key=""))
     app.dependency_overrides[require_admin] = lambda: AdminUser(email="admin@example.com", uid="test-uid", role=Role.ADMIN)
     app.dependency_overrides[require_staff] = lambda: AdminUser(email="admin@example.com", uid="test-uid", role=Role.ADMIN)
