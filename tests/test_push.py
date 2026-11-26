@@ -186,9 +186,9 @@ def test_the_service_worker_is_served_from_the_site_root_and_only_opens_admin_pa
     assert "importScripts" not in response.text and "gstatic" not in response.text  # no Firebase code inside the worker
 
 
-def test_push_js_registers_the_root_worker_for_the_admin_area_only():
+def test_push_js_registers_the_root_worker_for_the_whole_origin():
     js = client.get("/static/admin/js/push.js").text
-    assert 'SW_URL = "/service-worker.js"' in js and "scope: SW_SCOPE" in js and 'SW_SCOPE = "/admin/"' in js
+    assert 'SW_URL = "/service-worker.js"' in js and "scope: SW_SCOPE" in js and 'SW_SCOPE = "/"' in js
 
 
 def test_the_admin_page_and_push_js_carry_the_csrf_token_to_register():

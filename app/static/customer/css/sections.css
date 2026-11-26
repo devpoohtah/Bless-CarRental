@@ -206,33 +206,50 @@
 
 /* Car rental requirements */
 .reqs { margin-top: 2.5rem; padding-top: 2rem; border-top: 1px solid var(--border-dark-muted); }
-.reqs h3 { font-size: 1.75rem; font-weight: 500; color: var(--text-on-dark); margin: 0 0 1.5rem; } /* 28px */
+.reqs h3 { font-size: 1.5rem; font-weight: 500; color: var(--text-on-dark); margin: 0 0 1.5rem; } /* 24px - slightly reduced */
 
-/* Each group: heading + its own grid - SAME grid for all */
-.reqs__group { margin-top: 1.75rem; padding-top: 1.25rem; border-top: 1px solid var(--border-dark-muted); } /* 28px between groups */
-.reqs__group:first-child { margin-top: 0; padding-top: 0; border-top: none; }
-.reqs__group h4 { margin: 0 0 0.75rem; font-size: 1.125rem; font-weight: 500; color: var(--text-on-dark); } /* 18px */
-
-/* Unified 3-column grid for ALL groups */
-.reqs__grid {
+/* Three-column layout */
+.reqs__columns {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.625rem 1.5rem; /* 10px row gap, 24px column gap */
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
   align-items: start;
+}
+
+/* Column dividers */
+.reqs__col {
+  padding: 0 1.5rem;
+}
+.reqs__col:not(:first-child) {
+  border-left: 1px solid rgba(208, 230, 253, 0.2); /* Powder Blue #D0E6FD @ 20% */
+}
+
+/* Column headings: uppercase, small, letter-spaced, Bone color */
+.reqs__col-title {
+  margin: 0 0 1rem;
+  font-size: 0.75rem; /* 12px */
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #F1E4D1; /* Bone */
+}
+
+/* Lists inside columns */
+.reqs__list {
   margin: 0;
   padding: 0;
   list-style: none;
 }
-
-/* Items: icon + text on ONE LINE */
-.reqs__grid li {
+.reqs__list li {
   display: flex;
   align-items: flex-start;
-  gap: 0.625rem; /* 10px icon-text gap */
-  color: rgba(255,255,255,0.78); /* white @ 78% */
+  gap: 0.625rem; /* 10px */
+  color: rgba(255,255,255,0.78);
   font-size: 1rem; /* 16px */
   line-height: 1.45;
+  margin-bottom: 0.625rem;
 }
+.reqs__list li:last-child { margin-bottom: 0; }
 
 /* Check-circle icon: 18px, white, top-aligned, flex:none */
 .reqs__icon {
@@ -246,30 +263,91 @@
 }
 
 /* Bold parts: white, weight 600 */
-.reqs__grid strong {
+.reqs__list strong {
   color: var(--text-on-dark);
   font-weight: 600;
 }
 
-/* Excess time charges: empty icon placeholder for alignment */
-.reqs__icon[aria-hidden="true"] { visibility: hidden; }
+/* Excess time charges: price list */
+.reqs__prices {
+  margin: 0;
+  padding: 0;
+  max-width: 16rem; /* keep prices close to labels */
+}
+.reqs__prices div {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.75rem 1rem;
+  align-items: baseline;
+  margin-bottom: 0.5rem;
+}
+.reqs__prices div:last-child { margin-bottom: 0; }
+.reqs__prices dt {
+  color: rgba(255,255,255,0.78);
+  font-size: 1rem;
+  line-height: 1.45;
+}
+.reqs__prices dd {
+  color: var(--text-on-dark);
+  font-size: 1rem;
+  font-weight: 600;
+  text-align: right;
+  white-space: nowrap;
+}
+.reqs__prices strong { color: var(--text-on-dark); }
 
 /* Note under Excess */
 .reqs__note {
   margin-top: 0.75rem; /* 12px */
   font-size: 0.875rem; /* 14px */
-  color: rgba(255,255,255,0.65); /* white @ 65% */
+  color: rgba(255,255,255,0.65);
   line-height: 1.4;
 }
 
-/* Responsive: under 768px (48em) -> 1 column, smaller text */
-@media (max-width: 47.99em) {
-  .reqs h3 { font-size: 1.5rem; } /* 24px */
-  .reqs__group h4 { font-size: 1.0625rem; } /* 17px */
-  .reqs__grid { grid-template-columns: 1fr; gap: 0.5rem 0; }
-  .reqs__group { margin-top: 1.5rem; }
-  .reqs__group:first-child { margin-top: 0; }
-  .reqs__grid li { font-size: 0.9375rem; } /* 15px */
+/* Responsive: 900px (56.25em) and below -> 2 columns, excess spans full width */
+@media (max-width: 56.25em) {
+  .reqs__columns {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .reqs__col:nth-child(3) {
+    grid-column: 1 / -1;
+    border-left: none;
+    border-top: 1px solid rgba(208, 230, 253, 0.2);
+    padding-top: 1.5rem;
+    padding-left: 0;
+    padding-right: 0;
+    margin-top: 0.5rem;
+  }
+  .reqs__col:not(:first-child):not(:nth-child(3)) {
+    border-left: 1px solid rgba(208, 230, 253, 0.2);
+  }
+}
+
+/* Responsive: 560px (35em) and below -> 1 column, top borders between groups */
+@media (max-width: 35em) {
+  .reqs h3 { font-size: 1.375rem; } /* 22px */
+  .reqs__columns {
+    grid-template-columns: 1fr;
+  }
+  .reqs__col {
+    border-left: none;
+    padding-left: 0;
+    padding-right: 0;
+  }
+  .reqs__col:not(:first-child) {
+    border-top: 1px solid rgba(208, 230, 253, 0.2);
+    padding-top: 1.5rem;
+    margin-top: 0.5rem;
+  }
+  .reqs__col:nth-child(3) {
+    border-top: 1px solid rgba(208, 230, 253, 0.2);
+    padding-top: 1.5rem;
+    margin-top: 0.5rem;
+  }
+  .reqs__col-title { font-size: 0.6875rem; } /* 11px */
+  .reqs__list li { font-size: 0.9375rem; } /* 15px */
+  .reqs__prices dt,
+  .reqs__prices dd { font-size: 0.9375rem; }
   .reqs__note { font-size: 0.8125rem; } /* 13px */
 }
 .why__actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.75rem; }

@@ -37,30 +37,32 @@
     <div id="requirements" class="reqs">
       <h3>What you need to rent a car</h3>
 
-      <div class="reqs__group">
-        <h4>Local renters</h4>
-        <ul class="reqs__grid">
-          <li><span class="reqs__icon">{{ icon('circle-check', 'icon', 1.125) }}</span><span><strong>Driver's license</strong> valid for the whole rental</span></li>
-          <li><span class="reqs__icon">{{ icon('circle-check', 'icon', 1.125) }}</span><span><strong>₱500 downpayment</strong> to reserve your dates</span></li>
-        </ul>
-      </div>
+      <div class="reqs__columns">
+        <div class="reqs__col">
+          <h4 class="reqs__col-title">Local renters</h4>
+          <ul class="reqs__list">
+            <li><span class="reqs__icon">{{ icon('circle-check', 'icon', 1.125) }}</span><span><strong>Driver's license</strong> valid for the whole rental</span></li>
+            <li><span class="reqs__icon">{{ icon('circle-check', 'icon', 1.125) }}</span><span><strong>₱500 downpayment</strong> to reserve your dates</span></li>
+          </ul>
+        </div>
 
-      <div class="reqs__group">
-        <h4>International renters</h4>
-        <ul class="reqs__grid">
-          <li><span class="reqs__icon">{{ icon('circle-check', 'icon', 1.125) }}</span><span><strong>Driver's license</strong> valid for the whole rental</span></li>
-          <li><span class="reqs__icon">{{ icon('circle-check', 'icon', 1.125) }}</span><span><strong>1 valid ID</strong></span></li>
-          <li><span class="reqs__icon">{{ icon('circle-check', 'icon', 1.125) }}</span><span><strong>₱500 downpayment</strong> to reserve your dates</span></li>
-        </ul>
-      </div>
+        <div class="reqs__col">
+          <h4 class="reqs__col-title">International renters</h4>
+          <ul class="reqs__list">
+            <li><span class="reqs__icon">{{ icon('circle-check', 'icon', 1.125) }}</span><span><strong>Driver's license</strong> valid for the whole rental</span></li>
+            <li><span class="reqs__icon">{{ icon('circle-check', 'icon', 1.125) }}</span><span><strong>1 valid ID</strong></span></li>
+            <li><span class="reqs__icon">{{ icon('circle-check', 'icon', 1.125) }}</span><span><strong>₱500 downpayment</strong> to reserve your dates</span></li>
+          </ul>
+        </div>
 
-      <div class="reqs__group">
-        <h4>Excess time charges</h4>
-        <ul class="reqs__grid">
-          <li><span class="reqs__icon" aria-hidden="true"></span><span><strong>5-seater:</strong> ₱200/hr</span></li>
-          <li><span class="reqs__icon" aria-hidden="true"></span><span><strong>7-seater:</strong> ₱250/hr</span></li>
-        </ul>
-        <p class="reqs__note">Applies beyond agreed return time.</p>
+        <div class="reqs__col">
+          <h4 class="reqs__col-title">Excess time charges</h4>
+          <dl class="reqs__prices">
+            <div><dt><strong>5-seater:</strong></dt><dd>₱200/hr</dd></div>
+            <div><dt><strong>7-seater:</strong></dt><dd>₱250/hr</dd></div>
+          </dl>
+          <p class="reqs__note">Applies beyond agreed return time.</p>
+        </div>
       </div>
     </div>
   </div>

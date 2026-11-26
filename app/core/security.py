@@ -31,7 +31,7 @@ STRICT_CSP_TEMPLATE = (
     "style-src 'self' https://fonts.googleapis.com https://cdn.jsdelivr.net 'nonce-{nonce}'; "
     "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; "
     "img-src 'self' https: data: blob:; "
-    "connect-src 'self' https://cdn.jsdelivr.net https://challenges.cloudflare.com https://firestore.googleapis.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com; "
+    "connect-src 'self' https://cdn.jsdelivr.net https://challenges.cloudflare.com https://firestore.googleapis.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com https://firebaseinstallations.googleapis.com https://fcmregistrations.googleapis.com; "
     "frame-src https://challenges.cloudflare.com https://bless-rental.firebaseapp.com; "
     "base-uri 'self'; "
     "form-action 'self';"

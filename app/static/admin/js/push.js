@@ -4,10 +4,11 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
 import { getMessaging, getToken, isSupported } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-messaging.js";
 
-// Served from the site root (see main.py) so its scope can be the whole admin area.
+// Served from the site root (see main.py) so its scope can be the whole origin.
+// FCM web push with VAPID keys requires root scope; the worker itself filters to /admin/ pages.
 const SW_URL = "/service-worker.js";
-const SW_SCOPE = "/admin/";
-const OLD_SW_SCOPE = "/static/admin/js/"; // where the worker lived before: its registration would double every alert
+const SW_SCOPE = "/";
+const OLD_SW_SCOPES = ["/static/admin/js/", "/admin/"]; // old scopes to clean up
 const STORAGE_KEY = "admin-push";
 const RESEND_AFTER_MS = 24 * 60 * 60 * 1000;
 const button = document.querySelector("[data-push-toggle]");
@@ -33,10 +34,20 @@ function remembered() {
 }
 
 async function subscribe() {
-  // Drop the old registration, if this browser has one. Its push subscription then ends, and the server
-  // removes that dead token the next time it sends.
+  // Drop the old registrations. Their push subscriptions then end, and the server
+  // removes those dead tokens the next time it sends.
+  let hadOld = false;
   for (const old of await navigator.serviceWorker.getRegistrations()) {
-    if (new URL(old.scope).pathname === OLD_SW_SCOPE) await old.unregister();
+    if (OLD_SW_SCOPES.includes(new URL(old.scope).pathname)) {
+      await old.unregister();
+      hadOld = true;
+    }
+  }
+  // If we removed an old worker that was controlling the page, reload so the new root-scope
+  // worker becomes the active controller. getToken() needs the worker to be controlling.
+  if (hadOld && navigator.serviceWorker.controller) {
+    window.location.reload();
+    return; // the reload will re-run subscribe() with a clean slate
   }
   const registration = await navigator.serviceWorker.register(SW_URL, { scope: SW_SCOPE });
   await activated(registration);

@@ -1,5 +1,11 @@
 // Service worker for desktop alerts. Registered by push.js. It only shows the notification the server
 // sends and opens the booking when it is clicked; it holds no Firebase code and no settings.
+
+self.addEventListener("activate", (event) => {
+  // Claim all clients immediately so this worker controls the page without a reload.
+  event.waitUntil(self.clients.claim());
+});
+
 self.addEventListener("push", (event) => {
   let payload = {};
   try { payload = event.data ? event.data.json() : {}; } catch (error) { /* not JSON: show the default text */ }
