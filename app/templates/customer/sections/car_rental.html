@@ -2,7 +2,7 @@
 {% macro car_head() %}
 <div class="section__head vcar__head">
   <h2>Car rental services</h2>
-  <p class="section__lead">Choose a vehicle type, then message us with your dates to ask about availability and rates.</p>
+  <p class="section__lead">Choose a vehicle type, then send a rental request with your dates. We'll call the number you provided to confirm availability and the final rate.</p>
   {% if vehicles | selectattr('is_sample') | list %}
   <p class="note">{{ icon('info', 'icon icon--sm') }}Sample listings. Vehicles, specifications and rates will be confirmed by BLESS.</p>
   {% endif %}

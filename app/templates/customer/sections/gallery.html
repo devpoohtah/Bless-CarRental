@@ -2,16 +2,34 @@
   <div class="container">
     <div class="section__head">
       <h2>Travel experiences</h2>
-      <p class="section__lead">Destinations, group tours, customer trips, vehicles and the people behind BLESS. Placeholder images for now.</p>
+      <p class="section__lead">Group tours, island hops, heritage trails guided by BLESS.</p>
     </div>
     {# To swap in real photos: put files in app/static/customer/img/gallery/ and update app/services/content.py. #}
     <ul class="gallery">
-      {% for item in gallery %}
+      {% for item in gallery if item.category != "Rental Experiences" %}
       <li class="on-dark">
         <img src="{{ static_url(item.photo.src) }}" alt="{{ item.photo.alt }}" width="1200" height="900" loading="lazy" decoding="async">
         <span class="gallery__cap">{{ item.category }}</span>
       </li>
       {% endfor %}
     </ul>
+
+    {# Rental Experiences carousel #}
+    {% set rental_images = gallery | selectattr('category', 'equalto', 'Rental Experiences') | list %}
+    {% if rental_images %}
+    <div class="section__head" style="margin-top: 5rem;">
+      <h2>Rental experiences</h2>
+      <p class="section__lead">Self-drive freedom, family road trips, airport runs with your wheels your way.</p>
+    </div>
+    <div class="rental-gallery" data-rental-gallery role="region" aria-label="Car rental photos">
+      <div class="rental-gallery__track">
+        {% for item in rental_images %}
+        <img src="{{ static_url(item.photo.src) }}" alt="{{ item.photo.alt }}" loading="lazy" width="800" height="600">
+        {% endfor %}
+      </div>
+      <button type="button" class="icon-btn rental-gallery__btn rental-gallery__btn--prev" data-rental-gallery-prev aria-label="Previous rental photo">{{ icon('chevron-left', 'icon') }}</button>
+      <button type="button" class="icon-btn rental-gallery__btn rental-gallery__btn--next" data-rental-gallery-next aria-label="Next rental photo">{{ icon('chevron-right', 'icon') }}</button>
+    </div>
+    {% endif %}
   </div>
 </section>

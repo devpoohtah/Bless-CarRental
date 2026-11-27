@@ -1,11 +1,11 @@
 <section id="about" class="section section--white">
   <div class="container about">
-    <div>
+    <div class="about__text" style="max-width: 65ch;">
       <h2>{{ site.tagline }}</h2>
       <p class="about__lead">{{ site.business_name }} is a travel and transportation business based in {{ site.location }}. We offer tour packages to help you explore destinations, and car rentals to help you get there and get around.</p>
       <blockquote class="pull-quote">
-        <p>Discover the world, one mile at a time.</p>
-        <p>Fast and easy booking experience.</p>
+        <p>Based in Sta. Rosa, Mandurriao, Iloilo City.</p>
+        <p>Book your tour or car rental on this website. Questions? Reach us on Facebook..</p>
       </blockquote>
       <dl class="duo">
         <div>
@@ -19,9 +19,16 @@
       </dl>
     </div>
     <div class="about__media">
-      {# Replace these two placeholders with real BLESS travel photography. #}
-      <img class="about__img-main" src="{{ static_url('customer/img/about/about-scenic-placeholder.svg') }}" alt="Placeholder image for a travel photo" width="960" height="1200" loading="lazy" decoding="async">
-      <img class="about__img-inset" src="{{ static_url('customer/img/about/about-travel-placeholder.svg') }}" alt="Placeholder image for a second travel photo" width="1200" height="900" loading="lazy" decoding="async">
+      <iframe
+        title="Map of Sta. Rosa, Mandurriao, Iloilo City, where BLESS Travel and Tours is based"
+        src="https://www.google.com/maps?ll=10.7170,122.5440&z=14&output=embed"
+        loading="lazy"
+        referrerpolicy="no-referrer-when-downgrade"
+        class="about__map"
+        width="600"
+        height="450"
+      ></iframe>
+      <p class="about__map-caption">Sta. Rosa, Mandurriao, Iloilo City</p>
     </div>
   </div>
 </section>

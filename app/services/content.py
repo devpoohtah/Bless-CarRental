@@ -248,25 +248,37 @@ def list_gallery() -> list[GalleryImage]:
         item("g4", "Group Adventures & Getaways", "group.webp"),
         item("g5", "Business activities", "businessactivities.webp"),
         item("g6", "Memorable Journeys & Experiences", "journey.webp"),
+        item("g7", "Rental Experiences", "car-rental-1.webp"),
+        item("g8", "Rental Experiences", "car-rental-2.webp"),
+        item("g9", "Rental Experiences", "car-rental-3.webp"),
+        item("g10", "Rental Experiences", "car-rental-4.webp"),
+        item("g11", "Rental Experiences", "car-rental-5.webp"),
+        item("g12", "Rental Experiences", "car-rental-6.webp"),
+        item("g13", "Rental Experiences", "car-rental-7.webp"),
+        item("g14", "Rental Experiences", "car-rental-8.webp"),
+        item("g15", "Rental Experiences", "car-rental-9.webp"),
+        item("g16", "Rental Experiences", "car-rental-10.webp"),
+        item("g17", "Rental Experiences", "car-rental-11.webp"),
+        item("g18", "Rental Experiences", "car-rental-12.webp"),
     ]
 
 
 def list_faqs() -> list[FaqItem]:
     return [
         FaqItem(
-            question="How can I book a tour?",
+            question="How do I book a tour or rent a vehicle?",
             answer=(
-                "Choose a tour, fill in the booking request form and verify your email with a 6-digit "
-                "code. You receive a reference number, and BLESS emails you once your request is "
-                "approved. You can also ask us first by Messenger or phone."
+                "Choose a tour or a vehicle, fill in the booking request form and verify your email "
+                "with a 6-digit code. You receive a reference number, and BLESS emails you once your "
+                "request is approved. Questions first? Message us on Facebook or call."
             ),
         ),
         FaqItem(
-            question="How can I rent a vehicle?",
+            question="What do I need to rent a vehicle?",
             answer=(
-                "Pick a car, send the rental request form and verify your email. You will need a "
-                "driver's license, a valid ID, a downpayment and a security deposit. BLESS confirms "
-                "availability and the final rate. You can also message or call us first."
+                "Local renters need a driver's license, a valid ID and a downpayment. International "
+                "renters need the same, with one valid ID. BLESS confirms availability and the final "
+                "rate when it reviews your request."
             ),
         ),
         FaqItem(
@@ -280,9 +292,8 @@ def list_faqs() -> list[FaqItem]:
         FaqItem(
             question="How can I inquire about available packages?",
             answer=(
-                "Message us on Messenger or call to ask about current tour packages and vehicles. "
-                "The packages and vehicles shown on this page are sample listings until the business "
-                "confirms its offerings."
+                "Everything currently available is listed in the Tours and Car Rental sections on this website."
+                "Have a question about a package or a car? Message us on Facebook or call."
             ),
         ),
         FaqItem(

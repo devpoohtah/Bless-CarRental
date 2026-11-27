@@ -157,6 +157,37 @@
     update();
   });
 
+  // Rental Gallery carousel: previous/next buttons over a scroll-snap track.
+  document.querySelectorAll("[data-rental-gallery]").forEach((root) => {
+    const track = root.querySelector(".rental-gallery__track");
+    const prevBtn = root.querySelector("[data-rental-gallery-prev]");
+    const nextBtn = root.querySelector("[data-rental-gallery-next]");
+    if (!track || !prevBtn || !nextBtn) return;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const scrollAmount = () => track.clientWidth;
+    const goTo = (direction) => track.scrollBy({ left: direction * scrollAmount(), behavior: reduced.matches ? "auto" : "smooth" });
+    prevBtn.addEventListener("click", () => goTo(-1));
+    nextBtn.addEventListener("click", () => goTo(1));
+
+    let frame = 0;
+
+    // Keyboard navigation: ArrowLeft/ArrowRight on the track
+    track.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowLeft") { goTo(-1); e.preventDefault(); }
+      if (e.key === "ArrowRight") { goTo(1); e.preventDefault(); }
+    });
+
+    // Hide/show buttons based on scroll position
+    const updateButtons = () => {
+      const maxScroll = track.scrollWidth - track.clientWidth;
+      prevBtn.style.display = track.scrollLeft > 10 ? "flex" : "none";
+      nextBtn.style.display = track.scrollLeft < maxScroll - 10 ? "flex" : "none";
+    };
+    track.addEventListener("scroll", () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(updateButtons); }, { passive: true });
+    window.addEventListener("resize", updateButtons);
+    updateButtons();
+  });
+
   // Detail dialogs (native <dialog>): open from buttons, close on backdrop click.
   document.querySelectorAll("[data-open-dialog]").forEach((btn) =>
     btn.addEventListener("click", () => document.getElementById(btn.dataset.openDialog)?.showModal())
